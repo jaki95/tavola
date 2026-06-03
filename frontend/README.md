@@ -16,6 +16,12 @@ Run the development server:
 npm run dev
 ```
 
+Vite serves the app on its local development URL, usually
+`http://localhost:5173`, and proxies `/api/*` requests to the backend. The
+default proxy target is `http://localhost:8000`; set
+`VITE_BACKEND_PROXY_TARGET` to point at a different backend during local
+development.
+
 Run tests:
 
 ```sh
@@ -27,4 +33,10 @@ Run quality checks:
 ```sh
 npm run lint
 npm run build
+```
+
+Preview the production build locally:
+
+```sh
+npm run preview
 ```
