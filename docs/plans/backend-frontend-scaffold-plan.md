@@ -163,6 +163,11 @@ respects Tavola's layer boundaries.
 - `GET /api/health` returns a stable JSON response.
 - `cd backend && uv run pytest` passes.
 
+**Implementation Note**: Sprint 2 completed on 2026-06-04. The backend now has
+a thin FastAPI app entrypoint, typed local-development settings, a routed
+`GET /api/health` endpoint, and focused tests for app import, configurable API
+prefix, health response shape, and settings defaults.
+
 ### Task 2.1: Create FastAPI Application Entrypoint
 
 - **Location**: `backend/src/tavola/api/main.py`
