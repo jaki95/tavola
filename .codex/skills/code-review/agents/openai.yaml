@@ -1,4 +1,4 @@
 interface:
   display_name: "Code Review"
   short_description: "Focused architecture-aware code quality reviews"
-  default_prompt: "Use $code-review to review my current changes for correctness, security, and complexity."
+  default_prompt: "Use $code-review to review my current branch against main for correctness, security, and complexity."
