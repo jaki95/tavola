@@ -26,6 +26,8 @@ Backend:
 
 - Python 3.12+
 - FastAPI for HTTP APIs
+- Pydantic for backend request/response schemas and boundary validation where
+  useful
 - uv for dependency management and Python task execution
 - pytest for tests
 - Ruff for linting and formatting
@@ -119,6 +121,10 @@ when a small client/service abstraction would keep the UI easier to change.
 
 - Use FastAPI idioms for routing, dependency injection, request validation, and
   response models in the API layer.
+- Prefer Pydantic models for structured type validation at API, DTO, settings,
+  and external-data boundaries where they reduce ambiguity or boilerplate.
+- Keep Pydantic validation focused on data shape and boundary constraints;
+  enforce commerce invariants in the domain layer.
 - Keep framework-specific imports out of the domain layer.
 - Define repository or gateway interfaces at the application/domain boundary when
   use cases need persistence or external systems.
