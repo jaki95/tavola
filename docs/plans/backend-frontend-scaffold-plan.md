@@ -311,6 +311,12 @@ catalog and basket slices.
 - Frontend status indicator succeeds against the live backend.
 - README/AGENTS commands match actual tooling.
 
+**Implementation Note**: Sprint 4 completed on 2026-06-04. The repository now
+has a root contributor README, updated backend/frontend/agent command
+documentation, a scaffold smoke checklist, and a verified cross-service local
+workflow where Vite proxies `/api/health` to the live FastAPI backend and the
+Tavola shell shows the connected backend status.
+
 ### Task 4.1: Document Local Development Workflow
 
 - **Location**: `README.md`, `backend/README.md`, `frontend/README.md`,

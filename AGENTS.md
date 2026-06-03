@@ -75,9 +75,13 @@ when tooling, scripts, or project layout changes.
 Backend:
 
 - Install dependencies: `cd backend && uv sync`
+- Run development server:
+  `cd backend && uv run uvicorn tavola.api.main:app --reload`
 - Run tests: `cd backend && uv run pytest`
 - Run formatting: `cd backend && uv run ruff format .`
-- Run linting: `cd backend && uv run ruff check . --fix`
+- Check formatting: `cd backend && uv run ruff format --check .`
+- Run linting: `cd backend && uv run ruff check .`
+- Apply lint fixes: `cd backend && uv run ruff check . --fix`
 
 Frontend:
 
@@ -85,6 +89,8 @@ Frontend:
 - Run development server: `cd frontend && npm run dev`
 - Run tests: `cd frontend && npm test`
 - Run linting: `cd frontend && npm run lint`
+- Run production build: `cd frontend && npm run build`
+- Preview production build: `cd frontend && npm run preview`
 
 ## Architecture Principles
 
@@ -162,6 +168,9 @@ For meaningful changes, add or update focused tests.
   feature slice.
 
 If tests cannot be run, explain exactly what was not run and why.
+
+After scaffold or cross-service workflow changes, run the checklist in
+`docs/scaffold-smoke-check.md` and report any unchecked items.
 
 ## Agent Workflow
 
