@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tavola TDD"
+  short_description: "Run Tavola work through red-green-refactor"
+  default_prompt: "Use $tdd to implement the next Tavola behavior test-first."

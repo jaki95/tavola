@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tavola Feature Slice"
+  short_description: "Build focused Tavola vertical slices"
+  default_prompt: "Use $tavola-feature-slice to implement Sprint 1 tasks 1.1-1.3 from the Tavola plan."
