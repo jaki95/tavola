@@ -80,6 +80,11 @@ without user-facing product behavior yet.
 - `cd frontend && npm install` completes.
 - Backend and frontend command surfaces are documented.
 
+**Implementation Note**: Sprint 1 completed on 2026-06-03. The repository now
+has backend uv metadata and package layout, frontend Vite React TypeScript
+metadata and source layout, environment examples, shared ignore rules, generated
+lockfiles, and minimal smoke tests for the documented test commands.
+
 ### Task 1.1: Add Backend uv Project Metadata
 
 - **Location**: `backend/pyproject.toml`, `backend/.python-version`,
