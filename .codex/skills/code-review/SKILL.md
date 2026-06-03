@@ -18,7 +18,10 @@ Review code as a senior engineer looking for concrete defects and avoidable risk
 
 2. Establish review scope.
    - If the user names files, commits, a branch, a PR, or a diff, review that scope.
-   - If the user asks to review current work, inspect `git status --short` and review the local diff. Prefer `git diff --stat` and targeted `git diff` reads over dumping the whole patch at once.
+   - If the user asks to review current work or the current branch, compare changes against the main branch, not only the uncommitted diff.
+     Prefer `git rev-parse --verify main` when available; otherwise use `origin/main` if present. Establish the baseline with `git merge-base HEAD <main-ref>`, then inspect `git diff --stat <baseline>...HEAD` and targeted `git diff <baseline>...HEAD` reads.
+   - Also inspect `git status --short` for unstaged, staged, or untracked local changes. Include those local changes in the review when they are part of the user's requested current work.
+   - Prefer diff stats and targeted diff reads over dumping the whole patch at once.
    - If there is no obvious scope, ask one concise question instead of guessing.
 
 3. Inspect the implementation in context.
