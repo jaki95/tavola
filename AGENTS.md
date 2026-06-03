@@ -63,6 +63,8 @@ frontend/
     types/
 ```
 
+Planning documents should live in `docs/plans/`.
+
 ## Commands
 
 These commands may change as the repository evolves. Keep this section updated
@@ -81,7 +83,6 @@ Frontend:
 - Run development server: `cd frontend && npm run dev`
 - Run tests: `cd frontend && npm test`
 - Run linting: `cd frontend && npm run lint`
--
 
 ## Architecture Principles
 
