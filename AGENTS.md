@@ -169,6 +169,9 @@ For meaningful changes, add or update focused tests.
 
 If tests cannot be run, explain exactly what was not run and why.
 
+After scaffold or cross-service workflow changes, run the checklist in
+`docs/scaffold-smoke-check.md` and report any unchecked items.
+
 ## Agent Workflow
 
 - Read the relevant files before changing code.
