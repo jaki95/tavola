@@ -226,6 +226,14 @@ that can read backend health without coupling UI components to transport details
 - The frontend can call the backend health endpoint through an API client.
 - `cd frontend && npm test` and `cd frontend && npm run build` pass.
 
+**Implementation Note**: Sprint 3 completed on 2026-06-04. The frontend now has
+a typed health API client with predictable error values, a local Vite `/api`
+proxy to the backend, a Tavola storefront workspace shell with planned catalog,
+basket, and checkout navigation, explicit backend loading/success/error status
+states, and focused Vitest coverage for app and health-client behavior. Live
+browser verification confirmed the shell reaches `GET /api/health` through the
+Vite proxy and displays the connected backend state.
+
 ### Task 3.1: Create Frontend API Client
 
 - **Location**: `frontend/src/api/client.ts`, `frontend/src/api/health.ts`,
