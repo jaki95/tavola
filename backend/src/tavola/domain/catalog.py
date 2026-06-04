@@ -62,6 +62,10 @@ class DietaryFacets:
     is_gluten_free: bool = False
     contains_alcohol: bool = False
 
+    def __post_init__(self) -> None:
+        if self.is_vegan and not self.is_vegetarian:
+            raise ValueError("vegan SKUs must also be vegetarian")
+
 
 @dataclass(frozen=True, slots=True)
 class CatalogSku:

@@ -55,6 +55,11 @@ def test_catalog_sku_keeps_customer_facing_catalog_data() -> None:
     assert sku.is_available is True
 
 
+def test_dietary_facets_reject_vegan_without_vegetarian() -> None:
+    with pytest.raises(ValueError, match="vegan SKUs must also be vegetarian"):
+        DietaryFacets(is_vegan=True, is_vegetarian=False)
+
+
 @pytest.mark.parametrize(
     ("amount_minor", "currency", "message"),
     [
