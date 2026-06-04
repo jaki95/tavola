@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { formatBasketMoney } from "../basket/basketFormat";
 import { getCatalogImageAsset } from "../catalog/catalogImages";
@@ -13,6 +13,7 @@ import { usePlanner, type PlannerClient } from "./usePlanner";
 type PlannerWorkspaceProps = {
   basket: Basket | null;
   onBasketAccepted: (basket: Basket) => void;
+  onProposalReadyChange?: (isProposalReady: boolean) => void;
   client?: PlannerClient;
 };
 
@@ -25,6 +26,7 @@ const examplePrompts = [
 export function PlannerWorkspace({
   basket,
   onBasketAccepted,
+  onProposalReadyChange,
   client
 }: PlannerWorkspaceProps) {
   const planner = usePlanner({ client });
@@ -37,6 +39,12 @@ export function PlannerWorkspace({
   const isPlannerUnavailable =
     planner.plannerStatus.status === "disabled" ||
     planner.plannerStatus.status === "error";
+  const hasReviewableProposal =
+    planner.state.status === "proposal_ready" && Boolean(planner.draftProposal);
+
+  useEffect(() => {
+    onProposalReadyChange?.(hasReviewableProposal);
+  }, [hasReviewableProposal, onProposalReadyChange]);
 
   async function submitPrompt(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

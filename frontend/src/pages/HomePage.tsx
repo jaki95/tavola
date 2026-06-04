@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import {
   StorefrontWorkflowTabs,
@@ -18,11 +18,31 @@ export function HomePage() {
   const basket = useBasket();
   const [activeWorkflow, setActiveWorkflow] =
     useState<StorefrontWorkflow>("shop");
+  const activeWorkflowRef = useRef(activeWorkflow);
+  const [hasUnseenPlanProposal, setHasUnseenPlanProposal] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const isBasketMutationPending = basket.mutation.status === "pending";
   const isBasketUpdating =
     isBasketMutationPending || basket.basket.status === "loading";
   const basketQuantities = getBasketQuantities(basket.basket.basket);
+  const selectWorkflow = useCallback((workflow: StorefrontWorkflow) => {
+    activeWorkflowRef.current = workflow;
+    setActiveWorkflow(workflow);
+
+    if (workflow === "plan") {
+      setHasUnseenPlanProposal(false);
+    }
+  }, []);
+  const handleProposalReadyChange = useCallback((isProposalReady: boolean) => {
+    if (!isProposalReady) {
+      setHasUnseenPlanProposal(false);
+      return;
+    }
+
+    if (activeWorkflowRef.current === "shop") {
+      setHasUnseenPlanProposal(true);
+    }
+  }, []);
 
   return (
     <div className="site-shell">
@@ -31,7 +51,7 @@ export function HomePage() {
           <div className="top-bar__brand-area">
             <button
               className="brand-mark brand-mark--compact"
-              onClick={() => setActiveWorkflow("shop")}
+              onClick={() => selectWorkflow("shop")}
               type="button"
             >
               <span className="brand-mark__name">Tavola</span>
@@ -40,7 +60,10 @@ export function HomePage() {
           </div>
           <StorefrontWorkflowTabs
             activeWorkflow={activeWorkflow}
-            onWorkflowChange={setActiveWorkflow}
+            onWorkflowChange={selectWorkflow}
+            planBadgeLabel={
+              hasUnseenPlanProposal ? "Proposal ready" : undefined
+            }
           />
         </div>
       </header>
@@ -72,6 +95,7 @@ export function HomePage() {
               <PlannerWorkspace
                 basket={basket.basket.basket}
                 onBasketAccepted={basket.applyBasket}
+                onProposalReadyChange={handleProposalReadyChange}
               />
             </section>
           </div>

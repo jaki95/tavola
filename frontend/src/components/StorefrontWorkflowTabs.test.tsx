@@ -53,4 +53,20 @@ describe("StorefrontWorkflowTabs", () => {
       "true"
     );
   });
+
+  test("shows a proposal-ready badge on the Plan tab without changing selection", () => {
+    render(
+      <StorefrontWorkflowTabs
+        activeWorkflow="shop"
+        onWorkflowChange={vi.fn()}
+        planBadgeLabel="Proposal ready"
+      />
+    );
+
+    const planTab = screen.getByRole("tab", { name: "Plan" });
+
+    expect(planTab).toHaveAttribute("aria-selected", "false");
+    expect(planTab).toHaveAccessibleDescription("Proposal ready");
+    expect(within(planTab).getByText("Proposal ready")).toBeInTheDocument();
+  });
 });
