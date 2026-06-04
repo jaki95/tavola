@@ -347,19 +347,6 @@ h1 {
   gap: 8px 16px;
 }
 
-.planner-workspace__icon {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border: 1px solid rgb(45 101 68 / 40%);
-  border-radius: 999px;
-  color: var(--color-basil);
-  font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 900;
-}
-
 .planner-workspace h2,
 .planner-proposal h3 {
   margin: 0;

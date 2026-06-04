@@ -87,9 +87,6 @@ export function PlannerWorkspace({
     >
       <div className="planner-workspace__header">
         <div className="planner-workspace__title-group">
-          <span className="planner-workspace__icon" aria-hidden="true">
-            P
-          </span>
           <div className="planner-workspace__heading-line">
             <h2 id="planner-workspace-title">Plan a menu</h2>
             <span className="planner-workspace__codex">powered by Codex</span>

@@ -265,6 +265,31 @@ supported desktop viewport.
 
 ## Sprint 3: End-to-End UX Verification
 
+**Status**: Completed June 4, 2026.
+
+**Implementation notes**:
+
+- Strengthened App-level integration coverage in `frontend/src/App.test.tsx`
+  for brand-to-Shop behavior preserving both basket and planner draft state.
+- Extended the accepted planner proposal flow to switch back to Shop and prove
+  catalog browsing/add-to-basket remains available with updated basket
+  quantities.
+- Completed desktop browser verification for default Shop, sticky Basket,
+  tabbed Shop/Plan switching, catalog add success, Catalog filter/search
+  persistence with detail close-on-leave, empty Catalog results, planner
+  unavailable messaging, and clean console output.
+
+**Completed validation**:
+
+- `cd frontend && npm test -- App.test.tsx`
+- `cd frontend && npm test`
+- `cd frontend && npm run lint`
+- `cd frontend && npm run build`
+- Browser approval check at `http://127.0.0.1:5173/` with backend and frontend
+  running through the Vite proxy. Live planner proposal success could not be
+  verified in browser because the local backend reported Planner disabled; the
+  proposal acceptance path is covered by App tests with mocked planner success.
+
 **Goal**: Confirm the tabbed flow solves the cramming problem without regressing
 catalog, basket, planner, or checkout workflows.
 
