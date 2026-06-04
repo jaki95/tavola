@@ -384,7 +384,7 @@ describe("PlannerWorkspace", () => {
     expect(screen.getByRole("button", { name: "Plan menu" })).toBeEnabled();
   });
 
-  test("shows live planner mode and concise run summary", async () => {
+  test("keeps planner availability out of the primary composer when available", async () => {
     const client = createPlannerClient({
       statusResult: success({
         enabled: true,
@@ -396,8 +396,15 @@ describe("PlannerWorkspace", () => {
 
     renderPlannerWorkspace({ client });
 
-    expect(await screen.findByText("Live planner mode")).toBeInTheDocument();
-    expect(screen.getByText("Live planner is ready.")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Meal request")).toBeEnabled();
+    expect(screen.queryByText("Live planner mode")).not.toBeInTheDocument();
+    expect(screen.queryByText("Live planner is ready.")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Checks products against Tavola's catalog")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Prices calculated by Tavola")
+    ).not.toBeInTheDocument();
   });
 
   test("disables prompt submission when the planner is unavailable", async () => {
@@ -411,10 +418,10 @@ describe("PlannerWorkspace", () => {
 
     renderPlannerWorkspace({ client });
 
-    expect(await screen.findByText("Planner unavailable")).toBeInTheDocument();
     expect(
-      screen.getByText("Planner setup is incomplete.")
+      await screen.findByText("Planner setup is incomplete.")
     ).toBeInTheDocument();
+    expect(screen.queryByText("Planner unavailable")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Meal request")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Plan menu" })).toBeDisabled();
     expect(

@@ -55,6 +55,9 @@ describe("BasketPanel", () => {
     expect(
       within(panel).getByRole("heading", { level: 2, name: "Basket" })
     ).toBeInTheDocument();
+    expect(
+      within(panel).queryByText("Basket", { selector: ".eyebrow" })
+    ).not.toBeInTheDocument();
     expect(within(panel).getByText("Your basket is empty.")).toBeInTheDocument();
     expect(
       within(panel).getByText("Add products from the catalog to start your basket.")
