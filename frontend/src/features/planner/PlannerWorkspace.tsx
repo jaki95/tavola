@@ -33,6 +33,7 @@ export function PlannerWorkspace({
   const [isConfirmingReplace, setIsConfirmingReplace] = useState(false);
   const isPlanning = planner.state.status === "loading";
   const isAcceptPending = planner.state.status === "accept_pending";
+  const isAccepted = planner.state.status === "accepted";
 
   async function submitPrompt(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,7 +48,7 @@ export function PlannerWorkspace({
   }
 
   async function acceptProposal(mode: AcceptMenuProposalMode) {
-    if (!basket || isAcceptPending) {
+    if (!basket || isAcceptPending || isAccepted) {
       return;
     }
 
@@ -164,6 +165,7 @@ export function PlannerWorkspace({
       {planner.draftProposal ? (
         <ProposalReview
           basket={basket}
+          isAccepted={isAccepted}
           isAcceptPending={isAcceptPending}
           isConfirmingReplace={isConfirmingReplace}
           proposal={planner.draftProposal}
@@ -180,6 +182,7 @@ export function PlannerWorkspace({
 function ProposalReview({
   basket,
   proposal,
+  isAccepted,
   isAcceptPending,
   isConfirmingReplace,
   onAccept,
@@ -189,6 +192,7 @@ function ProposalReview({
 }: {
   basket: Basket | null;
   proposal: MenuProposal;
+  isAccepted: boolean;
   isAcceptPending: boolean;
   isConfirmingReplace: boolean;
   onAccept: (mode: AcceptMenuProposalMode) => void;
@@ -201,6 +205,7 @@ function ProposalReview({
     currency: proposal.currency
   });
   const basketHasLines = Boolean(basket && basket.lines.length > 0);
+  const actionsDisabled = isAcceptPending || isAccepted;
 
   return (
     <div className="planner-proposal" aria-label="Menu proposal">
@@ -244,7 +249,8 @@ function ProposalReview({
             <ul className="planner-course__lines">
               {course.lines.map((line) => (
                 <ProposalLineItem
-                  isPending={isAcceptPending}
+                  canRemove={course.lines.length > 1}
+                  isDisabled={actionsDisabled}
                   key={line.sku_id}
                   line={line}
                   onRemoveLine={onRemoveLine}
@@ -261,7 +267,7 @@ function ProposalReview({
           <p>This will replace the current basket.</p>
           <div>
             <button
-              disabled={isAcceptPending}
+              disabled={actionsDisabled}
               onClick={() => onAccept("replace")}
               type="button"
             >
@@ -269,7 +275,7 @@ function ProposalReview({
             </button>
             <button
               className="planner-action--secondary"
-              disabled={isAcceptPending}
+              disabled={actionsDisabled}
               onClick={onCancelReplace}
               type="button"
             >
@@ -281,7 +287,7 @@ function ProposalReview({
 
       <div className="planner-proposal__actions">
         <button
-          disabled={isAcceptPending || proposal.line_count === 0 || !basket}
+          disabled={actionsDisabled || proposal.line_count === 0 || !basket}
           onClick={() => onAccept("append")}
           type="button"
         >
@@ -290,7 +296,7 @@ function ProposalReview({
         <button
           className="planner-action--secondary"
           disabled={
-            isAcceptPending ||
+            actionsDisabled ||
             proposal.line_count === 0 ||
             !basket ||
             (basketHasLines && isConfirmingReplace)
@@ -307,12 +313,14 @@ function ProposalReview({
 
 function ProposalLineItem({
   line,
-  isPending,
+  canRemove,
+  isDisabled,
   onRemoveLine,
   onSetLineQuantity
 }: {
   line: MenuProposalLine;
-  isPending: boolean;
+  canRemove: boolean;
+  isDisabled: boolean;
   onRemoveLine: (skuId: string) => void;
   onSetLineQuantity: (skuId: string, quantity: number) => void;
 }) {
@@ -357,7 +365,7 @@ function ProposalLineItem({
           <label>
             <span>Quantity for {line.name}</span>
             <input
-              disabled={isPending}
+              disabled={isDisabled}
               inputMode="numeric"
               min={1}
               onBlur={(event) => updateQuantity(event.currentTarget.value)}
@@ -368,7 +376,7 @@ function ProposalLineItem({
           </label>
           <button
             className="planner-action--secondary"
-            disabled={isPending}
+            disabled={isDisabled || !canRemove}
             onClick={() => onRemoveLine(line.sku_id)}
             type="button"
           >

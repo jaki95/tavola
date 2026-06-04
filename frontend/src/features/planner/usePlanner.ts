@@ -131,7 +131,8 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
         return;
       }
 
-      setState({ status: "loading", session: currentSession, message: null });
+      setDraftProposal(null);
+      setState({ status: "loading", session: null, message: null });
       const result = await client.createSession({ message: trimmedMessage });
 
       if (result.ok) {
@@ -141,7 +142,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
 
       setState({
         status: "failed",
-        session: currentSession,
+        session: null,
         message: result.error.message
       });
     },
@@ -199,7 +200,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
 
   const removeLine = useCallback((skuId: string) => {
     setDraftProposal((proposal) =>
-      proposal ? recalculateProposal(removeProposalLine(proposal, skuId)) : proposal
+      proposal ? recalculateProposal(removeProposalLineIfCourseRemains(proposal, skuId)) : proposal
     );
   }, []);
 
@@ -234,6 +235,10 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
       basketId: string,
       mode: AcceptMenuProposalMode
     ): Promise<Basket | null> => {
+      if (state.status === "accepted" || state.status === "accept_pending") {
+        return null;
+      }
+
       if (!currentSession || !draftProposal) {
         setState({
           status: "validation_error",
@@ -272,7 +277,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
       });
       return result.data.basket;
     },
-    [client, currentSession, draftProposal]
+    [client, currentSession, draftProposal, state.status]
   );
 
   const hasProposalLines = useMemo(
@@ -315,7 +320,17 @@ function updateProposalLineQuantity(
   };
 }
 
-function removeProposalLine(proposal: MenuProposal, skuId: string): MenuProposal {
+function removeProposalLineIfCourseRemains(
+  proposal: MenuProposal,
+  skuId: string
+): MenuProposal {
+  const targetCourse = proposal.courses.find((course) =>
+    course.lines.some((line) => line.sku_id === skuId)
+  );
+  if (!targetCourse || targetCourse.lines.length <= 1) {
+    return proposal;
+  }
+
   return {
     ...proposal,
     courses: proposal.courses

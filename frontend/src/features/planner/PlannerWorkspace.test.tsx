@@ -95,6 +95,36 @@ const proposal: MenuProposal = {
   warnings: ["Budget is approximate; Tavola priced the final items."]
 };
 
+const pairedAntipastoProposal: MenuProposal = {
+  ...proposal,
+  courses: proposal.courses.map((course) =>
+    course.course === "antipasto"
+      ? {
+          ...course,
+          lines: [
+            ...course.lines,
+            {
+              sku_id: "focaccia-genovese-slab",
+              name: "Focaccia Genovese",
+              category_id: "antipasti",
+              category_label: "Antipasti",
+              unit_label: "slab",
+              quantity: 1,
+              unit_price_minor: 650,
+              line_total_minor: 650,
+              currency: "GBP",
+              image_id: "focaccia-genovese-slab",
+              rationale: "Soft bread rounds out the antipasto plate."
+            }
+          ]
+        }
+      : course
+  ),
+  total_minor: 3495,
+  item_count: 8,
+  line_count: 4
+};
+
 const readySession: PlannerSessionResponse = {
   planner_session_id: "planner-1",
   status: "proposal_ready",
@@ -103,6 +133,11 @@ const readySession: PlannerSessionResponse = {
   follow_up_question: null,
   menu_proposal: proposal,
   validation_errors: []
+};
+
+const pairedAntipastoSession: PlannerSessionResponse = {
+  ...readySession,
+  menu_proposal: pairedAntipastoProposal
 };
 
 const needsInputSession: PlannerSessionResponse = {
@@ -233,7 +268,7 @@ describe("PlannerWorkspace", () => {
 
   test("edits quantities and removes proposal lines before acceptance", async () => {
     const client = createPlannerClient({
-      createResults: [success(readySession)]
+      createResults: [success(pairedAntipastoSession)]
     });
 
     renderPlannerWorkspace({ client });
@@ -254,11 +289,26 @@ describe("PlannerWorkspace", () => {
     expect(within(tagliatelleLine).getByText("£12.75")).toBeInTheDocument();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Remove Tiramisu Cup from proposal" })
+      screen.getByRole("button", { name: "Remove Focaccia Genovese from proposal" })
     );
 
-    expect(screen.queryByText("Tiramisu Cup")).not.toBeInTheDocument();
-    expect(screen.getByText("£17.70")).toBeInTheDocument();
+    expect(screen.queryByText("Focaccia Genovese")).not.toBeInTheDocument();
+    expect(screen.getByText("£32.70")).toBeInTheDocument();
+  });
+
+  test("does not allow removing the final item from a package course", async () => {
+    const client = createPlannerClient({
+      createResults: [success(readySession)]
+    });
+
+    renderPlannerWorkspace({ client });
+    submitReadyPrompt();
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Remove Tiramisu Cup from proposal"
+      })
+    ).toBeDisabled();
   });
 
   test("accepts a proposal by appending it to the basket", async () => {
@@ -286,6 +336,8 @@ describe("PlannerWorkspace", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Menu proposal added to your basket."
     );
+    expect(screen.getByRole("button", { name: "Add to basket" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Replace basket" })).toBeDisabled();
   });
 
   test("requires confirmation before replacing a non-empty basket", async () => {

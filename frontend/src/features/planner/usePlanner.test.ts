@@ -94,6 +94,36 @@ const proposal: MenuProposal = {
   warnings: []
 };
 
+const pairedAntipastoProposal: MenuProposal = {
+  ...proposal,
+  courses: proposal.courses.map((course) =>
+    course.course === "antipasto"
+      ? {
+          ...course,
+          lines: [
+            ...course.lines,
+            {
+              sku_id: "focaccia-genovese-slab",
+              name: "Focaccia Genovese",
+              category_id: "antipasti",
+              category_label: "Antipasti",
+              unit_label: "slab",
+              quantity: 1,
+              unit_price_minor: 650,
+              line_total_minor: 650,
+              currency: "GBP",
+              image_id: "focaccia-genovese-slab",
+              rationale: "Soft bread rounds out the antipasto plate."
+            }
+          ]
+        }
+      : course
+  ),
+  total_minor: 3495,
+  item_count: 8,
+  line_count: 4
+};
+
 const readySession: PlannerSessionResponse = {
   planner_session_id: "planner-1",
   status: "proposal_ready",
@@ -102,6 +132,11 @@ const readySession: PlannerSessionResponse = {
   follow_up_question: null,
   menu_proposal: proposal,
   validation_errors: []
+};
+
+const pairedAntipastoSession: PlannerSessionResponse = {
+  ...readySession,
+  menu_proposal: pairedAntipastoProposal
 };
 
 const needsInputSession: PlannerSessionResponse = {
@@ -213,6 +248,36 @@ describe("usePlanner", () => {
     expect(result.current.state.status).toBe("proposal_ready");
   });
 
+  test("clears a stale proposal when a new planner request fails", async () => {
+    const client = createPlannerClient({
+      createResults: [
+        success(readySession),
+        {
+          ok: false,
+          error: {
+            kind: "http",
+            status: 503,
+            message: "Planner is not configured for this environment."
+          }
+        }
+      ]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4 around £50");
+    });
+
+    expect(result.current.draftProposal?.title).toBe("Vegetarian dinner for four");
+
+    await act(async () => {
+      await result.current.submitPrompt("A birthday lunch for 8");
+    });
+
+    expect(result.current.state.status).toBe("failed");
+    expect(result.current.draftProposal).toBeNull();
+  });
+
   test("keeps proposal edits local until validation", async () => {
     const normalizedProposal: MenuProposal = {
       ...proposal,
@@ -269,7 +334,7 @@ describe("usePlanner", () => {
 
   test("removes proposal lines locally and surfaces validation errors", async () => {
     const client = createPlannerClient({
-      createResults: [success(readySession)],
+      createResults: [success(pairedAntipastoSession)],
       validateResults: [
         {
           ok: false,
@@ -288,11 +353,11 @@ describe("usePlanner", () => {
     });
 
     act(() => {
-      result.current.removeLine("tiramisu-cup-single");
+      result.current.removeLine("focaccia-genovese-slab");
     });
 
-    expect(result.current.draftProposal?.line_count).toBe(2);
-    expect(result.current.draftProposal?.item_count).toBe(3);
+    expect(result.current.draftProposal?.line_count).toBe(3);
+    expect(result.current.draftProposal?.item_count).toBe(7);
 
     await act(async () => {
       await result.current.validateProposal();
@@ -300,6 +365,27 @@ describe("usePlanner", () => {
 
     expect(result.current.state.status).toBe("validation_error");
     expect(result.current.state.message).toBe("One item is no longer available.");
+  });
+
+  test("keeps the final line in each package course", async () => {
+    const client = createPlannerClient({
+      createResults: [success(readySession)]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4 around £50");
+    });
+
+    act(() => {
+      result.current.removeLine("tiramisu-cup-single");
+    });
+
+    expect(result.current.draftProposal?.line_count).toBe(3);
+    expect(
+      result.current.draftProposal?.courses.find((course) => course.course === "dessert")
+        ?.lines
+    ).toHaveLength(1);
   });
 
   test("accepts a proposal into the selected basket mode", async () => {
@@ -326,6 +412,30 @@ describe("usePlanner", () => {
       menu_proposal: proposal
     });
     expect(acceptedBasket).toEqual(updatedBasket);
+    expect(result.current.state.status).toBe("accepted");
+  });
+
+  test("does not accept the same proposal again after it is accepted", async () => {
+    const client = createPlannerClient({
+      createResults: [success(readySession)],
+      acceptResults: [
+        success({ basket: updatedBasket, meal_plan_grouping: mealPlanGrouping })
+      ]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4 around £50");
+    });
+
+    await act(async () => {
+      await result.current.acceptProposal("basket-1", "append");
+    });
+    await act(async () => {
+      await result.current.acceptProposal("basket-1", "append");
+    });
+
+    expect(client.acceptProposal).toHaveBeenCalledTimes(1);
     expect(result.current.state.status).toBe("accepted");
   });
 
