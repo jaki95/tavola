@@ -78,6 +78,11 @@ of the meal plan after accepting it. This metadata should preserve context such
 as "Dinner for 4" with Antipasto, Primo, and Dessert sections, while SKU lines
 remain the source of pricing and checkout truth.
 
+Checkout should allow future order summaries to preserve optional meal-plan
+grouping metadata copied from a basket, while order lines remain the source of
+pricing truth. The mock checkout slice does not need to introduce grouping data
+before the planner exists.
+
 ## Scope
 
 Tavola should stay intentionally small.
@@ -133,6 +138,16 @@ Use these terms consistently when shaping the codebase:
 - Basket quantity: A positive integer count of sellable SKU units on a basket
   line.
 - Checkout: The mock process that finalizes a basket into a demonstration order.
+- Contact details: The name and email submitted during checkout for one order;
+  they are not a customer account or reusable customer profile.
+- Order: A pickup-only demonstration record created by checkout from a basket;
+  it is not payment or fulfillment state.
+- Order ID: A generated customer-facing confirmation reference for one order;
+  it does not imply order lookup or order management.
+- Order line: A checkout-time snapshot of one SKU line on an order, including
+  quantity and customer-facing price details.
+- Pickup window: A backend-defined customer-facing pickup choice for mock
+  checkout; it is not a capacity reservation or live schedule.
 - Planner session: A bounded AI-assisted workflow for turning a meal request
   into a proposed basket.
 - Menu proposal: The planner's suggested meal or occasion plan before final SKU
@@ -255,8 +270,45 @@ The per-line maximum is a basket validation rule, not catalog browsing copy. The
 first catalog UI should not display quantity limits before basket editing exists.
 
 Checkout should create an in-memory demonstration order for pickup only. It
-should require customer name, email, and a backend-defined pickup window. Payment,
+should require contact details and a backend-defined pickup window. Payment,
 shipping, delivery, and customer accounts remain out of scope.
+
+Contact detail validation is intentionally lightweight: require a non-blank name
+and an email value with text before and after `@`. Do not add deliverability
+checks, strict email parsing, phone numbers, addresses, or marketing consent in
+the first version.
+
+Pickup windows are static demonstrator choices with stable IDs and
+customer-facing labels. They do not use calendar logic, capacity checks, opening
+hours, or inventory reservation.
+
+The frontend displays pickup windows provided by the backend and submits the
+selected pickup window ID during checkout. The backend validates the ID and
+stores the selected pickup window label on the order snapshot.
+
+After a successful checkout, the checkout creates an order snapshot and leaves
+the customer's current basket empty. The first version does not model a separate
+checked-out basket lifecycle.
+
+An order may keep the originating basket ID as provenance, but the basket remains
+the customer's current editable basket rather than becoming order state.
+
+An order ID may be shown on the checkout confirmation as a receipt-like
+reference. The first version does not let customers retrieve, manage, or update
+orders by order ID after the confirmation flow.
+
+Checkout validates basket line SKU identities against the current backend
+catalog before creating an order. The seed catalog prices are static for the
+demonstrator, but order lines still store customer-facing SKU and price snapshots
+from checkout time.
+
+The first checkout API is a checkout workflow, not an order-management surface.
+It creates an order for confirmation but does not expose order history, order
+status changes, or customer order lookup.
+
+Customer-facing checkout copy should present a practical pickup order flow. Do
+not ask the customer to handle payment, and do not foreground implementation
+scope with phrases such as "mock payment" or "continue without payment."
 
 ## Catalog Metadata
 
