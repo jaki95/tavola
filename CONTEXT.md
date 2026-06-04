@@ -129,6 +129,9 @@ Use these terms consistently when shaping the codebase:
   Primi, Desserts, Drinks, or Pantry. Each product has exactly one primary
   category.
 - Basket: The customer's current collection of intended purchases.
+- Basket line: A single SKU entry in a basket with a customer-selected quantity.
+- Basket quantity: A positive integer count of sellable SKU units on a basket
+  line.
 - Checkout: The mock process that finalizes a basket into a demonstration order.
 - Planner session: A bounded AI-assisted workflow for turning a meal request
   into a proposed basket.
@@ -148,6 +151,11 @@ Initial product/SKU relationship:
 - Customers browse products.
 - Each initial product has exactly one SKU.
 - Basket, checkout, and planner validation reference SKUs, not products.
+- A basket has at most one basket line per SKU; adding the same SKU again merges
+  into the existing line by increasing its quantity.
+- Basket lines store SKU identity and quantity; customer-facing SKU details and
+  prices are resolved from the current backend catalog when a basket is
+  displayed or validated.
 - Catalog APIs may expose customer-facing product data with a `sku_id` because
   the SKU is the stable basket identity.
 - Basket quantities count SKU units. For example, quantity `2` of Fresh
