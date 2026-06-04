@@ -5,16 +5,16 @@ export type BackendStatus =
 
 const statusCopy = {
   loading: {
-    label: "Checking backend",
+    label: "Checking service",
     detail: "Waiting for the health check."
   },
   success: {
-    label: "Backend connected",
-    detail: "Tavola API is ready."
+    label: "Service ready",
+    detail: "Tavola API ready."
   },
   error: {
-    label: "Backend unavailable",
-    detail: "Catalog, basket, and checkout data will reconnect here."
+    label: "Service unavailable",
+    detail: "Catalog and basket data will reconnect here."
   }
 } as const;
 
@@ -26,7 +26,7 @@ export function BackendStatusPanel({ status }: BackendStatusPanelProps) {
   const copy = statusCopy[status.state];
   const detail =
     status.state === "success" && status.serviceName
-      ? `${status.serviceName} is ready.`
+      ? `${status.serviceName} ready.`
       : status.state === "error" && status.message
         ? status.message
         : copy.detail;
@@ -34,7 +34,7 @@ export function BackendStatusPanel({ status }: BackendStatusPanelProps) {
 
   return (
     <section
-      aria-label="Backend status"
+      aria-label="Service status"
       className={`status-panel status-panel--${status.state}`}
       role={liveRegionRole}
     >

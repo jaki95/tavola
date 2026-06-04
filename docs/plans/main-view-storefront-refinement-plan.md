@@ -1,7 +1,9 @@
 # Plan: Main View Storefront Refinement
 
 **Generated**: 2026-06-04
+**Last Updated**: 2026-06-04
 **Estimated Complexity**: Medium
+**Status**: Implemented
 
 ## Overview
 
@@ -32,6 +34,45 @@ Clarifying assumptions for this plan:
   should not be replaced by new "mock checkout" copy in this slice.
 - No external documentation lookup is needed because this is a local React/CSS
   layout refinement using existing dependencies.
+
+## Implementation Summary
+
+Implemented on 2026-06-04 as a frontend-only storefront refinement.
+
+- Removed the Catalog/Basket/Checkout workflow pills from the top bar.
+- Moved backend health into a compact `Service status` indicator in the top bar,
+  preserving `role=status` for loading/success and `role=alert` for errors.
+- Replaced the floating header treatment with a full-width, non-sticky top bar.
+- Added a small circular Tavola brand mark to the header. The mark echoes the
+  previous circular motif, uses a stronger tomato ring, and avoids badge-like
+  red dot decoration.
+- Removed the large "Storefront workspace" intro card and preserved the
+  decorative circle only as a subtle page accent.
+- Combined the catalog title copy and filters into one compact catalog controls
+  surface instead of separate stacked cards.
+- Moved product count metadata to the results edge above the product grid.
+- Replaced implementation-facing empty basket copy with customer-facing shopping
+  language.
+- Kept API clients, basket use case wiring, catalog data flow, product card
+  structure, and backend contracts unchanged.
+
+Validation completed:
+
+- `cd frontend && npm test`
+- `cd frontend && npm run lint`
+- `cd frontend && npm run build`
+- Browser visual checks with the Codex in-app Browser at a `1280x720` viewport,
+  which is stricter than the planned laptop-height check. Verified the full-width
+  static header bar, compact service status, combined catalog controls, count
+  above results, basket visibility, no workflow pills, no intro card, first-row
+  product visibility, and error-state visibility during the implementation pass.
+
+Known validation note:
+
+- The Browser plugin's text-entry helper intermittently failed because its
+  virtual clipboard was unavailable. Catalog search and basket behavior remained
+  covered by the passing frontend tests; browser verification focused on the
+  layout and visible states that this plan changed.
 
 ## Prerequisites
 
@@ -65,6 +106,8 @@ bring catalog products into view immediately.
 
 ### Task 1.1: Remove Workflow Pill Navigation From The Home Page
 
+**Status**: Completed.
+
 - **Location**: `frontend/src/pages/HomePage.tsx`
 - **Description**: Remove `workflowItems` and the `primary-nav` rendering from
   the top bar. Point the brand link at `#catalog-title` so it returns the
@@ -78,8 +121,14 @@ bring catalog products into view immediately.
 - **Validation**:
   - Update `frontend/src/App.test.tsx` expectations that currently assert the
     navigation links and disabled checkout button.
+- **Implementation Notes**:
+  - Removed `workflowItems` and `primary-nav`.
+  - Brand link now targets `#catalog-title`.
+  - Added a constrained `.top-bar__inner` inside a full-width `.top-bar`.
 
 ### Task 1.2: Convert Backend Status Into A Compact Top-Bar Indicator
+
+**Status**: Completed.
 
 - **Location**:
   - `frontend/src/pages/HomePage.tsx`
@@ -100,8 +149,15 @@ bring catalog products into view immediately.
   - Update backend status tests in `frontend/src/App.test.tsx`.
   - Manually verify mocked loading, success, and error states in the browser or
     through a focused component render.
+- **Implementation Notes**:
+  - Status copy now uses customer-facing service language: "Checking service",
+    "Service ready", and "Service unavailable".
+  - `BackendStatusPanel` remains typed around `BackendStatus` and remains
+    accessible through the `Service status` label.
 
 ### Task 1.3: Remove The Storefront Workspace Card
+
+**Status**: Completed.
 
 - **Location**:
   - `frontend/src/pages/HomePage.tsx`
@@ -128,8 +184,16 @@ bring catalog products into view immediately.
   - Update `frontend/src/App.test.tsx` if the `h1` location or accessible name
     changes.
   - Browser-check that no decorative element overlaps catalog or basket content.
+- **Implementation Notes**:
+  - Removed the `workspace-intro` section and renamed touched top-level
+    storefront classes.
+  - Catalog now owns the opening `h1`.
+  - The decorative circle moved to a subtle non-interactive page pseudo-element.
+  - A smaller circular brand mark was later added to the header.
 
 ### Task 1.4: Tighten The Catalog Browser Header
+
+**Status**: Completed.
 
 - **Location**:
   - `frontend/src/features/catalog/CatalogBrowser.tsx`
@@ -148,8 +212,15 @@ bring catalog products into view immediately.
   - Run catalog feature tests under `frontend/src/features/catalog/`.
   - Browser-check catalog loading, successful product display, empty filter
     results, and catalog error state.
+- **Implementation Notes**:
+  - Catalog title copy and filters now share one compact controls surface.
+  - Product count moved out of the heading area and into a results bar above the
+    grid.
+  - The count remains `aria-live="polite"`.
 
 ### Task 1.5: Rebalance The Commerce Grid Around Catalog And Basket
+
+**Status**: Completed.
 
 - **Location**: `frontend/src/styles.css`
 - **Description**: Adjust spacing, top margins, grid columns, and sticky/visual
@@ -169,8 +240,17 @@ bring catalog products into view immediately.
 - **Validation**:
   - Browser-check `1366x768` or equivalent desktop viewport.
   - Add or update component tests only if markup or accessibility names change.
+- **Implementation Notes**:
+  - Reduced top spacing and column gap while preserving the existing two-column
+    catalog/basket relationship.
+  - Existing basket sticky behavior was already present before this plan; no new
+    sticky-scroll behavior was introduced during this slice.
+  - Browser validation used `1280x720`, where the catalog heading, controls,
+    basket, and a substantial portion of the first product row were visible.
 
 ### Task 1.6: Remove Backend Language From Basket Empty Copy
+
+**Status**: Completed.
 
 - **Location**: `frontend/src/features/basket/BasketPanel.tsx`
 - **Description**: Replace implementation-facing empty basket copy with customer
@@ -184,6 +264,9 @@ bring catalog products into view immediately.
 - **Validation**:
   - Run `frontend/src/features/basket/BasketPanel.test.tsx`.
   - Browser-check the empty basket state in the first viewport.
+- **Implementation Notes**:
+  - Empty basket copy now reads: "Add products from the catalog to start your
+    basket."
 
 ## Testing Strategy
 
@@ -206,8 +289,8 @@ bring catalog products into view immediately.
 - Removing the workflow navigation may remove useful anchor jumps. Mitigation:
   keep brand or skip-style linking to the main catalog area if needed.
 - Reducing intro copy could make the demonstrator less self-explanatory.
-  Mitigation: keep a concise catalog-adjacent line that says products are real
-  deli SKUs and the basket is backend-owned.
+  Mitigation: keep concise catalog-adjacent copy that says customers can browse
+  real deli products and add picks to the basket.
 - The first viewport target can vary by browser chrome and dev tools. Mitigation:
   validate at a named desktop viewport and report the exact size used.
 - CSS spacing changes may accidentally affect catalog detail modal, empty state,
