@@ -56,6 +56,10 @@ flow.
   validation.
 - Accepting a menu proposal is terminal for that planner session's current
   proposal; duplicate accept attempts should be rejected.
+- Future planner UI work should use the compact planner-band visual direction
+  from `docs/plans/tavola-visual-style-refresh-plan.md` and
+  `docs/plans/assets/tavola-planner-band-visual-reference.png`; that visual
+  refresh does not mean planner behavior has already been implemented.
 - Runtime image generation, real payments, accounts, inventory reservation,
   recipe instructions, and exact serving guarantees remain out of scope.
 
@@ -533,6 +537,9 @@ before basket mutation.
   - Planner empty/input state is a compact first-viewport band that still leaves
     at least part of the first catalog product row visible on the supported
     desktop viewport.
+  - Planner styling follows the visual refresh's warm paper canvas, red serif
+    hierarchy, thin hairlines, restrained controls, and calm basket/catalog
+    composition without reworking the catalog, basket, or checkout contracts.
   - Planner may expand after a menu proposal is ready for review.
   - Basket updates after accepted proposals without a full page reload.
   - Existing catalog add-to-basket and checkout flows still work.
