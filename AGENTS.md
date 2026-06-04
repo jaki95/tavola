@@ -147,6 +147,9 @@ when a small client/service abstraction would keep the UI easier to change.
 ## Frontend Guidance
 
 - Write frontend code in TypeScript.
+- Treat Tavola as a desktop-first demonstrator. Do not design or test
+  mobile-specific layouts, breakpoints, or interactions unless explicitly
+  requested.
 - Keep user workflows efficient and easy to scan.
 - Make loading, empty, error, and success states explicit for user-facing flows.
 - Do not hide critical user-facing state inside purely visual components.

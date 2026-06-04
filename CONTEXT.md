@@ -92,9 +92,11 @@ In scope:
 - Planner sessions that produce validated basket proposals.
 - Deterministic validation before cart mutation.
 - Static generated catalog imagery for the seed inventory.
+- Desktop browser experience for the demonstrator.
 
 Out of scope unless explicitly requested:
 
+- Mobile-specific layout and interaction design.
 - Real payment processing.
 - Real shipping, fulfillment, or delivery integrations.
 - Customer accounts and loyalty systems.
@@ -109,15 +111,31 @@ Out of scope unless explicitly requested:
 
 Use these terms consistently when shaping the codebase:
 
-- Product: A sellable deli item as shown to customers.
-- SKU: A concrete catalog item that can be added to a basket.
-- Catalog: The set of products and SKUs available to browse or search.
+- Product: A sellable deli item as shown to customers. In the first catalog,
+  each product has exactly one SKU.
+- SKU: The concrete catalog identity that can be added to a basket and validated
+  for availability, quantity, and pricing.
+- Unit label: The required free-text customer-facing sellable unit for a SKU,
+  such as `250g`, `serves 2`, `single portion`, `750ml`, or `jar 180g`.
+- Short description: A compact customer-facing product sentence used for catalog
+  cards, scanning, and search.
+- Detail description: Richer customer-facing product copy used on the product
+  detail surface; it is not searched in the first version.
+- Catalog: The customer-facing set of available products and SKUs that can be
+  browsed or searched.
+- Seed catalog: The real static demonstrator catalog data used by Tavola's first
+  commerce flow.
+- Category: A customer-facing catalog navigation group, such as Antipasti,
+  Primi, Desserts, Drinks, or Pantry. Each product has exactly one primary
+  category.
 - Basket: The customer's current collection of intended purchases.
 - Checkout: The mock process that finalizes a basket into a demonstration order.
 - Planner session: A bounded AI-assisted workflow for turning a meal request
   into a proposed basket.
 - Menu proposal: The planner's suggested meal or occasion plan before final SKU
   validation.
+- Course: A planner or menu structure role, such as Antipasto, Primo, Dessert,
+  or Aperitivo; courses are not the same as catalog categories.
 - Package template: A planner-only course structure such as Antipasto + Primo +
   Dessert, used to shape a proposal without becoming a purchasable product.
 - Meal-plan grouping: Optional basket or order metadata that preserves the
@@ -125,12 +143,53 @@ Use these terms consistently when shaping the codebase:
 - Validated basket: A basket proposal that has passed deterministic application
   checks and is safe to present for cart creation or update.
 
+Initial product/SKU relationship:
+
+- Customers browse products.
+- Each initial product has exactly one SKU.
+- Basket, checkout, and planner validation reference SKUs, not products.
+- Catalog APIs may expose customer-facing product data with a `sku_id` because
+  the SKU is the stable basket identity.
+- Basket quantities count SKU units. For example, quantity `2` of Fresh
+  Tagliatelle with unit label `250g` means two 250g packs.
+- Unit labels are not parsed as structured measurement data in the first
+  version; exact serving guarantees and nutritional measurement logic remain out
+  of scope.
+- Customer-facing catalog browsing, search, and detail endpoints expose only
+  available products; unavailable SKUs remain relevant to deterministic basket
+  and planner validation but are not shown in the public catalog.
+
+Category/course relationship:
+
+- Customers browse by category.
+- Planner proposals are organized by course.
+- A product's category does not always determine its planner course. For
+  example, a Pantry product such as sugo may support a Primo course when paired
+  with fresh pasta.
+- Cross-category meaning belongs in tags rather than multiple categories. For
+  example, pesto remains in Pantry but may carry tags such as `pasta`, `primo`,
+  and `sauce`.
+
 ## Initial Commerce Model
 
 The first version should use a small static seed catalog served by the backend.
 Catalog items should be single sellable SKUs rather than a separate product and
 variant hierarchy. A starting catalog of 20 SKUs is enough to demonstrate
 browsing, basket editing, checkout, and later planner composition.
+
+The seed catalog is product data for the demonstrator, not incidental mock data.
+Missing unit labels, unclear descriptions, invalid image IDs, or weak tags
+should be treated as catalog data-quality issues.
+
+All 20 seed catalog SKUs are available in the first catalog slice so the
+customer-facing browseable catalog remains complete. Unavailable-SKU behavior can
+be tested with separate fixtures until real catalog availability changes are in
+scope.
+
+Each seed catalog product should meet a minimum content bar: real deli-style
+name, stable SKU slug, primary category, required unit label, GBP price, one
+sentence short description, one to two sentence detail description, at least two
+tags, dietary facet booleans, image ID, and explicit display order.
 
 Customer-facing categories should initially be:
 
@@ -140,7 +199,26 @@ Customer-facing categories should initially be:
 - Drinks.
 - Pantry.
 
-The seed catalog should roughly contain 5 Antipasti, 6 Primi, 3 Desserts, 3
+These labels are canonical customer-facing category names for the first catalog.
+Do not rename them to alternatives such as Starters, Mains, Pasta, Beverages, or
+Pantry Staples unless the product language is explicitly revisited. Search can
+use tags and descriptions to catch related words without changing category
+labels.
+
+Catalog browsing has no user-facing sort control in the first version. Results
+use backend-owned display order: categories appear as Antipasti, Primi,
+Desserts, Drinks, Pantry, and products within each category use explicit display
+order. Search preserves this curated order after filtering.
+
+Category IDs are stable lowercase URL-safe identifiers: `antipasti`, `primi`,
+`desserts`, `drinks`, and `pantry`. Category labels remain the canonical
+customer-facing names.
+
+SKU IDs use stable human-readable slugs, such as `fresh-tagliatelle-250g` or
+`pesto-genovese-180g`. They are stable identities, not values regenerated from
+display names.
+
+The seed catalog should contain exactly 5 Antipasti, 6 Primi, 3 Desserts, 3
 Drinks, and 3 Pantry items. Primi may include prepared dishes such as lasagne or
 parmigiana di melanzane as well as simple composed options such as fresh pasta
 and sauce. Drinks are contextual add-ons for planner proposals, not automatic
@@ -148,8 +226,9 @@ parts of meal packages unless the customer asks or the occasion clearly implies
 them.
 
 Prices are owned by the backend and represented as integer minor units with a
-currency, such as `unit_price_cents` and `currency`. The frontend may display
-prices, but basket and order totals must be recalculated server-side. Prices are
+currency, such as `unit_price_minor` and `currency`. The first seed catalog uses
+GBP and displays prices in pounds sterling. The frontend may display prices, but
+basket and order totals must be recalculated server-side. Prices are
 tax-inclusive for the demonstrator; no VAT breakdown is needed.
 
 The first basket model should be backend-owned, anonymous, and in memory. The
@@ -161,8 +240,11 @@ Basket validation should start with these rules:
 - SKU must exist in the catalog.
 - SKU must be available.
 - Quantity must be a positive integer.
-- Quantity must not exceed a simple per-line maximum.
+- Quantity must not exceed a simple per-line maximum of 10 units per SKU.
 - Totals are calculated by the backend from catalog prices.
+
+The per-line maximum is a basket validation rule, not catalog browsing copy. The
+first catalog UI should not display quantity limits before basket editing exists.
 
 Checkout should create an in-memory demonstration order for pickup only. It
 should require customer name, email, and a backend-defined pickup window. Payment,
@@ -175,21 +257,78 @@ search meaning.
 
 Initial hard-checkable facets should include:
 
-- Vegetarian.
-- Vegan.
-- Gluten-free.
-- Contains alcohol.
+- `is_vegetarian`.
+- `is_vegan`.
+- `is_gluten_free`.
+- `contains_alcohol`.
+
+Customer-facing labels for these facets are Vegetarian, Vegan, Gluten-free, and
+Contains alcohol.
 
 Dietary constraints declared by the customer should be enforced as deterministic
-validation rules when the required facets exist. Avoid serious allergen safety
-claims in the first version unless the catalog later gains explicit allergen
-metadata and the product intentionally accepts that responsibility.
+validation rules when the required facets exist. The `is_gluten_free` facet may
+be displayed as Gluten-free, but the first version must avoid broader allergen
+or food-safety claims such as Coeliac-safe, allergen-free, or suitable for
+specific medical needs unless the catalog later gains explicit allergen metadata
+and the product intentionally accepts that responsibility.
 
-Tags should support catalog search and planner composition. They can describe
-roles, occasions, meal moments, pairings, and uses, such as `antipasti`,
-`dinner-party`, `starter`, `picnic`, `comfort-food`, or `pairs-with-wine`. Keep
-tags lower-case and constrained; thoughtful tagging is part of the planner's
-product quality.
+Tags should support catalog search and planner composition as controlled
+discovery and planning descriptors, not as customer-facing taxonomy or hard
+validation facts. They can describe roles, occasions, meal moments, pairings,
+and uses, such as `pasta`, `sauce`, `dinner-party`, `starter`, `picnic`,
+`comfort-food`, or `pairs-with-wine`. Keep tags lower-case and constrained;
+thoughtful tagging is part of the planner's product quality.
+
+Tags may hint at a course or use, such as `primo` for a Pantry sauce that pairs
+with pasta, but deterministic dietary or availability checks must use structured
+facets and availability fields rather than tags.
+
+Raw tags are not rendered directly as customer-facing labels. If the UI needs
+visible descriptors beyond facets, use curated customer copy such as "Good for"
+phrases rather than title-casing tag values.
+
+Customer-facing catalog API responses should not expose raw tags or availability
+fields in the first catalog slice. Tags remain backend metadata for search and
+future planner support, and availability is enforced by excluding unavailable
+products from customer-facing catalog responses.
+
+Customer-facing catalog search should be deterministic and match only product
+name, primary category label, short description, tags, and positive structured
+facets such as `vegetarian`, `vegan`, `gluten-free`, and `contains-alcohol`.
+Long detail copy is not searched in the first version.
+
+Search query normalization is intentionally simple: trim leading and trailing
+whitespace, collapse internal whitespace for matching, match case-insensitively,
+and treat empty or whitespace-only queries as no query. Do not add stemming,
+fuzzy matching, typo correction, or ranking in the first version.
+
+When a search query has multiple tokens, every token must match somewhere in the
+product's combined searchable text. Token OR search is too noisy for the first
+version.
+
+The first catalog UI should show dietary facets as product badges and allow them
+to be found through text search, but it should not include dedicated dietary
+facet filter controls.
+
+Product detail should add richer product context beyond the card: detail
+description, larger image, unit label, price, and visible facets. Curated
+"good for" descriptors can be added later if detail panels need more
+customer-facing guidance. Because customer-facing catalog endpoints expose only
+available products, availability is not presented as a normal customer-facing
+detail state in the first catalog slice.
+
+Catalog browsing is inspect-only until the basket slice exists. Product cards
+and detail surfaces should not include add-to-basket buttons, disabled basket
+placeholders, or other dead purchase controls.
+
+Catalog products expose an `image_id` rather than frontend asset paths or
+backend-served image URLs. The frontend maps `image_id` values to committed
+static catalog image assets.
+
+The first customer-facing catalog API exposes products with `sku_id`, `name`,
+`category_id`, `category_label`, `unit_label`, `unit_price_minor`, `currency`,
+`short_description`, dietary facet booleans, and `image_id`. Product detail adds
+`detail_description`.
 
 ## Architectural Implications
 
@@ -210,13 +349,16 @@ the application's trusted path.
 
 The planner should access the catalog through explicit search and validation
 tools, even while the catalog is small. Search can start as deterministic lookup
-over name, category, description, structured facets, and tags. Embeddings,
-personalization, and advanced ranking are future enhancements.
+over product name, primary category label, short description, structured facets,
+and tags. Embeddings, personalization, and advanced ranking are future
+enhancements.
 
 ## Design Principles
 
 - Keep the commerce model small and legible.
 - Prefer vertical slices that demonstrate the current user flow.
+- Design desktop-first for the demonstrator. Do not add mobile-specific layouts,
+  breakpoints, or interactions unless explicitly requested.
 - Make invalid planner output repairable rather than silently accepted.
 - Keep AI suggestions explainable enough for the customer to review.
 - Preserve a clear boundary between generated ideas and validated cart changes.
