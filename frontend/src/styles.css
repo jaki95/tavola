@@ -481,20 +481,23 @@ h1 {
 
 .catalog-filters__search {
   display: grid;
-  grid-template-columns: minmax(10rem, 1fr) minmax(5.4rem, auto) minmax(7.8rem, auto);
+  grid-template-columns: minmax(0, 1fr) repeat(2, minmax(7.2rem, 7.2rem));
   align-items: end;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .catalog-filters__search-field {
   display: grid;
   gap: 6px;
+  min-width: 0;
 }
 
 .catalog-filters__search-field input {
   width: 100%;
   min-width: 0;
-  min-height: 2.25rem;
+  min-height: 2.5rem;
   padding: 0 0.8rem;
 }
 
@@ -506,6 +509,11 @@ h1 {
 }
 
 .catalog-filters__action {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.5rem;
+  padding-right: 10px;
+  padding-left: 10px;
   white-space: nowrap;
 }
 
