@@ -122,6 +122,24 @@ structure or behavior.
   - Controls remain keyboard accessible.
 - **Validation**: Component tests where available and browser keyboard check.
 
+### Sprint 1 Implementation Notes
+
+- Captured the pre-edit browser baseline at the supported desktop viewport:
+  catalog loaded with first product row visible, empty basket, populated basket,
+  product detail modal, and checkout modal. No console errors were observed in
+  those baseline states.
+- Reference checklist from the mockup: tomato-red serif brand treatment, warm
+  ivory paper canvas, thin tan/gold hairlines, compact first-viewport commerce
+  proportions, large food-led product cards, outline add buttons, calm basket
+  rail, filled tomato checkout actions, readable serif headings, and concise
+  trust/support metadata.
+- Sprint 1 CSS changes keep the current storefront structure and behavior while
+  refreshing global tokens, page texture, focus states, shared form controls,
+  primary buttons, secondary buttons, and catalog-card add actions.
+- Pre-existing visual/content concerns for later sprints: basket lines do not
+  yet include thumbnails, trust/support strips are not yet present, and product
+  detail loading/error copy can expose internal product identifiers.
+
 ## Sprint 2: App Shell And Storefront Layout
 
 **Goal**: Make the overall storefront composition match the mockup's compact,
