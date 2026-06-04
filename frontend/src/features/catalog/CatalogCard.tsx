@@ -13,13 +13,16 @@ export function CatalogCard({ product, onSelectProduct }: CatalogCardProps) {
   const dietaryBadges = formatDietaryFacetBadges(product);
 
   return (
-    <article className="catalog-card" aria-labelledby={`${product.sku_id}-name`}>
+    <article
+      className={`catalog-card catalog-card--${product.category_id}`}
+      aria-labelledby={`${product.sku_id}-name`}
+    >
       <div
         className="catalog-card__image"
         role="img"
         aria-label={`${product.name} product image`}
       >
-        <span aria-hidden="true">{product.image_id}</span>
+        <span aria-hidden="true">{formatImageId(product.image_id)}</span>
       </div>
       <div className="catalog-card__body">
         <p className="catalog-card__category">{product.category_label}</p>
@@ -47,10 +50,18 @@ export function CatalogCard({ product, onSelectProduct }: CatalogCardProps) {
             ))}
           </ul>
         ) : null}
-        <button type="button" onClick={() => onSelectProduct(product.sku_id)}>
-          View details for {product.name}
+        <button
+          aria-label={`View details for ${product.name}`}
+          type="button"
+          onClick={() => onSelectProduct(product.sku_id)}
+        >
+          View details
         </button>
       </div>
     </article>
   );
+}
+
+function formatImageId(imageId: string): string {
+  return imageId.trim().replace(/[-_]+/g, " ");
 }

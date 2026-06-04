@@ -71,7 +71,9 @@ function PopulatedDetail({ product }: { product: CatalogProductDetail }) {
   });
 
   return (
-    <article className="catalog-detail__content">
+    <article
+      className={`catalog-detail__content catalog-detail__content--${product.category_id}`}
+    >
       <CatalogImageFallback product={product} />
 
       <div className="catalog-detail__body">
