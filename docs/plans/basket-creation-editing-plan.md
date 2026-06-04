@@ -469,6 +469,8 @@ for mock pickup checkout.
 
 ### Task 5.1: Add End-To-End Manual Smoke Script
 
+**Status**: Completed on 2026-06-04.
+
 - **Location**: `docs/scaffold-smoke-check.md` or a new checklist section in
   `docs/plans/basket-creation-editing-plan.md`
 - **Description**: Document the manual browser workflow for basket creation and
@@ -485,6 +487,8 @@ for mock pickup checkout.
   any unchecked items.
 
 ### Task 5.2: Run Full Backend And Frontend Checks
+
+**Status**: Completed on 2026-06-04.
 
 - **Location**: repository root.
 - **Description**: Run the broad verification suite after the vertical slice is
