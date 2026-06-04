@@ -5,12 +5,14 @@ import { useCatalogBrowser } from "./useCatalogBrowser";
 
 type CatalogBrowserProps = {
   basketQuantities?: Record<string, number>;
+  isActive?: boolean;
   isAddPending?: boolean;
   onAddProduct?: (skuId: string, quantity: number) => void;
 };
 
 export function CatalogBrowser({
   basketQuantities = {},
+  isActive = true,
   isAddPending = false,
   onAddProduct = () => {}
 }: CatalogBrowserProps) {
@@ -27,7 +29,7 @@ export function CatalogBrowser({
     reloadCatalog,
     openDetail,
     closeDetail
-  } = useCatalogBrowser();
+  } = useCatalogBrowser({ isActive });
 
   const productCount = catalog.products.length;
   const productCountLabel =
@@ -41,7 +43,7 @@ export function CatalogBrowser({
         <div className="catalog-browser__header">
           <div className="catalog-browser__header-copy">
             <p className="eyebrow">Fresh from the counter</p>
-            <h1 id="catalog-title">Catalog</h1>
+            <h1 id="catalog-title">Shop</h1>
             <p className="catalog-browser__lede">
               Browse deli products and add your picks to the basket.
             </p>
