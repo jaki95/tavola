@@ -248,15 +248,16 @@ while keeping checkout rules outside the transport layer.
 
 ## Sprint 3: Frontend Checkout Flow
 
-**Goal**: Add a desktop checkout panel that lets customers review the basket,
-submit pickup details, and see a completed order confirmation.
+**Goal**: Add a desktop checkout modal, opened from the basket, that lets
+customers review the basket, submit pickup details, and see a completed order
+confirmation.
 
 **Demo/Validation**:
 
 - `cd frontend && npm test -- CheckoutPanel checkout useCheckout`
-- With backend and frontend running, add products to the basket, choose a pickup
-  window, submit contact details, and see an order confirmation with the basket
-  cleared.
+- With backend and frontend running, add products to the basket, open checkout
+  from the basket, choose a pickup window, submit contact details, and see an
+  order confirmation with the basket cleared.
 
 ### Task 3.1: Add Checkout Frontend Types And API Client
 
@@ -279,10 +280,10 @@ submit pickup details, and see a completed order confirmation.
 - **Location**: `frontend/src/features/checkout/useCheckout.ts`,
   `frontend/src/features/checkout/useCheckout.test.ts`
 - **Description**: Manage pickup-window loading, checkout submission state,
-  successful order state, and checkout error messages.
+  successful order state, and checkout error messages for the checkout modal.
 - **Dependencies**: Task 3.1.
 - **Acceptance Criteria**:
-  - Hook loads pickup windows when the checkout panel mounts.
+  - Hook loads pickup windows when the checkout modal mounts.
   - Hook exposes loading, success, empty, and error states for pickup windows.
   - Hook prevents submission when no basket is available or the basket is empty.
   - Hook submits contact details and basket ID through the API client.
@@ -292,16 +293,18 @@ submit pickup details, and see a completed order confirmation.
 - **Validation**: Hook tests for load success, load error, blocked empty basket,
   submit success, submit validation error, and reset behavior.
 
-### Task 3.3: Add Checkout Panel Component
+### Task 3.3: Add Checkout Modal Component
 
 - **Location**: `frontend/src/features/checkout/CheckoutPanel.tsx`,
   `frontend/src/features/checkout/CheckoutPanel.test.tsx`
-- **Description**: Render basket review, contact name/email inputs, pickup
-  window selection, submit button, errors, loading states, and completed order
-  confirmation.
+- **Description**: Render a modal dialog with basket review, contact name/email
+  inputs, pickup window selection, submit button, errors, loading states, and
+  completed order confirmation.
 - **Dependencies**: Tasks 3.1 and 3.2.
 - **Acceptance Criteria**:
-  - Empty basket state clearly blocks checkout without hiding the basket panel.
+  - Empty basket state clearly blocks checkout if the modal is reached without
+    a populated basket.
+  - Modal includes a clear way back to the basket so customers can keep editing.
   - Loading pickup windows state is visible and does not shift the surrounding
     layout unexpectedly.
   - Pickup window load errors include a retry control.
@@ -319,22 +322,23 @@ submit pickup details, and see a completed order confirmation.
 
 - **Location**: `frontend/src/pages/HomePage.tsx`,
   `frontend/src/App.test.tsx`, `frontend/src/styles.css`
-- **Description**: Add the checkout panel to the existing storefront workspace,
-  update top navigation status, and synchronize the basket returned by checkout
-  with the basket panel.
+- **Description**: Add a checkout button to the basket panel, open checkout as a
+  modal dialog in the existing storefront workspace, and synchronize the basket
+  returned by checkout with the basket panel.
 - **Dependencies**: Task 3.3.
 - **Acceptance Criteria**:
-  - Checkout navigation links to an active checkout section once the panel
-    exists.
-  - Catalog, basket, and checkout remain visible as a coherent desktop workflow.
+  - Basket exposes a checkout action only when checkout can proceed.
+  - Checkout opens in a modal dialog rather than as a permanently visible panel
+    underneath the basket.
+  - Catalog and basket remain visible as the main desktop shopping workflow.
   - Successful checkout updates the basket panel to an empty basket without a
     page refresh.
   - Styles follow the existing Tavola palette and compact operational UI, with
     no mobile-specific breakpoint work.
-  - Text fits within form controls, buttons, panels, and confirmation summary at
-    the supported desktop viewport.
-- **Validation**: App/page tests for checkout nav, empty basket state, and
-  successful basket synchronization.
+  - Text fits within form controls, buttons, modal content, and confirmation
+    summary at the supported desktop viewport.
+- **Validation**: App/page tests for the basket checkout action, modal open/back
+  behavior, empty basket state, and successful basket synchronization.
 
 ## Sprint 4: End-To-End Smoke And Handoff
 
@@ -384,9 +388,9 @@ browser before handoff.
 - **Acceptance Criteria**:
   - Loading, empty, error, ready, pending, and success states touched by checkout
     are verified where practical.
-  - Catalog add-to-basket, basket review, checkout submission, order
-    confirmation, and post-checkout empty basket are verified at the supported
-    desktop viewport.
+  - Catalog add-to-basket, checkout modal open/back behavior, basket review,
+    checkout submission, order confirmation, and post-checkout empty basket are
+    verified at the supported desktop viewport.
   - Any unchecked browser approval items are documented in handoff.
 - **Validation**: Manual browser approval notes in the final implementation
   handoff.
