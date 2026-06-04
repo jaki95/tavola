@@ -98,7 +98,7 @@ function BasketContents({
     return (
       <div className="basket-panel__empty">
         <h3>Your basket is empty.</h3>
-        <p>Add deli products from the catalog to start a backend-owned basket.</p>
+        <p>Add products from the catalog to start your basket.</p>
       </div>
     );
   }

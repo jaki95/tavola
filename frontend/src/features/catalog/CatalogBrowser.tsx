@@ -30,22 +30,35 @@ export function CatalogBrowser({
   } = useCatalogBrowser();
 
   const productCount = catalog.products.length;
+  const productCountLabel =
+    catalog.status === "loading"
+      ? "Loading products"
+      : `${productCount} ${productCount === 1 ? "product" : "products"}`;
 
   return (
     <section className="catalog-browser" aria-labelledby="catalog-title">
-      <div className="catalog-browser__header">
-        <div>
-          <p className="eyebrow">Fresh from the counter</p>
-          <h2 id="catalog-title">Browse Tavola products</h2>
-          <p>
-            Explore real antipasti, primi, desserts, drinks, and pantry staples
-            priced by the deli.
-          </p>
+      <div className="catalog-browser__controls">
+        <div className="catalog-browser__header">
+          <div className="catalog-browser__header-copy">
+            <p className="eyebrow">Fresh from the counter</p>
+            <h1 id="catalog-title">Catalog</h1>
+            <p className="catalog-browser__lede">
+              Browse real deli products, then add your picks to the basket.
+            </p>
+          </div>
         </div>
-        <div className="catalog-browser__summary" aria-live="polite">
-          <span>{catalog.status === "loading" ? "Loading" : productCount}</span>
-          <span>{productCount === 1 ? "product" : "products"}</span>
-        </div>
+
+        {catalog.status === "error" ? null : (
+          <CatalogFilters
+            categories={catalog.categories}
+            onCategorySelect={selectCategory}
+            onReset={resetFilters}
+            onSearchSubmit={submitSearch}
+            onSearchTextChange={updateDraftSearch}
+            searchText={draftSearch}
+            selectedCategoryId={selectedCategoryId}
+          />
+        )}
       </div>
 
       {catalog.status === "error" ? (
@@ -58,27 +71,22 @@ export function CatalogBrowser({
         </div>
       ) : (
         <>
-          <CatalogFilters
-            categories={catalog.categories}
-            onCategorySelect={selectCategory}
-            onReset={resetFilters}
-            onSearchSubmit={submitSearch}
-            onSearchTextChange={updateDraftSearch}
-            searchText={draftSearch}
-            selectedCategoryId={selectedCategoryId}
-          />
-
           {catalog.status === "loading" ? (
             <div className="catalog-state" role="status">
               Loading catalog products.
             </div>
           ) : null}
 
-          {committedSearch ? (
-            <p className="catalog-browser__active-query">
-              Showing matches for <strong>{committedSearch}</strong>
+          <div className="catalog-browser__results-bar">
+            <p className="catalog-browser__summary" aria-live="polite">
+              {productCountLabel}
             </p>
-          ) : null}
+            {committedSearch ? (
+              <p className="catalog-browser__active-query">
+                Showing matches for <strong>{committedSearch}</strong>
+              </p>
+            ) : null}
+          </div>
 
           <div className="catalog-browser__workspace">
             <CatalogGrid

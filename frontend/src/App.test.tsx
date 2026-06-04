@@ -158,21 +158,20 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Tavola" })
+      screen.getByRole("link", { name: /independent italian deli tavola/i })
+    ).toHaveAttribute("href", "#catalog-title");
+    expect(
+      screen.queryByRole("navigation", { name: "Primary" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /checkout planned/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Catalog" })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("navigation", { name: "Primary" })
+      screen.getByText("Browse real deli products, then add your picks to the basket.")
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /catalog open/i })).toHaveAttribute(
-      "href",
-      "#catalog-title"
-    );
-    expect(
-      screen.getByRole("link", { name: /basket active/i })
-    ).toHaveAttribute("href", "#basket-panel-title");
-    expect(
-      screen.getByRole("link", { name: /checkout ready/i })
-    ).toHaveAttribute("href", "#checkout-panel-title");
     expect(
       await screen.findByRole("heading", {
         level: 3,
@@ -242,7 +241,11 @@ describe("App", () => {
 
     render(<App />);
 
-    expect(screen.getByText("Checking backend")).toBeInTheDocument();
+    expect(screen.getByLabelText("Service status")).toHaveAttribute(
+      "role",
+      "status"
+    );
+    expect(screen.getByText("Checking service")).toBeInTheDocument();
     expect(screen.getByText("Waiting for the health check.")).toBeInTheDocument();
   });
 
@@ -254,8 +257,8 @@ describe("App", () => {
 
     render(<App />);
 
-    expect(await screen.findByText("Backend connected")).toBeInTheDocument();
-    expect(screen.getByText("Tavola API is ready.")).toBeInTheDocument();
+    expect(await screen.findByText("Service ready")).toBeInTheDocument();
+    expect(screen.getByText("Tavola API ready.")).toBeInTheDocument();
   });
 
   test("shows the backend status error state from the health client", async () => {
@@ -269,10 +272,11 @@ describe("App", () => {
 
     render(<App />);
 
-    expect(await screen.findByText("Backend unavailable")).toBeInTheDocument();
-    expect(
-      screen.getByText("Could not reach the Tavola API.")
-    ).toBeInTheDocument();
+    const alert = await screen.findByLabelText("Service status");
+
+    expect(alert).toHaveAttribute("role", "alert");
+    expect(screen.getByText("Service unavailable")).toBeInTheDocument();
+    expect(screen.getByText("Could not reach the Tavola API.")).toBeInTheDocument();
   });
 });
 
