@@ -290,3 +290,25 @@ def test_basket_routes_return_422_for_quantity_errors(client: TestClient) -> Non
         ]
     }
     assert malformed_response.status_code == 422
+
+
+def test_add_line_route_returns_422_for_blank_sku_id(client: TestClient) -> None:
+    client.post("/api/baskets")
+
+    response = client.post(
+        "/api/baskets/basket-1/lines",
+        json={"sku_id": "   ", "quantity": 1},
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": [
+            {
+                "ctx": {"min_length": 1},
+                "input": "   ",
+                "loc": ["body", "sku_id"],
+                "msg": "String should have at least 1 character",
+                "type": "string_too_short",
+            }
+        ]
+    }

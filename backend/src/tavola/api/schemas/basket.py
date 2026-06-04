@@ -1,10 +1,14 @@
-from pydantic import BaseModel, Field, StrictInt
+from typing import Annotated
+
+from pydantic import BaseModel, StrictInt, StringConstraints
 
 from tavola.domain.basket import Basket, BasketLine
 
+NonBlankString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
 
 class BasketLineMutationRequest(BaseModel):
-    sku_id: str = Field(min_length=1)
+    sku_id: NonBlankString
     quantity: StrictInt
 
 
