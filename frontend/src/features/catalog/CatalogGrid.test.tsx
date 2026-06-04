@@ -92,8 +92,17 @@ describe("CatalogGrid", () => {
       />
     );
 
+    const productCard = screen
+      .getByRole("heading", { level: 3, name: "Fresh Tagliatelle" })
+      .closest("article");
+    if (!productCard) {
+      throw new Error("Expected Fresh Tagliatelle to render inside a product card.");
+    }
+
     fireEvent.click(
-      screen.getByRole("button", { name: "View details for Fresh Tagliatelle" })
+      within(productCard).getByRole("button", {
+        name: "View details for Fresh Tagliatelle"
+      })
     );
 
     expect(onSelectProduct).toHaveBeenCalledTimes(1);
