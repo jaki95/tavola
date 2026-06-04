@@ -6,6 +6,7 @@ from tavola.application.planner import (
     AnswerPlannerFollowUp,
     PlanMenuFromRequest,
     PlannerInputInvalid,
+    PlannerProposalInvalid,
     PlannerSessionNotFound,
     PlannerSessionStateInvalid,
     RevalidateMenuProposal,
@@ -486,6 +487,37 @@ def test_revalidate_menu_proposal_recalculates_customer_edits() -> None:
     assert "Revalidated by Tavola." in updated.menu_proposal.planner_notes
 
 
+def test_revalidate_menu_proposal_rejects_added_valid_products() -> None:
+    pasta = make_sku(amount_minor=425)
+    dessert = make_sku(
+        "tiramisu-cup-single",
+        name="Tiramisu Cup",
+        category=CatalogCategory("desserts", "Desserts", 3),
+        amount_minor=475,
+    )
+    repository = InMemoryPlannerSessionRepository(id_generator=lambda: "planner-1")
+    session = StartPlannerSession(
+        planner_repository=repository,
+        agent=FakeMenuPlannerAgent.with_proposal(raw_proposal(quantity=2)),
+        catalog_repository=StaticCatalogRepository([pasta, dessert]),
+    )(message="Dinner for two")
+    use_case = RevalidateMenuProposal(
+        planner_repository=repository,
+        catalog_repository=StaticCatalogRepository([pasta, dessert]),
+    )
+
+    updated = use_case(
+        planner_session_id=session.planner_session_id.value,
+        raw_proposal=raw_proposal(sku_id="tiramisu-cup-single", quantity=1),
+    )
+
+    assert updated.status == ProposalStatus.FAILED
+    assert (
+        updated.validation_errors[0].code == PlannerValidationErrorCode.INVALID_PROPOSAL
+    )
+    assert "cannot add products" in updated.validation_errors[0].message
+
+
 def test_revalidate_menu_proposal_rejects_empty_edited_proposal() -> None:
     repository = InMemoryPlannerSessionRepository(id_generator=lambda: "planner-1")
     session = StartPlannerSession(
@@ -613,3 +645,40 @@ def test_accept_menu_proposal_rejects_duplicate_acceptance() -> None:
             mode=AcceptanceMode.APPEND,
             raw_proposal=raw_proposal(),
         )
+
+
+def test_accept_menu_proposal_rejects_added_valid_products() -> None:
+    pasta = make_sku(amount_minor=425)
+    dessert = make_sku(
+        "tiramisu-cup-single",
+        name="Tiramisu Cup",
+        category=CatalogCategory("desserts", "Desserts", 3),
+        amount_minor=475,
+    )
+    planner_repository = InMemoryPlannerSessionRepository(id_generator=lambda: "p-1")
+    basket_repository = InMemoryBasketRepository(id_generator=lambda: "basket-1")
+    basket_repository.create_basket()
+    session = StartPlannerSession(
+        planner_repository=planner_repository,
+        agent=FakeMenuPlannerAgent.with_proposal(raw_proposal()),
+        catalog_repository=StaticCatalogRepository([pasta, dessert]),
+    )(message="Dinner for two")
+    accept = AcceptMenuProposal(
+        planner_repository=planner_repository,
+        basket_repository=basket_repository,
+        catalog_repository=StaticCatalogRepository([pasta, dessert]),
+    )
+
+    with pytest.raises(PlannerProposalInvalid) as exc_info:
+        accept(
+            planner_session_id=session.planner_session_id.value,
+            basket_id="basket-1",
+            mode=AcceptanceMode.APPEND,
+            raw_proposal=raw_proposal(sku_id="tiramisu-cup-single", quantity=1),
+        )
+
+    assert (
+        exc_info.value.validation_errors[0].code
+        == PlannerValidationErrorCode.INVALID_PROPOSAL
+    )
+    assert "cannot add products" in exc_info.value.validation_errors[0].message

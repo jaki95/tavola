@@ -1,6 +1,11 @@
 import pytest
 
+from tavola.api.dependencies import get_menu_planner_agent
 from tavola.config.settings import MissingPlannerCodexCredentialsError, Settings
+from tavola.infrastructure.codex_planner import (
+    CodexMenuPlannerAgent,
+    FakeMenuPlannerAgent,
+)
 
 
 def test_settings_defaults_are_local_development_friendly() -> None:
@@ -82,3 +87,23 @@ def test_missing_codex_credentials_can_raise_for_demo_setup(
 
     with pytest.raises(MissingPlannerCodexCredentialsError):
         settings.use_real_codex_planner()
+
+
+def test_menu_planner_agent_dependency_uses_settings_for_real_codex(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TAVOLA_PLANNER_CODEX_ENABLED", "true")
+    monkeypatch.setenv("TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED", "true")
+    monkeypatch.setenv("TAVOLA_PLANNER_CODEX_MODEL", "codex-test-model")
+
+    assert isinstance(get_menu_planner_agent(), CodexMenuPlannerAgent)
+
+
+def test_menu_planner_agent_dependency_returns_disabled_fake_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("TAVOLA_PLANNER_CODEX_ENABLED", raising=False)
+    monkeypatch.delenv("TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED", raising=False)
+
+    assert isinstance(get_menu_planner_agent(), FakeMenuPlannerAgent)

@@ -139,9 +139,18 @@ class PlannerProposalInvalid(PlannerApplicationError):
         super().__init__("menu proposal is not valid")
 
 
+_REVALIDATED_NOTE = "Revalidated by Tavola."
+
+
 @dataclass(frozen=True, slots=True)
 class MenuProposalValidationResult:
     menu_proposal: ValidatedMenuProposal | None
+    validation_errors: tuple[PlannerValidationError, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class MenuProposalEditResult:
+    menu_proposal: MenuProposal | None
     validation_errors: tuple[PlannerValidationError, ...]
 
 
@@ -359,9 +368,18 @@ class RevalidateMenuProposal:
                 "menu proposal can be revalidated only after a proposal is ready"
             )
 
-        validation_result = self._validate_menu_proposal.validate_raw(
-            _with_revalidation_note(raw_proposal)
+        edit_result = _editable_proposal_for_session(
+            session,
+            raw_proposal,
+            append_revalidation_note=True,
         )
+        if edit_result.menu_proposal is None:
+            validation_result = MenuProposalValidationResult(
+                menu_proposal=None,
+                validation_errors=edit_result.validation_errors,
+            )
+        else:
+            validation_result = self._validate_menu_proposal(edit_result.menu_proposal)
         if validation_result.menu_proposal is None:
             updated = PlannerSession(
                 planner_session_id=session.planner_session_id,
@@ -413,7 +431,18 @@ class AcceptMenuProposal:
                 "menu proposal can be accepted only after it is ready"
             )
 
-        validation_result = self._validate_menu_proposal.validate_raw(raw_proposal)
+        edit_result = _editable_proposal_for_session(
+            session,
+            raw_proposal,
+            append_revalidation_note=False,
+        )
+        if edit_result.menu_proposal is None:
+            validation_result = MenuProposalValidationResult(
+                menu_proposal=None,
+                validation_errors=edit_result.validation_errors,
+            )
+        else:
+            validation_result = self._validate_menu_proposal(edit_result.menu_proposal)
         if validation_result.menu_proposal is None:
             raise PlannerProposalInvalid(validation_result.validation_errors)
         menu_proposal = validation_result.menu_proposal
@@ -581,6 +610,89 @@ def _duplicate_errors(proposal: MenuProposal) -> list[PlannerValidationError]:
     return errors
 
 
+def _editable_proposal_for_session(
+    session: PlannerSession,
+    raw_proposal: dict[str, Any],
+    *,
+    append_revalidation_note: bool,
+) -> MenuProposalEditResult:
+    if session.menu_proposal is None:
+        return MenuProposalEditResult(
+            menu_proposal=None,
+            validation_errors=(
+                _invalid_proposal_error("current menu proposal is required"),
+            ),
+        )
+
+    try:
+        proposal = _parse_raw_proposal(raw_proposal)
+    except (TypeError, ValueError) as error:
+        return MenuProposalEditResult(
+            menu_proposal=None,
+            validation_errors=(_validation_error_from_value_error(error),),
+        )
+
+    errors = _edit_errors(session.menu_proposal, proposal)
+    if errors:
+        return MenuProposalEditResult(menu_proposal=None, validation_errors=errors)
+    if append_revalidation_note:
+        proposal = _with_revalidation_note(proposal)
+    return MenuProposalEditResult(menu_proposal=proposal, validation_errors=())
+
+
+def _edit_errors(
+    current: ValidatedMenuProposal,
+    candidate: MenuProposal,
+) -> tuple[PlannerValidationError, ...]:
+    if candidate.title != current.title:
+        return (_invalid_proposal_error("menu proposal title cannot be edited"),)
+    if candidate.explanation != current.explanation:
+        return (_invalid_proposal_error("menu proposal explanation cannot be edited"),)
+    if candidate.party_size != current.party_size:
+        return (_invalid_proposal_error("party size cannot be edited"),)
+    if candidate.package_template_id != current.package_template_id:
+        return (_invalid_proposal_error("package template cannot be edited"),)
+    if candidate.warnings != current.warnings:
+        return (_invalid_proposal_error("menu proposal warnings cannot be edited"),)
+    if _normalized_notes(candidate.planner_notes) != _normalized_notes(
+        current.planner_notes
+    ):
+        return (_invalid_proposal_error("planner notes cannot be edited"),)
+
+    current_line_courses = {
+        line.sku.sku_id: course.course
+        for course in current.courses
+        for line in course.lines
+    }
+    for course in candidate.courses:
+        for line in course.lines:
+            current_course = current_line_courses.get(line.sku_id)
+            if current_course is None:
+                return (
+                    _invalid_proposal_error(
+                        "customer edits cannot add products to a menu proposal"
+                    ),
+                )
+            if course.course != current_course:
+                return (
+                    _invalid_proposal_error(
+                        "customer edits cannot move products between courses"
+                    ),
+                )
+    return ()
+
+
+def _normalized_notes(notes: tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(note for note in notes if note != _REVALIDATED_NOTE)
+
+
+def _invalid_proposal_error(message: str) -> PlannerValidationError:
+    return PlannerValidationError(
+        code=PlannerValidationErrorCode.INVALID_PROPOSAL,
+        message=message,
+    )
+
+
 def _require_message(message: str) -> str:
     stripped = message.strip()
     if not stripped:
@@ -618,17 +730,18 @@ def _get_basket_or_raise(
     return basket
 
 
-def _with_revalidation_note(raw_proposal: dict[str, Any]) -> dict[str, Any]:
-    notes = raw_proposal.get("planner_notes", ())
-    if not _is_sequence(notes):
-        return raw_proposal
-    text_notes = tuple(notes)
-    if "Revalidated by Tavola." in text_notes:
-        return raw_proposal
-    return {
-        **raw_proposal,
-        "planner_notes": (*text_notes, "Revalidated by Tavola."),
-    }
+def _with_revalidation_note(proposal: MenuProposal) -> MenuProposal:
+    if _REVALIDATED_NOTE in proposal.planner_notes:
+        return proposal
+    return MenuProposal(
+        title=proposal.title,
+        explanation=proposal.explanation,
+        planner_notes=(*proposal.planner_notes, _REVALIDATED_NOTE),
+        party_size=proposal.party_size,
+        package_template_id=proposal.package_template_id,
+        courses=proposal.courses,
+        warnings=proposal.warnings,
+    )
 
 
 def _meal_plan_grouping(
