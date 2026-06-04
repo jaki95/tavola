@@ -391,7 +391,9 @@ def test_validate_menu_proposal_rejects_drink_product_in_required_course() -> No
     result = ValidateMenuProposal(StaticCatalogRepository([drinks]))(proposal)
 
     assert result.menu_proposal is None
-    assert result.validation_errors[0].code == PlannerValidationErrorCode.INVALID_PROPOSAL
+    assert (
+        result.validation_errors[0].code == PlannerValidationErrorCode.INVALID_PROPOSAL
+    )
     assert result.validation_errors[0].sku_id == "san-pellegrino-limonata-4x330ml"
     assert result.validation_errors[0].course == Course.APERITIVO
 
@@ -432,7 +434,9 @@ def test_validate_menu_proposal_rejects_food_product_in_drinks_course() -> None:
     result = ValidateMenuProposal(StaticCatalogRepository([pasta, gnocchi]))(proposal)
 
     assert result.menu_proposal is None
-    assert result.validation_errors[0].code == PlannerValidationErrorCode.INVALID_PROPOSAL
+    assert (
+        result.validation_errors[0].code == PlannerValidationErrorCode.INVALID_PROPOSAL
+    )
     assert result.validation_errors[0].sku_id == "fresh-tagliatelle-250g"
     assert result.validation_errors[0].course == Course.DRINKS
 
