@@ -76,6 +76,15 @@ def test_get_basket_raises_typed_error_for_unknown_basket() -> None:
     assert error.value.code == "basket_not_found"
 
 
+def test_get_basket_raises_typed_error_for_invalid_basket_id() -> None:
+    repository = InMemoryBasketRepository(id_generator=lambda: "basket-1")
+
+    with pytest.raises(BasketNotFound) as error:
+        GetBasket(repository)(" ")
+
+    assert error.value.code == "basket_not_found"
+
+
 def test_add_basket_line_adds_available_sku_and_persists_totals() -> None:
     basket_repository = InMemoryBasketRepository(id_generator=lambda: "basket-1")
     catalog_repository = StaticCatalogRepository([make_sku()])
@@ -157,6 +166,24 @@ def test_add_basket_line_raises_typed_error_for_non_positive_quantity() -> None:
             "basket-1",
             sku_id="fresh-tagliatelle-250g",
             quantity=0,
+        )
+
+    assert error.value.code == "invalid_quantity"
+
+
+@pytest.mark.parametrize("quantity", [1.5, "2", True])
+def test_add_basket_line_raises_typed_error_for_non_integer_quantity(
+    quantity: object,
+) -> None:
+    basket_repository = InMemoryBasketRepository(id_generator=lambda: "basket-1")
+    basket_repository.create_basket()
+    catalog_repository = StaticCatalogRepository([make_sku()])
+
+    with pytest.raises(BasketQuantityInvalid) as error:
+        AddBasketLine(basket_repository, catalog_repository)(
+            "basket-1",
+            sku_id="fresh-tagliatelle-250g",
+            quantity=quantity,  # type: ignore[arg-type]
         )
 
     assert error.value.code == "invalid_quantity"

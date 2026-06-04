@@ -6,6 +6,7 @@ from tavola.domain.basket import (
     BasketId,
     BasketLineNotFoundError,
     BasketQuantityExceededError,
+    BasketQuantityNotIntegerError,
     BasketQuantityNotPositiveError,
 )
 
@@ -111,7 +112,10 @@ class AddBasketLine:
 
         try:
             updated = basket.add_line(sku, quantity=quantity)
-        except BasketQuantityNotPositiveError as error:
+        except (
+            BasketQuantityNotIntegerError,
+            BasketQuantityNotPositiveError,
+        ) as error:
             raise BasketQuantityInvalid() from error
         except BasketQuantityExceededError as error:
             raise BasketQuantityExceeded(error.max_quantity) from error
@@ -129,7 +133,10 @@ class SetBasketLineQuantity:
 
         try:
             updated = basket.set_line_quantity(sku_id, quantity=quantity)
-        except BasketQuantityNotPositiveError as error:
+        except (
+            BasketQuantityNotIntegerError,
+            BasketQuantityNotPositiveError,
+        ) as error:
             raise BasketQuantityInvalid() from error
         except BasketQuantityExceededError as error:
             raise BasketQuantityExceeded(error.max_quantity) from error
@@ -157,7 +164,12 @@ class RemoveBasketLine:
 
 
 def _get_basket_or_raise(repository: BasketRepository, basket_id: str) -> Basket:
-    basket = repository.get_basket(BasketId(basket_id))
+    try:
+        parsed_basket_id = BasketId(basket_id)
+    except ValueError as error:
+        raise BasketNotFound(basket_id) from error
+
+    basket = repository.get_basket(parsed_basket_id)
     if basket is None:
         raise BasketNotFound(basket_id)
     return basket

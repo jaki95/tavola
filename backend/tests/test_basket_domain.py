@@ -122,6 +122,12 @@ def test_quantity_must_be_positive(quantity: int) -> None:
         Basket.empty(BasketId("basket-1")).add_line(make_sku(), quantity=quantity)
 
 
+@pytest.mark.parametrize("quantity", [1.5, "2", True])
+def test_quantity_must_be_an_integer(quantity: object) -> None:
+    with pytest.raises(BasketValidationError, match="quantity must be an integer"):
+        Basket.empty(BasketId("basket-1")).add_line(make_sku(), quantity=quantity)  # type: ignore[arg-type]
+
+
 def test_quantity_cannot_exceed_maximum() -> None:
     with pytest.raises(BasketValidationError, match="cannot exceed 10"):
         Basket.empty(BasketId("basket-1")).add_line(

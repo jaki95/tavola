@@ -9,6 +9,10 @@ class BasketValidationError(ValueError):
     """Raised when basket quantities or identifiers break domain rules."""
 
 
+class BasketQuantityNotIntegerError(BasketValidationError):
+    """Raised when a basket quantity is not an integer."""
+
+
 class BasketQuantityNotPositiveError(BasketValidationError):
     """Raised when a basket quantity is zero or negative."""
 
@@ -134,6 +138,8 @@ class Basket:
 
 
 def _validate_quantity(quantity: int) -> None:
+    if type(quantity) is not int:
+        raise BasketQuantityNotIntegerError("quantity must be an integer")
     if quantity <= 0:
         raise BasketQuantityNotPositiveError("quantity must be positive")
     if quantity > MAX_BASKET_LINE_QUANTITY:
