@@ -176,7 +176,7 @@ describe("App", () => {
       screen.getByRole("heading", { level: 1, name: "Catalog" })
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Browse real deli products, then add your picks to the basket.")
+      screen.getByText("Browse deli products and add your picks to the basket.")
     ).toBeInTheDocument();
     expect(
       await screen.findByRole("heading", {
