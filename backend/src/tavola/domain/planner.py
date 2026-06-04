@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 from enum import StrEnum
@@ -49,7 +51,7 @@ class PackageTemplate:
     courses: tuple[Course, ...]
 
     @classmethod
-    def by_id(cls, template_id: str) -> "PackageTemplate":
+    def by_id(cls, template_id: str) -> PackageTemplate:
         try:
             return _PACKAGE_TEMPLATES[template_id]
         except KeyError as error:
@@ -186,12 +188,15 @@ class PlannerSession:
     planner_session_id: PlannerSessionId
     customer_request: str
     status: ProposalStatus
+    follow_up_answers: tuple[str, ...] = ()
     follow_up_question: FollowUpQuestion | None = None
-    menu_proposal: MenuProposal | None = None
+    menu_proposal: ValidatedMenuProposal | None = None
     validation_errors: tuple[PlannerValidationError, ...] = ()
 
     def __post_init__(self) -> None:
         _require_text(self.customer_request, "customer_request")
+        for answer in self.follow_up_answers:
+            _require_text(answer, "follow_up_answer")
         if self.status == ProposalStatus.NEEDS_INPUT:
             if self.follow_up_question is None:
                 raise ValueError("follow_up_question is required")

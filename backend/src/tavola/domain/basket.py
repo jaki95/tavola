@@ -124,6 +124,12 @@ class Basket:
             lines=tuple(line for line in self.lines if line.sku.sku_id != sku_id),
         )
 
+    def replace_lines(self, line_specs: tuple[tuple[CatalogSku, int], ...]) -> "Basket":
+        basket = Basket.empty(self.basket_id)
+        for sku, quantity in line_specs:
+            basket = basket.add_line(sku, quantity=quantity)
+        return basket
+
     def _find_line(self, sku_id: str) -> BasketLine | None:
         return next((line for line in self.lines if line.sku.sku_id == sku_id), None)
 

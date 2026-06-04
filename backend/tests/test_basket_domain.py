@@ -116,6 +116,23 @@ def test_removing_final_line_keeps_valid_empty_basket() -> None:
     assert updated.item_count == 0
 
 
+def test_replacing_lines_keeps_basket_identity_and_recalculates_totals() -> None:
+    pasta = make_sku()
+    dessert = make_sku(
+        "tiramisu-cup-single",
+        name="Tiramisu Cup",
+        amount_minor=475,
+    )
+    basket = Basket.empty(BasketId("basket-1")).add_line(pasta, quantity=2)
+
+    updated = basket.replace_lines(((dessert, 3),))
+
+    assert updated.basket_id == basket.basket_id
+    assert [line.sku.sku_id for line in updated.lines] == ["tiramisu-cup-single"]
+    assert updated.total.amount_minor == 1425
+    assert updated.item_count == 3
+
+
 @pytest.mark.parametrize("quantity", [0, -1])
 def test_quantity_must_be_positive(quantity: int) -> None:
     with pytest.raises(BasketValidationError, match="quantity must be positive"):

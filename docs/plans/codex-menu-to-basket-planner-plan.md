@@ -345,6 +345,13 @@ acceptance through stable backend APIs.
 - A client can start a planner session, answer a follow-up if needed, receive a
   validated proposal, edit quantities, revalidate, and accept it into a basket.
 
+**Implementation note (2026-06-04)**: Sprint 3 is implemented. Planner sessions
+can be started, continued with follow-up answers, revalidated after customer
+edits, fetched, and accepted into a basket in append or replace mode through
+backend APIs. Proposal acceptance final-validates catalog identities,
+availability, quantities, and pricing before basket mutation, then returns
+display-only meal-plan grouping metadata alongside the backend-owned basket.
+
 ### Task 3.1: Add Start And Follow-Up Answer Planner Use Cases
 
 - **Location**: `backend/src/tavola/application/planner.py`,
