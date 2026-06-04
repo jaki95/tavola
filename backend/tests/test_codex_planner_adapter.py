@@ -47,6 +47,7 @@ class CapturingCodexClient:
     prompt: str | None = None
     model: str | None = None
     sandbox_mode: str | None = None
+    reasoning_effort: str | None = None
     mcp_servers: tuple[CodexMcpServerConfig, ...] = ()
     timeout_seconds: float | None = None
 
@@ -56,6 +57,7 @@ class CapturingCodexClient:
         prompt: str,
         model: str,
         sandbox_mode: str,
+        reasoning_effort: str | None,
         mcp_servers: tuple[CodexMcpServerConfig, ...],
         timeout_seconds: float,
         timing_sink=None,
@@ -64,6 +66,7 @@ class CapturingCodexClient:
         self.prompt = prompt
         self.model = model
         self.sandbox_mode = sandbox_mode
+        self.reasoning_effort = reasoning_effort
         self.mcp_servers = mcp_servers
         self.timeout_seconds = timeout_seconds
         if self.should_timeout:
@@ -86,11 +89,13 @@ class SequencedCodexClient:
         prompt: str,
         model: str,
         sandbox_mode: str,
+        reasoning_effort: str | None,
         mcp_servers: tuple[CodexMcpServerConfig, ...],
         timeout_seconds: float,
         timing_sink=None,
     ) -> CodexSdkRunResult:
-        del model, sandbox_mode, mcp_servers, timeout_seconds, timing_sink
+        del model, sandbox_mode, reasoning_effort, mcp_servers, timeout_seconds
+        del timing_sink
         assert self.prompts is not None
         self.prompts.append(prompt)
         return self.results.pop(0)
@@ -130,6 +135,7 @@ def test_codex_adapter_configures_bounded_tools_and_validates_final_json() -> No
     agent = CodexMenuPlannerAgent(
         client=client,
         model="codex-test-model",
+        reasoning_effort="low",
         timeout_seconds=12,
         mcp_server_command=("python", "-m", "tavola.infrastructure.planner_mcp_server"),
     )
@@ -145,6 +151,7 @@ def test_codex_adapter_configures_bounded_tools_and_validates_final_json() -> No
     assert result.menu_proposal.total.amount_minor == 850
     assert client.model == "codex-test-model"
     assert client.sandbox_mode == "read-only"
+    assert client.reasoning_effort == "low"
     assert client.timeout_seconds == 12
     assert client.mcp_servers == (
         CodexMcpServerConfig(
@@ -153,25 +160,19 @@ def test_codex_adapter_configures_bounded_tools_and_validates_final_json() -> No
         ),
     )
     assert client.prompt is not None
-    assert "You MUST use Tavola MCP tools" in client.prompt
-    assert "Do not rely on memory, visible page data, or guessed catalog data" in (
-        client.prompt
-    )
-    assert "list_package_templates before choosing a package template" in client.prompt
-    assert "search_catalog for candidate products" in client.prompt
-    assert "validate_menu_proposal for the completed proposal" in client.prompt
-    assert "After list_package_templates, your next action must be search_catalog" in (
-        client.prompt
-    )
-    assert "Do not call get_sku_detail during the first pass" in client.prompt
-    assert "Your final response is invalid unless this turn used all three" in (
-        client.prompt
-    )
-    assert "SKU validity, availability, quantities, and totals" in client.prompt
+    assert len(client.prompt) < 1300
+    assert "use package templates" in client.prompt
+    assert "list_package_templates" in client.prompt
+    assert "search_catalog" in client.prompt
+    assert "validate_menu_proposal" in client.prompt
+    assert "ask one follow-up question" in client.prompt
+    assert "party size" in client.prompt
+    assert "Do not invent products or prices" in client.prompt
     assert "Final JSON contract" in client.prompt
+    assert '"follow_up_question"' in client.prompt
     assert '"courses"' in client.prompt
     assert '"sku_id"' in client.prompt
-    assert "Return JSON only, without Markdown" in client.prompt
+    assert "Return one JSON object only" in client.prompt
     assert "Vegetarian dinner for 2" in client.prompt
 
 
@@ -206,6 +207,49 @@ def test_codex_adapter_repairs_malformed_json_once() -> None:
     assert len(client.prompts) == 2
     assert "Repair your previous planner output" in client.prompts[1]
     assert "not json" not in client.prompts[1]
+
+
+def test_codex_adapter_does_not_repair_malformed_json_by_default() -> None:
+    client = SequencedCodexClient(
+        results=[
+            CodexSdkRunResult(
+                final_output="not json",
+                tool_names=required_tool_names(),
+            ),
+        ]
+    )
+    planner = PlanMenuFromRequest(
+        agent=CodexMenuPlannerAgent(
+            client=client,
+            model="codex-test-model",
+        ),
+        catalog_repository=StaticCatalogRepository([make_sku()]),
+    )
+
+    result = planner(customer_request="Vegetarian dinner for 2")
+
+    assert result.status == ProposalStatus.FAILED
+    assert result.agent_error is not None
+    assert result.agent_error.code == PlannerAgentErrorCode.MALFORMED_OUTPUT
+    assert client.prompts is not None
+    assert len(client.prompts) == 1
+
+
+def test_codex_adapter_maps_required_tool_follow_up_to_needs_input() -> None:
+    result = _run_agent(
+        CodexSdkRunResult(
+            final_output=json.dumps(
+                {"follow_up_question": "How many people should Tavola plan for?"}
+            ),
+            tool_names=required_tool_names(),
+        )
+    )
+
+    assert result.status == ProposalStatus.NEEDS_INPUT
+    assert result.follow_up_question is not None
+    assert result.follow_up_question.message == (
+        "How many people should Tavola plan for?"
+    )
 
 
 def test_codex_adapter_emits_sanitized_timing_events_for_success() -> None:
@@ -350,6 +394,7 @@ def test_python_codex_sdk_client_starts_thread_with_mcp_server_config() -> None:
         prompt="Plan dinner",
         model="codex-test-model",
         sandbox_mode="read-only",
+        reasoning_effort="low",
         mcp_servers=(
             CodexMcpServerConfig(
                 name="tavola-planner-tools",
@@ -377,6 +422,7 @@ def test_python_codex_sdk_client_starts_thread_with_mcp_server_config() -> None:
     assert fake_codex.started_sandbox == "read-only"
     assert fake_codex.started_approval_mode == "auto_review"
     assert fake_codex.thread.ran_approval_mode == "auto_review"
+    assert fake_codex.thread.ran_effort == "low"
     assert fake_codex.thread.ran_prompt == "Plan dinner"
     assert fake_codex.was_closed is True
     assert [event.name for event in events] == [
@@ -522,10 +568,12 @@ class FakeThread:
     def __init__(self) -> None:
         self.ran_prompt = None
         self.ran_approval_mode = None
+        self.ran_effort = None
 
     def run(self, prompt, **kwargs):
         self.ran_prompt = prompt
         self.ran_approval_mode = kwargs["approval_mode"].value
+        self.ran_effort = kwargs["effort"].value if kwargs["effort"] else None
         return FakeTurnResult()
 
 

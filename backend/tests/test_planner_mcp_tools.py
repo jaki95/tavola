@@ -52,6 +52,9 @@ def test_list_package_templates_exposes_courses_and_instructions() -> None:
         in result["instructions"]
     )
     assert "Do not mutate baskets or checkout orders." in result["instructions"]
+    assert result["recommended_next_action"] == (
+        "Choose one template, then call search_catalog for matching products."
+    )
     assert set(tools.available_tool_names()) == {
         "list_package_templates",
         "search_catalog",
@@ -81,6 +84,12 @@ def test_search_catalog_returns_customer_safe_sku_summaries() -> None:
     result = tools.call("search_catalog", {"query": "vegetarian pasta"})
 
     assert result == {
+        "result_count": 1,
+        "returned_count": 1,
+        "recommended_next_action": (
+            "Build a draft menu proposal from these products, then call "
+            "validate_menu_proposal."
+        ),
         "products": [
             {
                 "sku_id": "fresh-tagliatelle-250g",
@@ -103,6 +112,35 @@ def test_search_catalog_returns_customer_safe_sku_summaries() -> None:
             }
         ],
     }
+
+
+def test_search_catalog_limits_results_and_reports_available_count() -> None:
+    tools = create_planner_tool_handlers(
+        StaticCatalogRepository(
+            [
+                make_sku(
+                    f"pasta-{index}",
+                    name=f"Pasta {index}",
+                    tags=("pasta", "fresh"),
+                )
+                for index in range(10)
+            ]
+        )
+    )
+
+    result = tools.call("search_catalog", {"query": "pasta", "max_results": 3})
+
+    assert result["result_count"] == 10
+    assert result["returned_count"] == 3
+    assert [product["sku_id"] for product in result["products"]] == [
+        "pasta-0",
+        "pasta-1",
+        "pasta-2",
+    ]
+    assert result["recommended_next_action"] == (
+        "Build a draft menu proposal from these products, then call "
+        "validate_menu_proposal."
+    )
 
 
 def test_get_sku_detail_returns_customer_safe_detail_for_catalog_identity() -> None:
@@ -158,6 +196,9 @@ def test_validate_proposal_returns_normalized_totals_from_tavola_validation() ->
     )
 
     assert result["is_valid"] is True
+    assert result["recommended_next_action"] == (
+        "Return the validated menu proposal as the final JSON object."
+    )
     assert result["validation_errors"] == []
     assert result["menu_proposal"]["total"] == {
         "amount_minor": 1500,
@@ -210,6 +251,10 @@ def test_validate_proposal_returns_structured_validation_errors() -> None:
     assert result == {
         "is_valid": False,
         "menu_proposal": None,
+        "recommended_next_action": (
+            "Revise the proposal using only valid catalog products and call "
+            "validate_menu_proposal again."
+        ),
         "validation_errors": [
             {
                 "code": "unknown_sku",

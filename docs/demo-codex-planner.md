@@ -33,6 +33,15 @@ shell or a local secret manager. Use `backend/README.md` for the current planner
 environment settings and opt-in smoke command. Do not commit real credential
 values or paste them into demo notes.
 
+Current live-demo defaults are `gpt-5.5`, `low` reasoning effort, a 60-second
+technical timeout, and zero repair retries. Model strings are accepted or
+rejected by the installed Codex SDK and the active local credential path, so do
+not treat public API model documentation as a guarantee of demo availability.
+Use the benchmark smoke in `backend/README.md` to compare `low` against
+`sdk-default` reasoning effort or to test candidate model strings. Record only
+model name, reasoning effort, retry count, timeout, status, benchmark class, and
+sanitized timing totals.
+
 Live planner prompts send Tavola planner context, including bounded catalog and
 proposal-validation details, through the configured Codex credential path. Get
 explicit operator approval before running live smoke prompts or browser flows
