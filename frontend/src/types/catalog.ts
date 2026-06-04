@@ -41,6 +41,13 @@ export type CatalogProductDetail = CatalogProductSummary & {
   detail_description: string;
 };
 
+export type CatalogImageAsset = {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+};
+
 export type CatalogFilters = {
   category_id: CatalogCategoryId | null;
   query: string;

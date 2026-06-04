@@ -2,6 +2,7 @@ import {
   formatDietaryFacetBadges,
   formatMoney
 } from "./catalogFormat";
+import { getCatalogImageAsset } from "./catalogImages";
 import type { CatalogProductSummary } from "../../types/catalog";
 
 type CatalogCardProps = {
@@ -11,18 +12,23 @@ type CatalogCardProps = {
 
 export function CatalogCard({ product, onSelectProduct }: CatalogCardProps) {
   const dietaryBadges = formatDietaryFacetBadges(product);
+  const image = getCatalogImageAsset(product.image_id, product.name);
 
   return (
     <article
       className={`catalog-card catalog-card--${product.category_id}`}
       aria-labelledby={`${product.sku_id}-name`}
     >
-      <div
-        className="catalog-card__image"
-        role="img"
-        aria-label={`${product.name} product image`}
-      >
-        <span aria-hidden="true">{formatImageId(product.image_id)}</span>
+      <div className="catalog-card__image-frame">
+        <img
+          alt={image.alt}
+          className="catalog-card__image"
+          decoding="async"
+          height={image.height}
+          loading="lazy"
+          src={image.src}
+          width={image.width}
+        />
       </div>
       <div className="catalog-card__body">
         <p className="catalog-card__category">{product.category_label}</p>
@@ -60,8 +66,4 @@ export function CatalogCard({ product, onSelectProduct }: CatalogCardProps) {
       </div>
     </article>
   );
-}
-
-function formatImageId(imageId: string): string {
-  return imageId.trim().replace(/[-_]+/g, " ");
 }

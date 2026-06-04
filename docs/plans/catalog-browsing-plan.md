@@ -615,6 +615,18 @@ cross-service feature from backend seed data to frontend browsing.
   - Any unchecked smoke checklist items are reported explicitly.
 - **Validation**: Complete and report the scaffold smoke checklist.
 
+**Implementation note (2026-06-04)**: Sprint 5 is implemented. The repo-local
+catalog image style skill lives in `.codex/skills/tavola-catalog-image-style/`,
+static catalog images live in `frontend/src/assets/catalog/`, and
+`frontend/src/features/catalog/catalogImages.ts` maps the backend `image_id`
+values to imported assets with a fallback image. Frontend card and detail
+surfaces now render real static images with stable dimensions. Automated backend
+and frontend quality gates passed. Live browser smoke covered all categories,
+three searches, empty state, product detail, static image loading, and catalog
+error recovery. Port `8000` was occupied by a stale local listener during the
+manual smoke, so the backend ran on `8001` and Vite used
+`VITE_BACKEND_PROXY_TARGET=http://127.0.0.1:8001`.
+
 ## Testing Strategy
 
 - Domain tests prove catalog invariants without network or framework imports.
