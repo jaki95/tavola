@@ -399,6 +399,55 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
+  test("badges Plan when a proposal becomes ready while Shop is active", async () => {
+    const deferredPlannerSession = createDeferred<{
+      ok: true;
+      data: PlannerSessionResponse;
+    }>();
+    createPlannerSessionMock.mockReturnValue(deferredPlannerSession.promise);
+
+    render(<App />);
+
+    const storefrontHeader = screen.getByRole("banner", {
+      name: "Tavola storefront"
+    });
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Plan" }));
+
+    const planner = screen.getByRole("region", { name: "Plan a menu" });
+    fireEvent.change(within(planner).getByLabelText("Meal request"), {
+      target: { value: "Plan pasta for 2" }
+    });
+    fireEvent.click(within(planner).getByRole("button", { name: "Plan menu" }));
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Shop" }));
+
+    expect(
+      within(storefrontHeader).getByRole("tab", { name: "Plan" })
+    ).not.toHaveAccessibleDescription("Proposal ready");
+
+    deferredPlannerSession.resolve({
+      ok: true,
+      data: plannerReadySession
+    });
+
+    await waitFor(() => {
+      const planTab = within(storefrontHeader).getByRole("tab", { name: "Plan" });
+      expect(planTab).toHaveAccessibleDescription("Proposal ready");
+      expect(within(planTab).getByText("Proposal ready")).toBeInTheDocument();
+    });
+
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Plan" }));
+
+    expect(
+      within(storefrontHeader).getByRole("tab", { name: "Plan" })
+    ).not.toHaveAccessibleDescription("Proposal ready");
+    expect(
+      within(planner).getByRole("heading", {
+        level: 3,
+        name: "Fresh pasta supper"
+      })
+    ).toBeInTheDocument();
+  });
+
   test("preserves catalog filters but closes detail after leaving Shop", async () => {
     render(<App />);
 
@@ -556,4 +605,13 @@ function installLocalStorage() {
       }
     }
   });
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+
+  return { promise, resolve };
 }
