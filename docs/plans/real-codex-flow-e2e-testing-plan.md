@@ -141,6 +141,41 @@ Browser findings:
 Evidence screenshots were captured under `/private/tmp/` during the run and
 were not committed to the repository.
 
+### Latency Benchmark Addendum
+
+The real-flow test now includes Tavola's Planner latency benchmark checklist.
+The benchmark remains an opt-in real Codex SDK exercise, not a normal automated
+test and not a reason to introduce a fake runtime planner or direct non-SDK
+model path.
+
+Targets:
+
+- Ideal: valid proposal below 10 seconds.
+- Acceptable: valid proposal below 30 seconds.
+- Slow path: valid proposal at or above 30 seconds, recorded as a benchmark
+  miss even if the Planning UX remains usable until the technical timeout.
+
+Primary benchmark command:
+
+```sh
+cd backend
+TAVOLA_PLANNER_CODEX_ENABLED=true \
+TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED=true \
+uv run python -m tavola.infrastructure.codex_planner_smoke \
+  --benchmark --repeat 3 \
+  "Vegetarian dinner for 4 around GBP 50"
+```
+
+Record model, reasoning effort, timeout, retry count, per-run class, and
+min/median/max totals. Do not record raw transcripts, prompts beyond approved
+persona labels, tool arguments, proposal JSON, credentials, credential paths,
+stack traces, or SDK traces.
+
+Prior timing evidence showed the Tavola MCP server was not the bottleneck:
+`Vegetarian dinner for 4 around GBP 50` spent about 2 ms in MCP handlers and
+about 50 seconds in non-tool Codex SDK/model time. Future benchmark notes should
+call out any material change to that split.
+
 ### Task 1.1: Verify Local Codex Auth Path
 
 - **Location**: Local shell, `backend/README.md`
@@ -431,8 +466,10 @@ were not committed to the repository.
   item names unless the prompt requires a product.
 - **Latency**: Real Codex may be slow. Verify loading states and avoid repeated
   browser submissions while one planner run is pending.
-- **Malformed output repair**: The adapter retries once. If repair fails, the
-  correct outcome is a safe failed state, not a fake proposal.
+- **Malformed output repair**: The live demo defaults to zero repair retries to
+  avoid doubling a slow customer wait. If retries are enabled for an experiment
+  and repair still fails, the correct outcome is a safe failed state, not a fake
+  proposal.
 - **Credential leakage**: Do not paste tokens, `auth.json`, SDK traces, or raw
   transcripts into docs, tickets, screenshots, or handoff notes.
 - **In-memory state reset**: Restarting the backend loses planner sessions and

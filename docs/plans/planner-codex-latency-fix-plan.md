@@ -590,6 +590,45 @@ and desktop browser approval.
 - **Validation**:
   - Manual review of benchmark output and browser approval notes.
 
+### Sprint 4 Implementation Note
+
+- Added the real-Codex latency benchmark checklist, thresholds, safe handoff
+  format, and prior MCP timing finding to `docs/demo-codex-planner.md`,
+  `docs/plans/real-codex-flow-e2e-testing-plan.md`, and `backend/README.md`.
+- Reconciled the real-flow plan's malformed-output note with the current live
+  demo default of zero repair retries.
+- Backend focused planner/settings checks passed:
+  `uv run pytest tests/test_codex_planner_adapter.py tests/test_planner_mcp_tools.py tests/test_planner_domain.py tests/test_planner_repository.py tests/test_planner_use_cases.py tests/test_planner_api.py tests/test_settings.py`.
+- Full backend regression checks passed: `uv run pytest`,
+  `uv run ruff check .`, and `uv run ruff format --check .`.
+- Frontend planner and full regression checks passed: `npm test -- planner`,
+  `npm test`, `npm run lint`, and `npm run build`.
+- After explicit operator approval, the real Codex benchmark command ran for
+  `Vegetarian dinner for 4 around GBP 50` with `gpt-5.5`, `low` reasoning
+  effort, a 60-second timeout, and zero retries. Results: 2 valid proposals,
+  1 technical timeout, all classified `slow`; min 36,493 ms, median 50,090 ms,
+  max 60,007 ms. Final decision: above 30 seconds remains a demo slow-path, not
+  an acceptable benchmark hit.
+- A local Codex-disabled desktop browser pass ran on isolated ports `8011` and
+  `5175`. Checked: Shop initial load, catalog visibility, persistent Basket,
+  Plan disabled/unavailable state, Vite proxy-backed planner status requests,
+  catalog API requests, basket API requests, Add-to-basket success, and absence
+  of obvious runtime-detail leak text in visible copy.
+- A real Codex browser approval pass then ran on the same isolated ports.
+  Checked: live planner availability, progress copy at about 1/5/15/30 seconds,
+  proposal-ready review, proposal quantity edit/revalidation, planner
+  add-to-basket, live timeout/failure copy, Shop usability while planning, and
+  persistent Basket visibility. Browser-observed proposal readiness for the
+  successful run was about 65 seconds.
+- The live pass exposed customer-facing internal wording (`SKU` in proposal
+  notes and `Tavola tools` in a failed under-specified run). Fixed by changing
+  the backend missing-tool-use message to `Tavola checks` and adding frontend
+  customer-text sanitization at the API and display boundaries.
+- Live browser states still unchecked because repeated real runs timed out or
+  failed before reaching the needed state: needs-input follow-up completion,
+  planner replace-basket with a fresh non-empty-basket proposal, and
+  proposal-ready navigation badge.
+
 ## Testing Strategy
 
 - Backend unit tests for settings, adapter prompt/config, MCP payloads, planner

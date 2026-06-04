@@ -104,6 +104,26 @@ required Tavola tool use, technical timeout, and missing configuration exit
 nonzero. Do not paste prompts, raw Codex transcripts, tool arguments,
 credentials, stack traces, or proposal JSON into handoff notes.
 
+Use this benchmark handoff format after at least three repeats of the primary
+persona:
+
+```text
+model: <model>
+reasoning_effort: <low|sdk-default|...>
+timeout_seconds: <seconds>
+max_retries: <count>
+primary_persona_totals_ms: min <n>, median <n>, max <n>
+primary_persona_classes: <ideal|acceptable|slow|failed>
+decision: <below 10s achieved|below 30s accepted|above 30s demo slow-path>
+```
+
+The primary persona is `Vegetarian dinner for 4 around GBP 50`. Use
+`docs/demo-codex-planner.md` for the broader browser demo personas and
+customer-facing acceptance checks. Previous sanitized traces showed Tavola MCP
+tool handlers taking about 2 ms during a roughly 50-second live run, so benchmark
+decisions should focus on Codex SDK model/config behavior unless new timing
+events show a different bottleneck.
+
 The installed `openai-codex` SDK accepts model names as strings; public model
 documentation is not proof that a model is available through the active local
 credential path. Keep `gpt-5.5` as the documented default unless an opt-in

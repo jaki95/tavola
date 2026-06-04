@@ -178,6 +178,87 @@ describe("planner API client", () => {
     );
   });
 
+  test("maps internal SKU wording out of customer-facing proposal copy", async () => {
+    const { fetchPlannerSession } = await loadPlannerClient();
+    const firstCourse = proposal.courses[0]!;
+    const firstLine = firstCourse.lines[0]!;
+    const proposalWithInternalCopy: MenuProposal = {
+      ...proposal,
+      explanation: "A validated SKU-backed dinner plan using this package template.",
+      planner_notes: [
+        {
+          note_type: "evidence",
+          source: "tavola",
+          message: "Validated by Tavola for SKU validity and template fit."
+        }
+      ],
+      courses: [
+        {
+          ...firstCourse,
+          lines: [
+            {
+              ...firstLine,
+              rationale: "This SKU anchors the main course."
+            }
+          ]
+        }
+      ],
+      warnings: ["One SKU was adjusted during validation."]
+    };
+    stubJsonResponse({
+      ...plannerSession,
+      menu_proposal: proposalWithInternalCopy
+    });
+
+    const result = await fetchPlannerSession("planner-1");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const mappedProposal = result.data.menu_proposal!;
+    expect(mappedProposal.explanation).toBe(
+      "A validated product-backed dinner plan using this menu structure."
+    );
+    expect(mappedProposal.planner_notes[0]!.message).toBe(
+      "Validated by Tavola for product validity and menu structure fit."
+    );
+    expect(mappedProposal.courses[0]!.lines[0]!.rationale).toBe(
+      "This product anchors the main course."
+    );
+    expect(mappedProposal.warnings[0]).toBe(
+      "One product was adjusted during validation."
+    );
+    expect(mappedProposal.courses[0]!.lines[0]!.sku_id).toBe(
+      "fresh-tagliatelle-250g"
+    );
+  });
+
+  test("maps internal tool wording out of customer-facing planner errors", async () => {
+    const { fetchPlannerSession } = await loadPlannerClient();
+    stubJsonResponse({
+      ...plannerSession,
+      status: "failed",
+      menu_proposal: null,
+      validation_errors: [
+        {
+          code: "invalid_proposal",
+          message: "Planner did not verify catalog and pricing with Tavola tools."
+        }
+      ]
+    });
+
+    const result = await fetchPlannerSession("planner-1");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.data.validation_errors[0]!.message).toBe(
+      "Planner did not verify catalog and pricing with Tavola checks."
+    );
+  });
+
   test("accepts an in-progress planning session response", async () => {
     const { createPlannerSession } = await loadPlannerClient();
     stubJsonResponse(planningSession);

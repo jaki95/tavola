@@ -161,7 +161,8 @@ def test_codex_adapter_configures_bounded_tools_and_validates_final_json() -> No
     )
     assert client.prompt is not None
     assert len(client.prompt) < 1300
-    assert "use package templates" in client.prompt
+    assert "choose a menu structure" in client.prompt
+    assert "do not mention templates" in client.prompt
     assert "list_package_templates" in client.prompt
     assert "search_catalog" in client.prompt
     assert "validate_menu_proposal" in client.prompt
@@ -470,6 +471,9 @@ def test_codex_adapter_requires_tavola_tool_use_before_final_output() -> None:
     assert result.status == ProposalStatus.FAILED
     assert result.agent_error is not None
     assert result.agent_error.code == PlannerAgentErrorCode.MISSING_TOOL_USE
+    assert result.agent_error.message == (
+        "Planner did not verify catalog and pricing with Tavola checks."
+    )
 
 
 def test_codex_adapter_maps_tool_failure_to_typed_failure() -> None:
@@ -488,6 +492,9 @@ def test_codex_adapter_maps_tool_failure_to_typed_failure() -> None:
     assert result.status == ProposalStatus.FAILED
     assert result.agent_error is not None
     assert result.agent_error.code == PlannerAgentErrorCode.TOOL_FAILURE
+    assert result.agent_error.message == (
+        "Planner checks failed before Tavola could validate a proposal."
+    )
 
 
 def test_codex_adapter_maps_timeout_to_typed_failure() -> None:

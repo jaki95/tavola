@@ -149,22 +149,22 @@ export function PlannerWorkspace({
       {planner.state.status === "failed" ||
       planner.state.status === "validation_error" ? (
         <p className="planner-workspace__alert" role="alert">
-          {planner.state.message}
+          {customerPlannerText(planner.state.message)}
         </p>
       ) : null}
 
       {planner.state.status === "accepted" ? (
         <p className="planner-workspace__status" role="status">
-          {planner.state.message}
+          {customerPlannerText(planner.state.message)}
         </p>
       ) : null}
 
       {planner.state.status === "needs_input" && planner.state.session ? (
         <div className="planner-follow-up">
           <p className="planner-follow-up__request">
-            {planner.state.session.customer_request}
+            {customerPlannerText(planner.state.session.customer_request)}
           </p>
-          <h3>{planner.state.session.follow_up_question}</h3>
+          <h3>{customerPlannerText(planner.state.session.follow_up_question ?? "")}</h3>
           <form className="planner-follow-up__form" onSubmit={submitFollowUp}>
             <label>
               <span>Follow-up answer</span>
@@ -288,8 +288,8 @@ function ProposalReview({
       <div className="planner-proposal__summary">
         <div>
           <p className="eyebrow">Menu proposal</p>
-          <h3>{proposal.title}</h3>
-          <p>{proposal.explanation}</p>
+          <h3>{customerPlannerText(proposal.title)}</h3>
+          <p>{customerPlannerText(proposal.explanation)}</p>
         </div>
         <div className="planner-proposal__total" aria-live="polite">
           <span>{total}</span>
@@ -301,7 +301,9 @@ function ProposalReview({
         <h4>Planner notes</h4>
         <ul>
           {proposal.planner_notes.map((note) => (
-            <li key={`${note.note_type}-${note.message}`}>{note.message}</li>
+            <li key={`${note.note_type}-${note.message}`}>
+              {customerPlannerText(note.message)}
+            </li>
           ))}
         </ul>
       </div>
@@ -309,7 +311,7 @@ function ProposalReview({
       {proposal.warnings.length > 0 ? (
         <div className="planner-warnings" role="note">
           {proposal.warnings.map((warning) => (
-            <p key={warning}>{warning}</p>
+            <p key={warning}>{customerPlannerText(warning)}</p>
           ))}
         </div>
       ) : null}
@@ -321,7 +323,7 @@ function ProposalReview({
             className="planner-course"
             key={course.course}
           >
-            <h4>{course.course_label}</h4>
+            <h4>{customerPlannerText(course.course_label)}</h4>
             <ul className="planner-course__lines">
               {course.lines.map((line) => (
                 <ProposalLineItem
@@ -400,7 +402,8 @@ function ProposalLineItem({
   onRemoveLine: (skuId: string) => void;
   onSetLineQuantity: (skuId: string, quantity: number) => void;
 }) {
-  const image = getCatalogImageAsset(line.image_id, line.name);
+  const lineName = customerPlannerText(line.name);
+  const image = getCatalogImageAsset(line.image_id, lineName);
   const unitPrice = formatBasketMoney({
     amount_minor: line.unit_price_minor,
     currency: line.currency
@@ -418,7 +421,7 @@ function ProposalLineItem({
   }
 
   return (
-    <li className="planner-line" aria-label={line.name}>
+    <li className="planner-line" aria-label={lineName}>
       <img
         alt={image.alt}
         className="planner-line__image"
@@ -429,17 +432,19 @@ function ProposalLineItem({
       <div className="planner-line__body">
         <div className="planner-line__summary">
           <div>
-            <h5>{line.name}</h5>
+            <h5>{lineName}</h5>
             <p>
               {line.unit_label} · {unitPrice} each
             </p>
           </div>
           <strong>{lineTotal}</strong>
         </div>
-        <p className="planner-line__rationale">{line.rationale}</p>
+        <p className="planner-line__rationale">
+          {customerPlannerText(line.rationale)}
+        </p>
         <div className="planner-line__controls">
           <label>
-            <span>Quantity for {line.name}</span>
+            <span>Quantity for {lineName}</span>
             <input
               disabled={isDisabled}
               inputMode="numeric"
@@ -456,10 +461,24 @@ function ProposalLineItem({
             onClick={() => onRemoveLine(line.sku_id)}
             type="button"
           >
-            Remove {line.name} from proposal
+            Remove {lineName} from proposal
           </button>
         </div>
       </div>
     </li>
   );
+}
+
+function customerPlannerText(value: string): string {
+  return value
+    .replace(/\bTavola tools\b/gi, "Tavola checks")
+    .replace(/\bplanner tool execution\b/gi, "planner checks")
+    .replace(/\bpackage templates\b/gi, "menu structures")
+    .replace(/\bpackage template\b/gi, "menu structure")
+    .replace(/\btemplates\b/gi, "menu structures")
+    .replace(/\btemplate\b/gi, "menu structure")
+    .replace(/\bsku_id\b/gi, "product")
+    .replace(/\bsku ids\b/gi, "products")
+    .replace(/\bskus\b/gi, "products")
+    .replace(/\bsku\b/gi, "product");
 }

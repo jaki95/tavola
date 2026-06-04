@@ -131,8 +131,8 @@ def _tool_descriptions() -> list[ToolPayload]:
         {
             "name": "list_package_templates",
             "description": (
-                "List Tavola planner package templates. Use this before choosing "
-                "a proposal structure."
+                "List Tavola planner menu structures. Use this before choosing "
+                "a proposal shape. Do not mention templates in customer-facing text."
             ),
             "inputSchema": {"type": "object", "properties": {}},
         },
@@ -204,7 +204,7 @@ def _list_package_templates(arguments: Mapping[str, Any]) -> ToolPayload:
     return {
         "instructions": PLANNER_TOOL_INSTRUCTIONS,
         "recommended_next_action": (
-            "Choose one template, then call search_catalog for matching products."
+            "Choose one menu structure, then call search_catalog for matching products."
         ),
         "templates": [
             {
