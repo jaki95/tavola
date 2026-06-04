@@ -8,6 +8,7 @@ import { BasketPanel } from "../features/basket/BasketPanel";
 import { useBasket } from "../features/basket/useBasket";
 import { CheckoutPanel } from "../features/checkout/CheckoutPanel";
 import { CatalogBrowser } from "../features/catalog/CatalogBrowser";
+import { PlannerWorkspace } from "../features/planner/PlannerWorkspace";
 
 type HomePageProps = {
   backendStatus: BackendStatus;
@@ -39,11 +40,17 @@ export function HomePage({ backendStatus }: HomePageProps) {
 
       <main className="storefront-main">
         <div className="storefront-main__commerce">
-          <CatalogBrowser
-            basketQuantities={basketQuantities}
-            isAddPending={isBasketMutationPending}
-            onAddProduct={basket.addLine}
-          />
+          <div className="storefront-main__primary">
+            <PlannerWorkspace
+              basket={basket.basket.basket}
+              onBasketAccepted={basket.applyBasket}
+            />
+            <CatalogBrowser
+              basketQuantities={basketQuantities}
+              isAddPending={isBasketMutationPending}
+              onAddProduct={basket.addLine}
+            />
+          </div>
           <div className="storefront-main__side-panel">
             <BasketPanel
               basket={basket.basket}
