@@ -6,6 +6,7 @@ import type { Basket } from "../../types/basket";
 type BasketPanelProps = {
   basket: BasketLoadState;
   mutation: BasketMutationState;
+  onCheckout: () => void;
   onReload: () => void;
   onRemoveLine: (skuId: string) => void;
   onSetLineQuantity: (skuId: string, quantity: number) => void;
@@ -14,12 +15,17 @@ type BasketPanelProps = {
 export function BasketPanel({
   basket,
   mutation,
+  onCheckout,
   onReload,
   onRemoveLine,
   onSetLineQuantity
 }: BasketPanelProps) {
   const visibleBasket = basket.basket;
   const isPending = mutation.status === "pending";
+  const canCheckout =
+    basket.status === "success" &&
+    Boolean(visibleBasket && visibleBasket.lines.length > 0) &&
+    !isPending;
 
   return (
     <section
@@ -62,6 +68,12 @@ export function BasketPanel({
         onRemoveLine={onRemoveLine}
         onSetLineQuantity={onSetLineQuantity}
       />
+
+      <div className="basket-panel__checkout">
+        <button disabled={!canCheckout} onClick={onCheckout} type="button">
+          Review and checkout
+        </button>
+      </div>
     </section>
   );
 }

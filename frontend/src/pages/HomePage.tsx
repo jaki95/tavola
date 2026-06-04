@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import {
   BackendStatusPanel,
   type BackendStatus
@@ -13,6 +15,7 @@ type HomePageProps = {
 
 export function HomePage({ backendStatus }: HomePageProps) {
   const basket = useBasket();
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const isBasketMutationPending = basket.mutation.status === "pending";
   const isBasketUpdating =
     isBasketMutationPending || basket.basket.status === "loading";
@@ -41,18 +44,23 @@ export function HomePage({ backendStatus }: HomePageProps) {
             <BasketPanel
               basket={basket.basket}
               mutation={basket.mutation}
+              onCheckout={() => setIsCheckoutOpen(true)}
               onReload={basket.reload}
               onRemoveLine={basket.removeLine}
               onSetLineQuantity={basket.setLineQuantity}
             />
-            <CheckoutPanel
-              basket={basket.basket}
-              isBasketUpdating={isBasketUpdating}
-              onCheckoutSuccess={basket.applyBasket}
-            />
           </div>
         </div>
       </main>
+
+      {isCheckoutOpen ? (
+        <CheckoutPanel
+          basket={basket.basket}
+          isBasketUpdating={isBasketUpdating}
+          onCheckoutSuccess={basket.applyBasket}
+          onClose={() => setIsCheckoutOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

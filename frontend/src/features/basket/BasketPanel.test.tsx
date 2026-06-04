@@ -61,6 +61,9 @@ describe("BasketPanel", () => {
     ).toBeInTheDocument();
     expect(within(panel).getByText("£0.00")).toBeInTheDocument();
     expect(within(panel).getByText("0 items")).toBeInTheDocument();
+    expect(
+      within(panel).getByRole("button", { name: "Review and checkout" })
+    ).toBeDisabled();
   });
 
   test("renders the loading state without hiding the previous basket", () => {
@@ -118,6 +121,27 @@ describe("BasketPanel", () => {
     expect(within(line).getByText("£8.50")).toBeInTheDocument();
     expect(within(panel).getAllByText("£8.50")).toHaveLength(2);
     expect(within(panel).getByText("2 items")).toBeInTheDocument();
+    expect(
+      within(panel).getByRole("button", { name: "Review and checkout" })
+    ).toBeEnabled();
+  });
+
+  test("opens checkout from a populated basket", () => {
+    const onCheckout = vi.fn();
+
+    renderBasketPanel({
+      basket: {
+        status: "success",
+        basket: tagliatelleBasket
+      },
+      onCheckout
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Review and checkout" })
+    );
+
+    expect(onCheckout).toHaveBeenCalledTimes(1);
   });
 
   test("changes quantity with buttons and a numeric input", () => {
@@ -234,11 +258,13 @@ function renderBasketPanel({
   basket,
   mutation = idleMutation,
   onReload = vi.fn(),
+  onCheckout = vi.fn(),
   onRemoveLine = vi.fn(),
   onSetLineQuantity = vi.fn()
 }: {
   basket: BasketLoadState;
   mutation?: BasketMutationState;
+  onCheckout?: () => void;
   onReload?: () => void;
   onRemoveLine?: (skuId: string) => void;
   onSetLineQuantity?: (skuId: string, quantity: number) => void;
@@ -247,6 +273,7 @@ function renderBasketPanel({
     <BasketPanel
       basket={basket}
       mutation={mutation}
+      onCheckout={onCheckout}
       onReload={onReload}
       onRemoveLine={onRemoveLine}
       onSetLineQuantity={onSetLineQuantity}

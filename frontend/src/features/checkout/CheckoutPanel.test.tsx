@@ -75,12 +75,56 @@ const checkoutResponse: CheckoutResponse = {
 };
 
 describe("CheckoutPanel", () => {
+  test("opens as a checkout dialog with a route back to basket editing", async () => {
+    const onClose = vi.fn();
+
+    renderCheckoutPanel({ onClose });
+
+    const dialog = screen.getByRole("dialog", { name: "Pickup checkout" });
+
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    fireEvent.click(
+      await within(dialog).findByRole("button", { name: "Back to basket" })
+    );
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  test("moves focus into the dialog when checkout opens", async () => {
+    renderCheckoutPanel();
+
+    const dialog = screen.getByRole("dialog", { name: "Pickup checkout" });
+    await within(dialog).findByLabelText("Contact name");
+
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+  });
+
+  test("keeps tab focus inside the checkout dialog", async () => {
+    renderCheckoutPanel();
+
+    const dialog = screen.getByRole("dialog", { name: "Pickup checkout" });
+    const contactName = await within(dialog).findByLabelText("Contact name");
+    const backButton = within(dialog).getByRole("button", {
+      name: "Back to basket"
+    });
+
+    backButton.focus();
+    fireEvent.keyDown(window, { key: "Tab" });
+
+    expect(contactName).toHaveFocus();
+
+    contactName.focus();
+    fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
+
+    expect(backButton).toHaveFocus();
+  });
+
   test("blocks checkout while keeping the empty basket state visible", async () => {
     renderCheckoutPanel({
       basket: { status: "success", basket: emptyBasket }
     });
 
-    const panel = screen.getByRole("region", { name: "Pickup checkout" });
+    const panel = screen.getByRole("dialog", { name: "Pickup checkout" });
 
     expect(
       within(panel).getByText("Add at least one deli item before checkout.")
@@ -99,7 +143,7 @@ describe("CheckoutPanel", () => {
       })
     });
 
-    const panel = screen.getByRole("region", { name: "Pickup checkout" });
+    const panel = screen.getByRole("dialog", { name: "Pickup checkout" });
 
     expect(within(panel).getByRole("status")).toHaveTextContent(
       "Loading pickup windows."
@@ -117,7 +161,7 @@ describe("CheckoutPanel", () => {
 
     renderCheckoutPanel({ client });
 
-    const panel = screen.getByRole("region", { name: "Pickup checkout" });
+    const panel = screen.getByRole("dialog", { name: "Pickup checkout" });
     expect(await within(panel).findByRole("alert")).toHaveTextContent(
       "Could not load pickup windows."
     );
@@ -132,7 +176,7 @@ describe("CheckoutPanel", () => {
   test("renders the ready checkout form with accessible fields", async () => {
     renderCheckoutPanel();
 
-    const panel = screen.getByRole("region", { name: "Pickup checkout" });
+    const panel = screen.getByRole("dialog", { name: "Pickup checkout" });
 
     expect(await within(panel).findByLabelText("Contact name")).toBeEnabled();
     expect(within(panel).getByLabelText("Contact email")).toBeEnabled();
@@ -150,7 +194,7 @@ describe("CheckoutPanel", () => {
 
     renderCheckoutPanel({ client, isBasketUpdating: true });
 
-    const panel = screen.getByRole("region", { name: "Pickup checkout" });
+    const panel = screen.getByRole("dialog", { name: "Pickup checkout" });
 
     expect(await within(panel).findByText("Basket is updating.")).toBeInTheDocument();
     expect(
@@ -170,7 +214,7 @@ describe("CheckoutPanel", () => {
     });
 
     renderCheckoutPanel({ client });
-    const panel = screen.getByRole("region", { name: "Pickup checkout" });
+    const panel = screen.getByRole("dialog", { name: "Pickup checkout" });
 
     await fillReadyForm(panel);
     fireEvent.click(
@@ -191,7 +235,7 @@ describe("CheckoutPanel", () => {
     });
 
     renderCheckoutPanel({ client });
-    const panel = screen.getByRole("region", { name: "Pickup checkout" });
+    const panel = screen.getByRole("dialog", { name: "Pickup checkout" });
 
     await fillReadyForm(panel, { contactEmail: "ada@example.com" });
     fireEvent.click(
@@ -211,7 +255,7 @@ describe("CheckoutPanel", () => {
     });
 
     renderCheckoutPanel({ client, onCheckoutSuccess });
-    const panel = screen.getByRole("region", { name: "Pickup checkout" });
+    const panel = screen.getByRole("dialog", { name: "Pickup checkout" });
 
     await fillReadyForm(panel);
     fireEvent.click(
@@ -228,6 +272,9 @@ describe("CheckoutPanel", () => {
     expect(within(panel).getByText("ada@example.com")).toBeInTheDocument();
     expect(within(panel).getByText("Today afternoon pickup")).toBeInTheDocument();
     expect(within(panel).getByText("Fresh Tagliatelle x 2")).toBeInTheDocument();
+    expect(
+      within(panel).getByText("Thank you for shopping with us.")
+    ).toBeInTheDocument();
     const confirmation = within(panel).getByRole("status");
     expect(within(confirmation).getByText("2 items")).toBeInTheDocument();
     expect(onCheckoutSuccess).toHaveBeenCalledWith(emptyBasket);
@@ -260,11 +307,13 @@ function renderCheckoutPanel({
     checkoutResults: [success(checkoutResponse)]
   }),
   isBasketUpdating = false,
+  onClose = vi.fn(),
   onCheckoutSuccess = vi.fn()
 }: {
   basket?: BasketLoadState;
   client?: CheckoutClient;
   isBasketUpdating?: boolean;
+  onClose?: () => void;
   onCheckoutSuccess?: (basket: Basket) => void;
 } = {}) {
   render(
@@ -272,6 +321,7 @@ function renderCheckoutPanel({
       basket={basket}
       client={client}
       isBasketUpdating={isBasketUpdating}
+      onClose={onClose}
       onCheckoutSuccess={onCheckoutSuccess}
     />
   );

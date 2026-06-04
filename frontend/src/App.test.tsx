@@ -182,8 +182,11 @@ describe("App", () => {
       await screen.findByRole("region", { name: "Current basket" })
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole("region", { name: "Pickup checkout" })
-    ).toBeInTheDocument();
+      screen.queryByRole("dialog", { name: "Pickup checkout" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Review and checkout" })
+    ).toBeDisabled();
   });
 
   test("synchronizes the visible basket after checkout succeeds", async () => {
@@ -203,7 +206,11 @@ describe("App", () => {
     });
     expect(within(basketPanel).getByText("Fresh Tagliatelle")).toBeInTheDocument();
 
-    const checkoutPanel = await screen.findByRole("region", {
+    fireEvent.click(
+      within(basketPanel).getByRole("button", { name: "Review and checkout" })
+    );
+
+    const checkoutPanel = await screen.findByRole("dialog", {
       name: "Pickup checkout"
     });
     fireEvent.change(await within(checkoutPanel).findByLabelText("Contact name"), {
