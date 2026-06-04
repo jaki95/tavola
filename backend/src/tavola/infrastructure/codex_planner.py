@@ -111,27 +111,32 @@ class PythonCodexSdkClient:
             if self._codex_factory is not None
             else Codex(codex_config)
         )
-        sandbox = _sdk_sandbox(Sandbox, sandbox_mode)
-        thread = codex.thread_start(
-            approval_mode=ApprovalMode.deny_all,
-            model=model,
-            sandbox=sandbox,
-            ephemeral=True,
-        )
-        turn_result = thread.run(
-            prompt,
-            approval_mode=ApprovalMode.deny_all,
-            model=model,
-            sandbox=sandbox,
-        )
-        tool_error = None
-        if getattr(turn_result, "error", None) is not None:
-            tool_error = str(turn_result.error)
-        return CodexSdkRunResult(
-            final_output=getattr(turn_result, "final_response", None) or "",
-            tool_names=_extract_tool_names(getattr(turn_result, "items", ())),
-            tool_error=tool_error,
-        )
+        try:
+            sandbox = _sdk_sandbox(Sandbox, sandbox_mode)
+            thread = codex.thread_start(
+                approval_mode=ApprovalMode.deny_all,
+                model=model,
+                sandbox=sandbox,
+                ephemeral=True,
+            )
+            turn_result = thread.run(
+                prompt,
+                approval_mode=ApprovalMode.deny_all,
+                model=model,
+                sandbox=sandbox,
+            )
+            tool_error = None
+            if getattr(turn_result, "error", None) is not None:
+                tool_error = str(turn_result.error)
+            return CodexSdkRunResult(
+                final_output=getattr(turn_result, "final_response", None) or "",
+                tool_names=_extract_tool_names(getattr(turn_result, "items", ())),
+                tool_error=tool_error,
+            )
+        finally:
+            close = getattr(codex, "close", None)
+            if callable(close):
+                close()
 
 
 @dataclass(frozen=True, slots=True)
@@ -286,10 +291,22 @@ def _sdk_sandbox(sandbox_type: Any, sandbox_mode: str) -> Any:
 def _extract_tool_names(items: Any) -> tuple[str, ...]:
     tool_names: list[str] = []
     for item in items or ():
-        name = _item_value(item, "tool_name") or _item_value(item, "name")
+        name = _tool_name_for_item(item)
         if isinstance(name, str) and name not in tool_names:
             tool_names.append(name)
     return tuple(tool_names)
+
+
+def _tool_name_for_item(item: Any) -> str | None:
+    candidates = (item, _item_value(item, "root"))
+    for candidate in candidates:
+        if candidate is None:
+            continue
+        for key in ("tool_name", "name", "tool"):
+            value = _item_value(candidate, key)
+            if isinstance(value, str):
+                return value
+    return None
 
 
 def _item_value(item: Any, key: str) -> Any:

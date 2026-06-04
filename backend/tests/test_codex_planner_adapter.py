@@ -171,6 +171,7 @@ def test_python_codex_sdk_client_starts_thread_with_mcp_server_config() -> None:
     assert fake_codex.started_model == "codex-test-model"
     assert fake_codex.started_sandbox == "read-only"
     assert fake_codex.thread.ran_prompt == "Plan dinner"
+    assert fake_codex.was_closed is True
 
 
 def test_codex_adapter_maps_malformed_json_to_typed_failure() -> None:
@@ -254,11 +255,15 @@ class FakeCodex:
         self.thread = FakeThread()
         self.started_model = None
         self.started_sandbox = None
+        self.was_closed = False
 
     def thread_start(self, **kwargs):
         self.started_model = kwargs["model"]
         self.started_sandbox = kwargs["sandbox"]
         return self.thread
+
+    def close(self) -> None:
+        self.was_closed = True
 
 
 class FakeThread:
@@ -271,12 +276,22 @@ class FakeThread:
         return FakeTurnResult()
 
 
+@dataclass(frozen=True)
+class FakeThreadItem:
+    root: object
+
+
+@dataclass(frozen=True)
+class FakeMcpToolCall:
+    tool: str
+
+
 class FakeTurnResult:
     final_response = '{"title": "Dinner"}'
     items = [
         {"name": "list_package_templates"},
-        {"tool_name": "search_catalog"},
+        FakeThreadItem(root=FakeMcpToolCall("search_catalog")),
         {"name": "get_sku_detail"},
-        {"name": "validate_menu_proposal"},
+        FakeMcpToolCall("validate_menu_proposal"),
     ]
     error = None
