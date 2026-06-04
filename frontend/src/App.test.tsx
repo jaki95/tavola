@@ -6,9 +6,11 @@ import { createBasket } from "./api/basket";
 import { getCatalog, getCatalogProduct } from "./api/catalog";
 import { createCheckout, listPickupWindows } from "./api/checkout";
 import { getHealth } from "./api/health";
+import { acceptProposal, createPlannerSession } from "./api/planner";
 import type { Basket } from "./types/basket";
 import type { CatalogListResponse, CatalogProductSummary } from "./types/catalog";
 import type { CheckoutResponse, PickupWindow } from "./types/checkout";
+import type { MenuProposal, PlannerSessionResponse } from "./types/planner";
 
 vi.mock("./api/health", () => ({
   getHealth: vi.fn()
@@ -32,12 +34,22 @@ vi.mock("./api/checkout", () => ({
   createCheckout: vi.fn()
 }));
 
+vi.mock("./api/planner", () => ({
+  createPlannerSession: vi.fn(),
+  answerFollowUp: vi.fn(),
+  fetchPlannerSession: vi.fn(),
+  validateProposal: vi.fn(),
+  acceptProposal: vi.fn()
+}));
+
 const createBasketMock = vi.mocked(createBasket);
 const getHealthMock = vi.mocked(getHealth);
 const getCatalogMock = vi.mocked(getCatalog);
 const getCatalogProductMock = vi.mocked(getCatalogProduct);
 const listPickupWindowsMock = vi.mocked(listPickupWindows);
 const createCheckoutMock = vi.mocked(createCheckout);
+const createPlannerSessionMock = vi.mocked(createPlannerSession);
+const acceptProposalMock = vi.mocked(acceptProposal);
 
 const tagliatelle: CatalogProductSummary = {
   sku_id: "fresh-tagliatelle-250g",
@@ -116,6 +128,53 @@ const checkoutResponse: CheckoutResponse = {
   basket: emptyBasket
 };
 
+const plannerProposal: MenuProposal = {
+  title: "Fresh pasta supper",
+  explanation: "A simple Tavola pasta plan for a relaxed dinner.",
+  planner_notes: [
+    { note_type: "evidence", source: "tavola", message: "Party size set to 2." },
+    {
+      note_type: "evidence",
+      source: "tavola",
+      message: "Products were checked against Tavola's catalog."
+    },
+    {
+      note_type: "evidence",
+      source: "tavola",
+      message: "Prices were calculated by Tavola."
+    }
+  ],
+  party_size: 2,
+  package_template_id: "primo-only",
+  courses: [
+    {
+      course: "primo",
+      course_label: "Primo",
+      lines: [
+        {
+          ...tagliatelleBasket.lines[0],
+          rationale: "Fresh pasta keeps the meal simple and generous."
+        }
+      ]
+    }
+  ],
+  total_minor: 850,
+  currency: "GBP",
+  item_count: 2,
+  line_count: 1,
+  warnings: []
+};
+
+const plannerReadySession: PlannerSessionResponse = {
+  planner_session_id: "planner-1",
+  status: "proposal_ready",
+  customer_request: "Plan pasta for 2",
+  follow_up_answers: [],
+  follow_up_question: null,
+  menu_proposal: plannerProposal,
+  validation_errors: []
+};
+
 describe("App", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -146,6 +205,28 @@ describe("App", () => {
     createCheckoutMock.mockResolvedValue({
       ok: true,
       data: checkoutResponse
+    });
+    createPlannerSessionMock.mockResolvedValue({
+      ok: true,
+      data: plannerReadySession
+    });
+    acceptProposalMock.mockResolvedValue({
+      ok: true,
+      data: {
+        basket: tagliatelleBasket,
+        meal_plan_grouping: {
+          title: "Fresh pasta supper",
+          party_size: 2,
+          package_template_id: "primo-only",
+          courses: [
+            {
+              course: "primo",
+              course_label: "Primo",
+              line_sku_ids: ["fresh-tagliatelle-250g"]
+            }
+          ]
+        }
+      }
     });
   });
 
@@ -187,6 +268,10 @@ describe("App", () => {
     expect(
       await screen.findByRole("region", { name: "Current basket" })
     ).toBeInTheDocument();
+    const planner = screen.getByRole("region", { name: "Plan a menu" });
+    const basketPanel = screen.getByRole("region", { name: "Current basket" });
+    expect(planner.closest(".storefront-main__primary")).not.toBeNull();
+    expect(basketPanel.closest(".storefront-main__side-panel")).not.toBeNull();
     expect(
       screen.queryByRole("dialog", { name: "Pickup checkout" })
     ).not.toBeInTheDocument();
@@ -243,6 +328,42 @@ describe("App", () => {
       contact_name: "Ada Lovelace",
       contact_email: "ada@example.com",
       pickup_window_id: "today-afternoon"
+    });
+  });
+
+  test("adds an accepted planner proposal to the visible basket", async () => {
+    getHealthMock.mockResolvedValue({
+      ok: true,
+      data: { service: "Tavola API", status: "ok" }
+    });
+
+    render(<App />);
+
+    const planner = await screen.findByRole("region", { name: "Plan a menu" });
+    fireEvent.change(within(planner).getByLabelText("Meal request"), {
+      target: { value: "Plan pasta for 2" }
+    });
+    fireEvent.click(within(planner).getByRole("button", { name: "Plan menu" }));
+
+    expect(
+      await within(planner).findByRole("heading", {
+        level: 3,
+        name: "Fresh pasta supper"
+      })
+    ).toBeInTheDocument();
+
+    fireEvent.click(within(planner).getByRole("button", { name: "Add to basket" }));
+
+    const basketPanel = await screen.findByRole("region", {
+      name: "Current basket"
+    });
+    await waitFor(() => {
+      expect(within(basketPanel).getByText("Fresh Tagliatelle")).toBeInTheDocument();
+    });
+    expect(acceptProposalMock).toHaveBeenCalledWith("planner-1", {
+      basket_id: "basket-1",
+      mode: "append",
+      menu_proposal: plannerProposal
     });
   });
 

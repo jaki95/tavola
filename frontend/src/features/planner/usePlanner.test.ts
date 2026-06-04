@@ -1,0 +1,529 @@
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+
+import type { ApiResult } from "../../api/client";
+import type { Basket } from "../../types/basket";
+import type {
+  AcceptMenuProposalResponse,
+  MenuProposal,
+  PlannerSessionResponse
+} from "../../types/planner";
+import { usePlanner, type PlannerClient } from "./usePlanner";
+
+const proposal: MenuProposal = {
+  title: "Vegetarian dinner for four",
+  explanation: "A simple Tavola supper with antipasto, pasta, and dessert.",
+  planner_notes: [
+    { note_type: "evidence", source: "tavola", message: "Party size set to 4." },
+    {
+      note_type: "evidence",
+      source: "tavola",
+      message: "All products were checked against Tavola's catalog."
+    },
+    {
+      note_type: "evidence",
+      source: "tavola",
+      message: "Prices were calculated by Tavola."
+    }
+  ],
+  party_size: 4,
+  package_template_id: "antipasto-primo-dessert",
+  courses: [
+    {
+      course: "antipasto",
+      course_label: "Antipasto",
+      lines: [
+        {
+          sku_id: "marinated-nocellara-olives-250g",
+          name: "Marinated Nocellara Olives",
+          category_id: "antipasti",
+          category_label: "Antipasti",
+          unit_label: "250g",
+          quantity: 1,
+          unit_price_minor: 495,
+          line_total_minor: 495,
+          currency: "GBP",
+          image_id: "marinated-nocellara-olives-250g",
+          rationale: "Bright, salty opener for the table."
+        }
+      ]
+    },
+    {
+      course: "primo",
+      course_label: "Primo",
+      lines: [
+        {
+          sku_id: "fresh-tagliatelle-250g",
+          name: "Fresh Tagliatelle",
+          category_id: "primi",
+          category_label: "Primi",
+          unit_label: "250g",
+          quantity: 2,
+          unit_price_minor: 425,
+          line_total_minor: 850,
+          currency: "GBP",
+          image_id: "fresh-tagliatelle-250g",
+          rationale: "Fresh pasta anchors the main course."
+        }
+      ]
+    },
+    {
+      course: "dessert",
+      course_label: "Dessert",
+      lines: [
+        {
+          sku_id: "tiramisu-cup-single",
+          name: "Tiramisu Cup",
+          category_id: "desserts",
+          category_label: "Desserts",
+          unit_label: "single",
+          quantity: 4,
+          unit_price_minor: 375,
+          line_total_minor: 1500,
+          currency: "GBP",
+          image_id: "tiramisu-cup-single",
+          rationale: "Individual desserts keep serving easy."
+        }
+      ]
+    }
+  ],
+  total_minor: 2845,
+  currency: "GBP",
+  item_count: 7,
+  line_count: 3,
+  warnings: []
+};
+
+const pairedAntipastoProposal: MenuProposal = {
+  ...proposal,
+  courses: proposal.courses.map((course) =>
+    course.course === "antipasto"
+      ? {
+          ...course,
+          lines: [
+            ...course.lines,
+            {
+              sku_id: "focaccia-genovese-slab",
+              name: "Focaccia Genovese",
+              category_id: "antipasti",
+              category_label: "Antipasti",
+              unit_label: "slab",
+              quantity: 1,
+              unit_price_minor: 650,
+              line_total_minor: 650,
+              currency: "GBP",
+              image_id: "focaccia-genovese-slab",
+              rationale: "Soft bread rounds out the antipasto plate."
+            }
+          ]
+        }
+      : course
+  ),
+  total_minor: 3495,
+  item_count: 8,
+  line_count: 4
+};
+
+const readySession: PlannerSessionResponse = {
+  planner_session_id: "planner-1",
+  status: "proposal_ready",
+  customer_request: "Vegetarian dinner for 4 around £50",
+  follow_up_answers: [],
+  follow_up_question: null,
+  menu_proposal: proposal,
+  validation_errors: []
+};
+
+const pairedAntipastoSession: PlannerSessionResponse = {
+  ...readySession,
+  menu_proposal: pairedAntipastoProposal
+};
+
+const needsInputSession: PlannerSessionResponse = {
+  planner_session_id: "planner-2",
+  status: "needs_input",
+  customer_request: "Plan a dinner",
+  follow_up_answers: [],
+  follow_up_question: "How many people are you serving?",
+  menu_proposal: null,
+  validation_errors: []
+};
+
+const updatedBasket: Basket = {
+  basket_id: "basket-1",
+  lines: [
+    {
+      sku_id: "fresh-tagliatelle-250g",
+      name: "Fresh Tagliatelle",
+      category_id: "primi",
+      category_label: "Primi",
+      unit_label: "250g",
+      quantity: 2,
+      unit_price_minor: 425,
+      line_total_minor: 850,
+      currency: "GBP",
+      image_id: "fresh-tagliatelle-250g"
+    }
+  ],
+  total_minor: 850,
+  currency: "GBP",
+  item_count: 2,
+  line_count: 1
+};
+
+const mealPlanGrouping = {
+  title: "Vegetarian dinner for four",
+  party_size: 4,
+  package_template_id: "antipasto-primo-dessert" as const,
+  courses: [
+    {
+      course: "antipasto" as const,
+      course_label: "Antipasto",
+      line_sku_ids: ["marinated-nocellara-olives-250g"]
+    },
+    {
+      course: "primo" as const,
+      course_label: "Primo",
+      line_sku_ids: ["fresh-tagliatelle-250g"]
+    },
+    {
+      course: "dessert" as const,
+      course_label: "Dessert",
+      line_sku_ids: ["tiramisu-cup-single"]
+    }
+  ]
+};
+
+describe("usePlanner", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test("starts empty and loads a proposal from a prompt", async () => {
+    const client = createPlannerClient({
+      createResults: [success(readySession)]
+    });
+
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    expect(result.current.state.status).toBe("empty");
+
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4 around £50");
+    });
+
+    expect(client.createSession).toHaveBeenCalledWith({
+      message: "Vegetarian dinner for 4 around £50"
+    });
+    expect(result.current.state.status).toBe("proposal_ready");
+    expect(result.current.state.session?.planner_session_id).toBe("planner-1");
+    expect(result.current.draftProposal?.title).toBe("Vegetarian dinner for four");
+  });
+
+  test("keeps the original request visible while answering a follow-up", async () => {
+    const client = createPlannerClient({
+      createResults: [success(needsInputSession)],
+      followUpResults: [success(readySession)]
+    });
+
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Plan a dinner");
+    });
+
+    expect(result.current.state.status).toBe("needs_input");
+    expect(result.current.state.session?.customer_request).toBe("Plan a dinner");
+    expect(result.current.state.session?.follow_up_question).toBe(
+      "How many people are you serving?"
+    );
+
+    await act(async () => {
+      await result.current.submitFollowUp("4 people");
+    });
+
+    expect(client.answerFollowUp).toHaveBeenCalledWith("planner-2", {
+      message: "4 people"
+    });
+    expect(result.current.state.status).toBe("proposal_ready");
+  });
+
+  test("clears a stale proposal when a new planner request fails", async () => {
+    const client = createPlannerClient({
+      createResults: [
+        success(readySession),
+        {
+          ok: false,
+          error: {
+            kind: "http",
+            status: 503,
+            message: "Planner is not configured for this environment."
+          }
+        }
+      ]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4 around £50");
+    });
+
+    expect(result.current.draftProposal?.title).toBe("Vegetarian dinner for four");
+
+    await act(async () => {
+      await result.current.submitPrompt("A birthday lunch for 8");
+    });
+
+    expect(result.current.state.status).toBe("failed");
+    expect(result.current.draftProposal).toBeNull();
+  });
+
+  test("keeps proposal edits local until validation", async () => {
+    const normalizedProposal: MenuProposal = {
+      ...proposal,
+      courses: proposal.courses.map((course) =>
+        course.course === "primo"
+          ? {
+              ...course,
+              lines: course.lines.map((line) => ({
+                ...line,
+                quantity: 3,
+                line_total_minor: 1275
+              }))
+            }
+          : course
+      ),
+      total_minor: 3270,
+      item_count: 8
+    };
+    const client = createPlannerClient({
+      createResults: [success(readySession)],
+      validateResults: [
+        success({
+          ...readySession,
+          menu_proposal: normalizedProposal
+        })
+      ]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4 around £50");
+    });
+
+    act(() => {
+      result.current.setLineQuantity("fresh-tagliatelle-250g", 3);
+    });
+
+    expect(client.validateProposal).not.toHaveBeenCalled();
+    const editedLine = result.current.draftProposal?.courses
+      .flatMap((course) => course.lines)
+      .find((line) => line.sku_id === "fresh-tagliatelle-250g");
+    expect(editedLine?.quantity).toBe(3);
+
+    await act(async () => {
+      await result.current.validateProposal();
+    });
+
+    expect(client.validateProposal).toHaveBeenCalledWith("planner-1", {
+      menu_proposal: expect.objectContaining({ total_minor: 3270 })
+    });
+    expect(result.current.state.status).toBe("proposal_ready");
+    expect(result.current.draftProposal?.total_minor).toBe(3270);
+  });
+
+  test("removes proposal lines locally and surfaces validation errors", async () => {
+    const client = createPlannerClient({
+      createResults: [success(pairedAntipastoSession)],
+      validateResults: [
+        {
+          ok: false,
+          error: {
+            kind: "http",
+            status: 422,
+            message: "One item is no longer available."
+          }
+        }
+      ]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4 around £50");
+    });
+
+    act(() => {
+      result.current.removeLine("focaccia-genovese-slab");
+    });
+
+    expect(result.current.draftProposal?.line_count).toBe(3);
+    expect(result.current.draftProposal?.item_count).toBe(7);
+
+    await act(async () => {
+      await result.current.validateProposal();
+    });
+
+    expect(result.current.state.status).toBe("validation_error");
+    expect(result.current.state.message).toBe("One item is no longer available.");
+  });
+
+  test("keeps the final line in each package course", async () => {
+    const client = createPlannerClient({
+      createResults: [success(readySession)]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4 around £50");
+    });
+
+    act(() => {
+      result.current.removeLine("tiramisu-cup-single");
+    });
+
+    expect(result.current.draftProposal?.line_count).toBe(3);
+    expect(
+      result.current.draftProposal?.courses.find((course) => course.course === "dessert")
+        ?.lines
+    ).toHaveLength(1);
+  });
+
+  test("accepts a proposal into the selected basket mode", async () => {
+    const client = createPlannerClient({
+      createResults: [success(readySession)],
+      acceptResults: [
+        success({ basket: updatedBasket, meal_plan_grouping: mealPlanGrouping })
+      ]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4 around £50");
+    });
+
+    let acceptedBasket: Basket | null = null;
+    await act(async () => {
+      acceptedBasket = await result.current.acceptProposal("basket-1", "replace");
+    });
+
+    expect(client.acceptProposal).toHaveBeenCalledWith("planner-1", {
+      basket_id: "basket-1",
+      mode: "replace",
+      menu_proposal: proposal
+    });
+    expect(acceptedBasket).toEqual(updatedBasket);
+    expect(result.current.state.status).toBe("accepted");
+  });
+
+  test("does not accept the same proposal again after it is accepted", async () => {
+    const client = createPlannerClient({
+      createResults: [success(readySession)],
+      acceptResults: [
+        success({ basket: updatedBasket, meal_plan_grouping: mealPlanGrouping })
+      ]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4 around £50");
+    });
+
+    await act(async () => {
+      await result.current.acceptProposal("basket-1", "append");
+    });
+    await act(async () => {
+      await result.current.acceptProposal("basket-1", "append");
+    });
+
+    expect(client.acceptProposal).toHaveBeenCalledTimes(1);
+    expect(result.current.state.status).toBe("accepted");
+  });
+
+  test("exposes pending state while accepting a proposal", async () => {
+    const deferredAccept = createDeferred<ApiResult<AcceptMenuProposalResponse>>();
+    const client = createPlannerClient({
+      createResults: [success(readySession)],
+      acceptResults: [deferredAccept.promise]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4 around £50");
+    });
+
+    void act(() => {
+      void result.current.acceptProposal("basket-1", "append");
+    });
+
+    await waitFor(() => {
+      expect(result.current.state.status).toBe("accept_pending");
+    });
+
+    await act(async () => {
+      deferredAccept.resolve(
+        success({ basket: updatedBasket, meal_plan_grouping: mealPlanGrouping })
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.state.status).toBe("accepted");
+    });
+  });
+});
+
+function createPlannerClient({
+  createResults = [],
+  followUpResults = [],
+  validateResults = [],
+  acceptResults = []
+}: {
+  createResults?: Array<
+    ApiResult<PlannerSessionResponse> | Promise<ApiResult<PlannerSessionResponse>>
+  >;
+  followUpResults?: Array<
+    ApiResult<PlannerSessionResponse> | Promise<ApiResult<PlannerSessionResponse>>
+  >;
+  validateResults?: Array<
+    ApiResult<PlannerSessionResponse> | Promise<ApiResult<PlannerSessionResponse>>
+  >;
+  acceptResults?: Array<
+    ApiResult<AcceptMenuProposalResponse> | Promise<ApiResult<AcceptMenuProposalResponse>>
+  >;
+}): PlannerClient {
+  return {
+    createSession: vi.fn(async () => await shiftResult(createResults, "create")),
+    answerFollowUp: vi.fn(
+      async () => await shiftResult(followUpResults, "follow-up")
+    ),
+    fetchSession: vi.fn(),
+    validateProposal: vi.fn(
+      async () => await shiftResult(validateResults, "validate")
+    ),
+    acceptProposal: vi.fn(async () => await shiftResult(acceptResults, "accept"))
+  };
+}
+
+async function shiftResult<T>(
+  results: Array<ApiResult<T> | Promise<ApiResult<T>>>,
+  action: string
+): Promise<ApiResult<T>> {
+  const result = results.shift();
+  if (!result) {
+    throw new Error(`No planner ${action} result was queued.`);
+  }
+
+  return await result;
+}
+
+function success<T>(data: T): ApiResult<T> {
+  return { ok: true, data };
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+
+  return { promise, resolve };
+}
