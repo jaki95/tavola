@@ -185,6 +185,12 @@ seed catalog that can be tested without HTTP or React.
     an infrastructure-specific error.
 - **Validation**: Repository tests for list order, ID lookup, and missing lookup.
 
+**Implementation note (2026-06-04)**: Sprint 1 is implemented. The catalog
+domain value objects live in `tavola.domain.catalog`, the static 20-SKU seed
+catalog lives in `tavola.infrastructure.catalog_seed`, and the application
+repository protocol plus static adapter live in `tavola.application.catalog` and
+`tavola.infrastructure.catalog_repository`.
+
 ## Sprint 2: Catalog Application Use Cases And API
 
 **Goal**: Expose backend catalog browsing through stable HTTP endpoints while
