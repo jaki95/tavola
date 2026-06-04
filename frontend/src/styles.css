@@ -161,6 +161,7 @@ textarea::placeholder {
 }
 
 .storefront-workflow-tabs__tab {
+  position: relative;
   min-width: 5.4rem;
   min-height: 2.25rem;
   padding: 7px 14px;
@@ -170,6 +171,17 @@ textarea::placeholder {
   color: var(--color-muted);
   cursor: pointer;
   font-weight: 900;
+}
+
+.storefront-workflow-tabs__ready-dot {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--color-tomato);
+  box-shadow: 0 0 0 2px var(--color-paper);
 }
 
 .storefront-workflow-tabs__tab[aria-selected="true"] {

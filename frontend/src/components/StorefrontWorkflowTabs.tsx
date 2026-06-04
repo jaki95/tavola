@@ -8,6 +8,7 @@ export type { StorefrontWorkflow };
 
 type StorefrontWorkflowTabsProps = {
   activeWorkflow: StorefrontWorkflow;
+  isPlanProposalReady?: boolean;
   onWorkflowChange: (workflow: StorefrontWorkflow) => void;
 };
 
@@ -18,6 +19,7 @@ const workflows: Array<{ id: StorefrontWorkflow; label: string }> = [
 
 export function StorefrontWorkflowTabs({
   activeWorkflow,
+  isPlanProposalReady = false,
   onWorkflowChange
 }: StorefrontWorkflowTabsProps) {
   return (
@@ -28,6 +30,11 @@ export function StorefrontWorkflowTabs({
     >
       {workflows.map((workflow) => (
         <button
+          aria-label={
+            workflow.id === "plan" && isPlanProposalReady
+              ? "Plan, proposal ready"
+              : undefined
+          }
           aria-controls={getWorkflowPanelId(workflow.id)}
           aria-selected={activeWorkflow === workflow.id}
           className="storefront-workflow-tabs__tab"
@@ -38,6 +45,12 @@ export function StorefrontWorkflowTabs({
           type="button"
         >
           {workflow.label}
+          {workflow.id === "plan" && isPlanProposalReady ? (
+            <span
+              aria-hidden="true"
+              className="storefront-workflow-tabs__ready-dot"
+            />
+          ) : null}
         </button>
       ))}
     </div>

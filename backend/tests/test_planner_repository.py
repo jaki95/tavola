@@ -33,6 +33,20 @@ def test_create_session_assigns_deterministic_id_and_persists() -> None:
     assert repository.get_session(PlannerSessionId("planner-1")) == session
 
 
+def test_create_session_can_persist_planning_state() -> None:
+    repository = InMemoryPlannerSessionRepository(id_generator=lambda: "planner-1")
+
+    session = repository.create_session(
+        customer_request="Dinner for friends",
+        status=ProposalStatus.PLANNING,
+    )
+
+    assert session.status == ProposalStatus.PLANNING
+    assert session.follow_up_question is None
+    assert session.menu_proposal is None
+    assert repository.get_session(PlannerSessionId("planner-1")) == session
+
+
 def test_save_session_updates_existing_session_state() -> None:
     repository = InMemoryPlannerSessionRepository(id_generator=lambda: "planner-1")
     repository.create_session(

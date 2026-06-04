@@ -54,6 +54,16 @@ const plannerSession: PlannerSessionResponse = {
   validation_errors: []
 };
 
+const planningSession: PlannerSessionResponse = {
+  planner_session_id: "planner-2",
+  status: "planning",
+  customer_request: "Dinner for 4",
+  follow_up_answers: [],
+  follow_up_question: null,
+  menu_proposal: null,
+  validation_errors: []
+};
+
 const plannerStatus = {
   enabled: true,
   mode: "real_codex" as const,
@@ -166,6 +176,15 @@ describe("planner API client", () => {
         headers: { Accept: "application/json" }
       }
     );
+  });
+
+  test("accepts an in-progress planning session response", async () => {
+    const { createPlannerSession } = await loadPlannerClient();
+    stubJsonResponse(planningSession);
+
+    const result = await createPlannerSession({ message: "Dinner for 4" });
+
+    expect(result).toEqual({ ok: true, data: planningSession });
   });
 
   test("validates an edited proposal without accepting it", async () => {

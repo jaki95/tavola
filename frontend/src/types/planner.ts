@@ -2,6 +2,7 @@ import type { Basket } from "./basket";
 import type { CatalogCategoryId } from "./catalog";
 
 export type PlannerStatus =
+  | "planning"
   | "needs_input"
   | "proposal_ready"
   | "accepted"

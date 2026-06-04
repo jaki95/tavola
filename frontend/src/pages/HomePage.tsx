@@ -19,10 +19,18 @@ export function HomePage() {
   const [activeWorkflow, setActiveWorkflow] =
     useState<StorefrontWorkflow>("shop");
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isPlanProposalReady, setIsPlanProposalReady] = useState(false);
   const isBasketMutationPending = basket.mutation.status === "pending";
   const isBasketUpdating =
     isBasketMutationPending || basket.basket.status === "loading";
   const basketQuantities = getBasketQuantities(basket.basket.basket);
+
+  function changeWorkflow(workflow: StorefrontWorkflow) {
+    if (workflow === "plan") {
+      setIsPlanProposalReady(false);
+    }
+    setActiveWorkflow(workflow);
+  }
 
   return (
     <div className="site-shell">
@@ -31,7 +39,7 @@ export function HomePage() {
           <div className="top-bar__brand-area">
             <button
               className="brand-mark brand-mark--compact"
-              onClick={() => setActiveWorkflow("shop")}
+              onClick={() => changeWorkflow("shop")}
               type="button"
             >
               <span className="brand-mark__name">Tavola</span>
@@ -40,7 +48,8 @@ export function HomePage() {
           </div>
           <StorefrontWorkflowTabs
             activeWorkflow={activeWorkflow}
-            onWorkflowChange={setActiveWorkflow}
+            isPlanProposalReady={isPlanProposalReady}
+            onWorkflowChange={changeWorkflow}
           />
         </div>
       </header>
@@ -72,6 +81,11 @@ export function HomePage() {
               <PlannerWorkspace
                 basket={basket.basket.basket}
                 onBasketAccepted={basket.applyBasket}
+                onProposalReady={() => {
+                  if (activeWorkflow !== "plan") {
+                    setIsPlanProposalReady(true);
+                  }
+                }}
               />
             </section>
           </div>

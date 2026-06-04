@@ -467,6 +467,25 @@ customer can keep browsing.
   - Backend fake-agent timeout tests.
   - Frontend fake-timer tests for progress and timeout copy.
 
+### Sprint 3 Implementation Note
+
+- Added `planning` as a valid planner session status with clean domain
+  invariants: no follow-up question, proposal, or validation errors while work
+  is in progress.
+- Split API session creation from planner execution. `POST /planner/sessions`
+  and follow-up answers now return quickly with the same session in `planning`,
+  then a one-at-a-time in-process background runner completes the session as
+  `needs_input`, `proposal_ready`, or `failed`.
+- Disabled planner mode now returns an unavailable error before creating a
+  session, and concurrent planner submissions return a customer-safe busy error
+  instead of queueing behind a slow live run.
+- Frontend planner types and API validation now accept `planning`; the planner
+  hook polls `fetchPlannerSession` about every two seconds, stops polling on
+  terminal states, unmount, or a newer prompt, and keeps progress copy in Tavola
+  customer language.
+- The Plan composer remains usable during planning so a customer can submit a
+  revised request while the previous backend task finishes out of band.
+
 ## Sprint 4: Benchmark, Browser Approval, And Documentation
 
 **Goal**: Prove the chosen fix in automated tests, opt-in real Codex benchmarks,

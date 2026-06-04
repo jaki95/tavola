@@ -1,4 +1,11 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { App } from "./App";
@@ -8,6 +15,7 @@ import { createCheckout, listPickupWindows } from "./api/checkout";
 import {
   acceptProposal,
   createPlannerSession,
+  fetchPlannerSession,
   getPlannerStatus
 } from "./api/planner";
 import type { Basket } from "./types/basket";
@@ -49,6 +57,7 @@ const listPickupWindowsMock = vi.mocked(listPickupWindows);
 const createCheckoutMock = vi.mocked(createCheckout);
 const getPlannerStatusMock = vi.mocked(getPlannerStatus);
 const createPlannerSessionMock = vi.mocked(createPlannerSession);
+const fetchPlannerSessionMock = vi.mocked(fetchPlannerSession);
 const acceptProposalMock = vi.mocked(acceptProposal);
 
 const tagliatelle: CatalogProductSummary = {
@@ -175,9 +184,20 @@ const plannerReadySession: PlannerSessionResponse = {
   validation_errors: []
 };
 
+const plannerPlanningSession: PlannerSessionResponse = {
+  planner_session_id: "planner-1",
+  status: "planning",
+  customer_request: "Plan pasta for 2",
+  follow_up_answers: [],
+  follow_up_question: null,
+  menu_proposal: null,
+  validation_errors: []
+};
+
 describe("App", () => {
   afterEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   beforeEach(() => {
@@ -215,6 +235,10 @@ describe("App", () => {
       }
     });
     createPlannerSessionMock.mockResolvedValue({
+      ok: true,
+      data: plannerReadySession
+    });
+    fetchPlannerSessionMock.mockResolvedValue({
       ok: true,
       data: plannerReadySession
     });
@@ -397,6 +421,54 @@ describe("App", () => {
         name: "Fresh pasta supper"
       })
     ).toBeInTheDocument();
+  });
+
+  test("marks Plan when a proposal becomes ready while Shop is visible", async () => {
+    vi.useFakeTimers();
+    createPlannerSessionMock.mockResolvedValueOnce({
+      ok: true,
+      data: plannerPlanningSession
+    });
+    fetchPlannerSessionMock.mockResolvedValueOnce({
+      ok: true,
+      data: plannerReadySession
+    });
+    render(<App />);
+
+    const storefrontHeader = screen.getByRole("banner", {
+      name: "Tavola storefront"
+    });
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Plan" }));
+
+    const planner = screen.getByRole("region", { name: "Plan a menu" });
+    fireEvent.change(within(planner).getByLabelText("Meal request"), {
+      target: { value: "Plan pasta for 2" }
+    });
+    fireEvent.click(within(planner).getByRole("button", { name: "Plan menu" }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Shop" }));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    expect(
+      within(storefrontHeader).getByRole("tab", {
+        name: "Plan, proposal ready"
+      })
+    ).toHaveAttribute("aria-selected", "false");
+
+    fireEvent.click(
+      within(storefrontHeader).getByRole("tab", {
+        name: "Plan, proposal ready"
+      })
+    );
+
+    expect(
+      within(storefrontHeader).getByRole("tab", { name: "Plan" })
+    ).toHaveAttribute("aria-selected", "true");
   });
 
   test("preserves catalog filters but closes detail after leaving Shop", async () => {

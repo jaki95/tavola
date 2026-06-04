@@ -1,5 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { act } from "react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ApiResult } from "../../api/client";
@@ -137,6 +136,16 @@ const readySession: PlannerSessionResponse = {
   validation_errors: []
 };
 
+const planningSession: PlannerSessionResponse = {
+  planner_session_id: "planner-1",
+  status: "planning",
+  customer_request: "Vegetarian dinner for 4 around £50",
+  follow_up_answers: [],
+  follow_up_question: null,
+  menu_proposal: null,
+  validation_errors: []
+};
+
 const pairedAntipastoSession: PlannerSessionResponse = {
   ...readySession,
   menu_proposal: pairedAntipastoProposal
@@ -215,8 +224,10 @@ describe("PlannerWorkspace", () => {
   });
 
   test("submits a meal prompt and renders a reviewable proposal", async () => {
+    vi.useFakeTimers();
     const client = createPlannerClient({
-      createResults: [success(readySession)]
+      createResults: [success(planningSession)],
+      fetchResults: [success(readySession)]
     });
 
     renderPlannerWorkspace({ client });
@@ -229,8 +240,19 @@ describe("PlannerWorkspace", () => {
     expect(client.createSession).toHaveBeenCalledWith({
       message: "Vegetarian dinner for 4 around £50"
     });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Tavola is planning your menu."
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
     expect(
-      await screen.findByRole("heading", {
+      screen.getByRole("heading", {
         level: 3,
         name: "Vegetarian dinner for four"
       })
@@ -244,9 +266,9 @@ describe("PlannerWorkspace", () => {
   test("shows customer-safe progress copy while planning remains pending", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-04T12:00:00Z"));
-    const deferredCreate = createDeferred<ApiResult<PlannerSessionResponse>>();
     const client = createPlannerClient({
-      createResults: [deferredCreate.promise]
+      createResults: [success(planningSession)],
+      fetchResults: Array.from({ length: 20 }, () => success(planningSession))
     });
 
     renderPlannerWorkspace({ client });
@@ -281,6 +303,8 @@ describe("PlannerWorkspace", () => {
     expect(statusCopy).not.toMatch(
       /codex|sdk|tool|thread|model|retry|token|credential/i
     );
+    expect(screen.getByLabelText("Meal request")).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Plan menu" })).toBeEnabled();
   });
 
   test("shows live planner mode and concise run summary", async () => {
@@ -329,9 +353,17 @@ describe("PlannerWorkspace", () => {
   });
 
   test("answers a required follow-up while preserving the original request", async () => {
+    vi.useFakeTimers();
+    const planningAfterFollowUp: PlannerSessionResponse = {
+      ...planningSession,
+      planner_session_id: "planner-2",
+      customer_request: "Plan a dinner",
+      follow_up_answers: ["4 people"]
+    };
     const client = createPlannerClient({
       createResults: [success(needsInputSession)],
-      followUpResults: [success(readySession)]
+      followUpResults: [success(planningAfterFollowUp)],
+      fetchResults: [success(readySession)]
     });
 
     renderPlannerWorkspace({ client });
@@ -340,23 +372,33 @@ describe("PlannerWorkspace", () => {
       target: { value: "Plan a dinner" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Plan menu" }));
+    await act(async () => {
+      await Promise.resolve();
+    });
 
-    expect(await screen.findByText("Plan a dinner")).toBeInTheDocument();
-    expect(
-      screen.getByText("How many people are you serving?")
-    ).toBeInTheDocument();
+    expect(screen.getAllByText("Plan a dinner")).toHaveLength(2);
+    expect(screen.getByText("How many people are you serving?")).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Follow-up answer"), {
       target: { value: "4 people" }
     });
     fireEvent.click(screen.getByRole("button", { name: "Continue planning" }));
-
-    await waitFor(() => {
-      expect(client.answerFollowUp).toHaveBeenCalledWith("planner-2", {
-        message: "4 people"
-      });
+    await act(async () => {
+      await Promise.resolve();
     });
-    expect(await screen.findByText("Vegetarian dinner for four")).toBeInTheDocument();
+
+    expect(client.answerFollowUp).toHaveBeenCalledWith("planner-2", {
+      message: "4 people"
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Tavola is planning your menu."
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    expect(screen.getByText("Vegetarian dinner for four")).toBeInTheDocument();
   });
 
   test("edits quantities and removes proposal lines before acceptance", async () => {
@@ -524,6 +566,7 @@ function createPlannerClient({
   }),
   createResults = [],
   followUpResults = [],
+  fetchResults = [],
   acceptResults = []
 }: {
   statusResult?: ApiResult<PlannerStatusResponse>;
@@ -531,6 +574,9 @@ function createPlannerClient({
     ApiResult<PlannerSessionResponse> | Promise<ApiResult<PlannerSessionResponse>>
   >;
   followUpResults?: Array<
+    ApiResult<PlannerSessionResponse> | Promise<ApiResult<PlannerSessionResponse>>
+  >;
+  fetchResults?: Array<
     ApiResult<PlannerSessionResponse> | Promise<ApiResult<PlannerSessionResponse>>
   >;
   acceptResults?: Array<
@@ -543,7 +589,7 @@ function createPlannerClient({
     answerFollowUp: vi.fn(
       async () => await shiftResult(followUpResults, "follow-up")
     ),
-    fetchSession: vi.fn(),
+    fetchSession: vi.fn(async () => await shiftResult(fetchResults, "fetch")),
     validateProposal: vi.fn(),
     acceptProposal: vi.fn(async () => await shiftResult(acceptResults, "accept"))
   };
@@ -563,13 +609,4 @@ async function shiftResult<T>(
 
 function success<T>(data: T): ApiResult<T> {
   return { ok: true, data };
-}
-
-function createDeferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((promiseResolve) => {
-    resolve = promiseResolve;
-  });
-
-  return { promise, resolve };
 }

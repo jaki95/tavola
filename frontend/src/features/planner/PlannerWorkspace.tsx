@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { formatBasketMoney } from "../basket/basketFormat";
 import { getCatalogImageAsset } from "../catalog/catalogImages";
@@ -12,6 +12,7 @@ import { usePlanner, type PlannerClient } from "./usePlanner";
 
 type PlannerWorkspaceProps = {
   basket: Basket | null;
+  onProposalReady?: () => void;
   onBasketAccepted: (basket: Basket) => void;
   client?: PlannerClient;
 };
@@ -24,6 +25,7 @@ const examplePrompts = [
 
 export function PlannerWorkspace({
   basket,
+  onProposalReady,
   onBasketAccepted,
   client
 }: PlannerWorkspaceProps) {
@@ -31,12 +33,23 @@ export function PlannerWorkspace({
   const [prompt, setPrompt] = useState("");
   const [followUpAnswer, setFollowUpAnswer] = useState("");
   const [isConfirmingReplace, setIsConfirmingReplace] = useState(false);
-  const isPlanning = planner.state.status === "loading";
+  const previousPlannerState = useRef(planner.state.status);
+  const isPlanning = planner.state.status === "planning";
   const isAcceptPending = planner.state.status === "accept_pending";
   const isAccepted = planner.state.status === "accepted";
   const isPlannerUnavailable =
     planner.plannerStatus.status === "disabled" ||
     planner.plannerStatus.status === "error";
+
+  useEffect(() => {
+    if (
+      planner.state.status === "proposal_ready" &&
+      previousPlannerState.current !== "proposal_ready"
+    ) {
+      onProposalReady?.();
+    }
+    previousPlannerState.current = planner.state.status;
+  }, [onProposalReady, planner.state.status]);
 
   async function submitPrompt(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -94,7 +107,7 @@ export function PlannerWorkspace({
         <label className="planner-composer__field">
           <span>Meal request</span>
           <textarea
-            disabled={isPlanning || isPlannerUnavailable}
+            disabled={isPlannerUnavailable}
             name="meal-request"
             onChange={(event) => setPrompt(event.target.value)}
             placeholder="Vegetarian dinner for 4 around £50"
@@ -103,10 +116,10 @@ export function PlannerWorkspace({
           />
         </label>
         <button
-          disabled={isPlanning || isPlannerUnavailable || !prompt.trim()}
+          disabled={isPlannerUnavailable || !prompt.trim()}
           type="submit"
         >
-          {isPlanning ? "Planning" : "Plan menu"}
+          Plan menu
         </button>
       </form>
 
@@ -114,7 +127,7 @@ export function PlannerWorkspace({
         <span>Try an example</span>
         {examplePrompts.map((examplePrompt) => (
           <button
-            disabled={isPlanning || isPlannerUnavailable}
+            disabled={isPlannerUnavailable}
             key={examplePrompt}
             onClick={() => setPrompt(examplePrompt)}
             type="button"
@@ -135,7 +148,7 @@ export function PlannerWorkspace({
         </p>
       ) : null}
 
-      {planner.state.status === "loading" ? (
+      {planner.state.status === "planning" ? (
         <p className="planner-workspace__status" role="status">
           {planningProgressMessage(planner.planningElapsedMs)}
         </p>

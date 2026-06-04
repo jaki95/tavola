@@ -33,6 +33,7 @@ import type {
 
 const catalogCategoryIdSet = new Set<string>(catalogCategoryIds);
 const plannerStatusSet = new Set<string>([
+  "planning",
   "needs_input",
   "proposal_ready",
   "accepted",

@@ -169,6 +169,18 @@ def test_planner_session_can_represent_follow_up_without_product_lines() -> None
     assert session.follow_up_question is not None
 
 
+def test_planner_session_can_represent_in_progress_planning() -> None:
+    session = PlannerSession(
+        planner_session_id=PlannerSessionId("planner-1"),
+        customer_request="Dinner for friends",
+        status=ProposalStatus.PLANNING,
+    )
+
+    assert session.follow_up_question is None
+    assert session.menu_proposal is None
+    assert session.validation_errors == ()
+
+
 def test_planner_session_enforces_status_payload_shape() -> None:
     with pytest.raises(ValueError, match="follow_up_question is required"):
         PlannerSession(
@@ -182,6 +194,14 @@ def test_planner_session_enforces_status_payload_shape() -> None:
             planner_session_id=PlannerSessionId("planner-1"),
             customer_request="Dinner",
             status=ProposalStatus.PROPOSAL_READY,
+        )
+
+    with pytest.raises(ValueError, match="planning sessions cannot include"):
+        PlannerSession(
+            planner_session_id=PlannerSessionId("planner-1"),
+            customer_request="Dinner",
+            status=ProposalStatus.PLANNING,
+            follow_up_question=FollowUpQuestion(message="How many people?"),
         )
 
 

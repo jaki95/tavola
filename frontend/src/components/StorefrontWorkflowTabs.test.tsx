@@ -53,4 +53,19 @@ describe("StorefrontWorkflowTabs", () => {
       "true"
     );
   });
+
+  test("can mark Plan when a hidden proposal is ready", () => {
+    render(
+      <StorefrontWorkflowTabs
+        activeWorkflow="shop"
+        isPlanProposalReady
+        onWorkflowChange={vi.fn()}
+      />
+    );
+
+    const planTab = screen.getByRole("tab", { name: "Plan, proposal ready" });
+
+    expect(planTab).toHaveAttribute("aria-controls", getWorkflowPanelId("plan"));
+    expect(planTab.querySelector(".storefront-workflow-tabs__ready-dot")).not.toBeNull();
+  });
 });

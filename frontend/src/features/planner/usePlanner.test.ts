@@ -135,6 +135,16 @@ const readySession: PlannerSessionResponse = {
   validation_errors: []
 };
 
+const planningSession: PlannerSessionResponse = {
+  planner_session_id: "planner-1",
+  status: "planning",
+  customer_request: "Vegetarian dinner for 4 around £50",
+  follow_up_answers: [],
+  follow_up_question: null,
+  menu_proposal: null,
+  validation_errors: []
+};
+
 const pairedAntipastoSession: PlannerSessionResponse = {
   ...readySession,
   menu_proposal: pairedAntipastoProposal
@@ -205,8 +215,10 @@ describe("usePlanner", () => {
   });
 
   test("starts empty and loads a proposal from a prompt", async () => {
+    vi.useFakeTimers();
     const client = createPlannerClient({
-      createResults: [success(readySession)]
+      createResults: [success(planningSession)],
+      fetchResults: [success(readySession)]
     });
 
     const { result } = renderHook(() => usePlanner({ client }));
@@ -220,12 +232,20 @@ describe("usePlanner", () => {
     expect(client.createSession).toHaveBeenCalledWith({
       message: "Vegetarian dinner for 4 around £50"
     });
+    expect(result.current.state.status).toBe("planning");
+    expect(result.current.state.session?.planner_session_id).toBe("planner-1");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    expect(client.fetchSession).toHaveBeenCalledWith("planner-1");
     expect(result.current.state.status).toBe("proposal_ready");
     expect(result.current.state.session?.planner_session_id).toBe("planner-1");
     expect(result.current.draftProposal?.title).toBe("Vegetarian dinner for four");
   });
 
-  test("tracks elapsed time while a planner request is loading", async () => {
+  test("tracks elapsed time while a planner request is planning", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-04T12:00:00Z"));
     const deferredCreate = createDeferred<ApiResult<PlannerSessionResponse>>();
@@ -239,7 +259,7 @@ describe("usePlanner", () => {
       submitPromise = result.current.submitPrompt("Vegetarian dinner for 4");
     });
 
-    expect(result.current.state.status).toBe("loading");
+    expect(result.current.state.status).toBe("planning");
     expect(result.current.planningElapsedMs).toBe(0);
 
     act(() => {
@@ -258,9 +278,17 @@ describe("usePlanner", () => {
   });
 
   test("keeps the original request visible while answering a follow-up", async () => {
+    vi.useFakeTimers();
+    const planningAfterFollowUp: PlannerSessionResponse = {
+      ...planningSession,
+      planner_session_id: "planner-2",
+      customer_request: "Plan a dinner",
+      follow_up_answers: ["4 people"]
+    };
     const client = createPlannerClient({
       createResults: [success(needsInputSession)],
-      followUpResults: [success(readySession)]
+      followUpResults: [success(planningAfterFollowUp)],
+      fetchResults: [success(readySession)]
     });
 
     const { result } = renderHook(() => usePlanner({ client }));
@@ -282,7 +310,84 @@ describe("usePlanner", () => {
     expect(client.answerFollowUp).toHaveBeenCalledWith("planner-2", {
       message: "4 people"
     });
+    expect(result.current.state.status).toBe("planning");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
     expect(result.current.state.status).toBe("proposal_ready");
+  });
+
+  test("ignores polling results from an older prompt after a new prompt starts", async () => {
+    vi.useFakeTimers();
+    const secondPlanningSession: PlannerSessionResponse = {
+      ...planningSession,
+      planner_session_id: "planner-2",
+      customer_request: "Birthday lunch for 8"
+    };
+    const secondReadySession: PlannerSessionResponse = {
+      ...readySession,
+      planner_session_id: "planner-2",
+      customer_request: "Birthday lunch for 8"
+    };
+    const client = createPlannerClient({
+      createResults: [success(planningSession), success(secondPlanningSession)],
+      fetchResults: [success(secondReadySession)]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4 around £50");
+    });
+    await act(async () => {
+      await result.current.submitPrompt("Birthday lunch for 8");
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    expect(client.fetchSession).toHaveBeenCalledWith("planner-2");
+    expect(client.fetchSession).not.toHaveBeenCalledWith("planner-1");
+    expect(result.current.state.status).toBe("proposal_ready");
+    expect(result.current.state.session?.planner_session_id).toBe("planner-2");
+  });
+
+  test("keeps polling the current planning session when a replacement prompt is busy", async () => {
+    vi.useFakeTimers();
+    const client = createPlannerClient({
+      createResults: [
+        success(planningSession),
+        {
+          ok: false,
+          error: {
+            kind: "http",
+            status: 503,
+            message: "Tavola is already planning a menu."
+          }
+        }
+      ],
+      fetchResults: [success(readySession)]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4 around £50");
+    });
+    await act(async () => {
+      await result.current.submitPrompt("Birthday lunch for 8");
+    });
+
+    expect(result.current.state.status).toBe("planning");
+    expect(result.current.state.session?.planner_session_id).toBe("planner-1");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    expect(client.fetchSession).toHaveBeenCalledWith("planner-1");
+    expect(result.current.state.status).toBe("proposal_ready");
+    expect(result.current.state.session?.planner_session_id).toBe("planner-1");
   });
 
   test("loads disabled planner status and blocks prompt submission", async () => {
@@ -563,6 +668,7 @@ function createPlannerClient({
   }),
   createResults = [],
   followUpResults = [],
+  fetchResults = [],
   validateResults = [],
   acceptResults = []
 }: {
@@ -571,6 +677,9 @@ function createPlannerClient({
     ApiResult<PlannerSessionResponse> | Promise<ApiResult<PlannerSessionResponse>>
   >;
   followUpResults?: Array<
+    ApiResult<PlannerSessionResponse> | Promise<ApiResult<PlannerSessionResponse>>
+  >;
+  fetchResults?: Array<
     ApiResult<PlannerSessionResponse> | Promise<ApiResult<PlannerSessionResponse>>
   >;
   validateResults?: Array<
@@ -586,7 +695,7 @@ function createPlannerClient({
     answerFollowUp: vi.fn(
       async () => await shiftResult(followUpResults, "follow-up")
     ),
-    fetchSession: vi.fn(),
+    fetchSession: vi.fn(async () => await shiftResult(fetchResults, "fetch")),
     validateProposal: vi.fn(
       async () => await shiftResult(validateResults, "validate")
     ),
