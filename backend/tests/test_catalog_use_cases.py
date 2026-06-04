@@ -62,6 +62,12 @@ def test_browse_catalog_searches_customer_catalog_text_and_positive_facets() -> 
     assert all(sku.facets.is_vegan or "vegan" in sku.tags for sku in result.products)
 
 
+def test_browse_catalog_finds_pantry_pesto_for_pasta_planning() -> None:
+    result = BrowseCatalog(StaticCatalogRepository.from_seed())(query="pasta")
+
+    assert "pesto-genovese-180g" in {sku.sku_id for sku in result.products}
+
+
 def test_browse_catalog_normalizes_search_query() -> None:
     repository = StaticCatalogRepository.from_seed()
     browse = BrowseCatalog(repository)

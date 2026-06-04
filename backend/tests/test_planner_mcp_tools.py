@@ -114,6 +114,16 @@ def test_search_catalog_returns_customer_safe_sku_summaries() -> None:
     }
 
 
+def test_search_catalog_seed_finds_pantry_pesto_for_pasta_requests() -> None:
+    tools = create_planner_tool_handlers(StaticCatalogRepository.from_seed())
+
+    result = tools.call("search_catalog", {"query": "pasta"})
+
+    assert "pesto-genovese-180g" in {
+        product["sku_id"] for product in result["products"]
+    }
+
+
 def test_search_catalog_limits_results_and_reports_available_count() -> None:
     tools = create_planner_tool_handlers(
         StaticCatalogRepository(

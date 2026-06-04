@@ -379,7 +379,7 @@ SEED_CATALOG: tuple[CatalogSku, ...] = (
             " spooning over vegetables. The jar is sized for two generous pasta"
             " suppers."
         ),
-        tags=("pesto", "basil", "sauce", "vegetarian"),
+        tags=("pesto", "basil", "sauce", "pasta", "primo", "vegetarian"),
         facets=DietaryFacets(is_vegetarian=True, is_gluten_free=True),
         image_id="pesto-genovese-180g",
         display_order=2,
