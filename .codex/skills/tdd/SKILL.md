@@ -133,6 +133,14 @@ first, then broaden when the change crosses boundaries.
 If the repository does not yet contain the referenced project area or command,
 say exactly what could not be run and why.
 
+## Frontend Browser Gate
+
+Automated component tests do not replace browser verification for frontend
+changes. After frontend tests and build checks pass, run the browser approval
+check in `docs/frontend-browser-approval-check.md` for the changed flow before
+finishing. If it cannot be completed, report exactly which checklist items remain
+unchecked and why.
+
 ## Per-Cycle Checklist
 
 ```text
