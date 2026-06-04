@@ -73,9 +73,9 @@ export function CatalogDetail({
           </button>
         </div>
 
-        {detail.status === "loading" ? <LoadingDetail skuId={detail.skuId} /> : null}
+        {detail.status === "loading" ? <LoadingDetail /> : null}
         {detail.status === "error" ? (
-          <ErrorDetail message={detail.message} skuId={detail.skuId} />
+          <ErrorDetail message={detail.message} />
         ) : null}
         {detail.status === "success" ? (
           <PopulatedDetail
@@ -148,19 +148,18 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
   ).filter((element) => element.tabIndex >= 0);
 }
 
-function LoadingDetail({ skuId }: { skuId: string }) {
+function LoadingDetail() {
   return (
     <section className="catalog-detail__state" aria-labelledby="catalog-detail-loading">
       <h2 id="catalog-detail-loading">Loading product details</h2>
-      <p role="status">Fetching detail for {skuId}.</p>
+      <p role="status">Fetching product details.</p>
     </section>
   );
 }
 
-function ErrorDetail({ message, skuId }: { message: string; skuId: string }) {
+function ErrorDetail({ message }: { message: string }) {
   return (
     <section className="catalog-detail__state" aria-labelledby="catalog-detail-error">
-      <p className="catalog-detail__category">{skuId}</p>
       <h2 id="catalog-detail-error">Product detail</h2>
       <p role="alert">{message}</p>
     </section>
@@ -193,23 +192,13 @@ function PopulatedDetail({
       <CatalogProductImage product={product} />
 
       <div className="catalog-detail__body">
+        <p className="catalog-detail__category">{product.category_label}</p>
         <h2>{product.name}</h2>
-        <p>{product.detail_description}</p>
-
-        <dl className="catalog-detail__facts">
-          <div>
-            <dt>Category</dt>
-            <dd>{product.category_label}</dd>
-          </div>
-          <div>
-            <dt>Unit</dt>
-            <dd>{product.unit_label}</dd>
-          </div>
-          <div>
-            <dt>Price</dt>
-            <dd>{price}</dd>
-          </div>
-        </dl>
+        <div className="catalog-detail__purchase">
+          <p className="catalog-detail__price">{price}</p>
+          <p className="catalog-detail__unit">{product.unit_label}</p>
+        </div>
+        <p className="catalog-detail__description">{product.detail_description}</p>
 
         {facetLabels.length > 0 ? (
           <ul className="catalog-detail__facets" aria-label="Dietary facets">

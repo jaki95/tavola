@@ -24,6 +24,10 @@ export function CatalogCard({
   const image = getCatalogImageAsset(product.image_id, product.name);
   const isInBasket = basketQuantity > 0;
   const basketQuantityLabel = formatBasketQuantityLabel(basketQuantity);
+  const price = formatMoney({
+    amount_minor: product.unit_price_minor,
+    currency: product.currency
+  });
 
   return (
     <article
@@ -44,22 +48,11 @@ export function CatalogCard({
       <div className="catalog-card__body">
         <p className="catalog-card__category">{product.category_label}</p>
         <h3 id={`${product.sku_id}-name`}>{product.name}</h3>
+        <div className="catalog-card__purchase">
+          <p className="catalog-card__price">{price}</p>
+          <p className="catalog-card__unit">{product.unit_label}</p>
+        </div>
         <p className="catalog-card__description">{product.short_description}</p>
-        <dl className="catalog-card__facts">
-          <div>
-            <dt>Unit</dt>
-            <dd>{product.unit_label}</dd>
-          </div>
-          <div>
-            <dt>Price</dt>
-            <dd>
-              {formatMoney({
-                amount_minor: product.unit_price_minor,
-                currency: product.currency
-              })}
-            </dd>
-          </div>
-        </dl>
         {dietaryBadges.length > 0 ? (
           <ul className="catalog-card__badges" aria-label="Dietary badges">
             {dietaryBadges.map((badge) => (
@@ -81,9 +74,7 @@ export function CatalogCard({
             type="button"
             onClick={() => onAddProduct(product.sku_id, 1)}
           >
-            <span>
-              {isAddPending ? "Adding" : isInBasket ? "Add another" : "Add to basket"}
-            </span>
+            <span>{isAddPending ? "Adding" : "Add"}</span>
             {isInBasket && !isAddPending ? (
               <span className="catalog-add-button__state">{basketQuantityLabel}</span>
             ) : null}

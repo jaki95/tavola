@@ -269,6 +269,24 @@ polished commerce feel.
   - No customer-facing SKU language appears.
 - **Validation**: Detail tests and browser keyboard/mouse check.
 
+### Sprint 3 Implementation Notes
+
+- Compact catalog controls now read as a tool strip rather than a hero panel,
+  with category radios and search preserving their accessible labels and
+  existing filter behavior.
+- Product cards now lead with stable food imagery, slimmer paper surfaces,
+  tighter serif product hierarchy, clearer price/unit placement, quieter
+  dietary badges, and compact red outline add actions that still show in-basket
+  quantity state.
+- Product detail now shares the refreshed card language with a calmer modal,
+  larger product image, clearer price/unit hierarchy, working add-to-basket
+  state, and loading/error copy that does not expose raw product identifiers.
+- Browser approval covered the loaded catalog at a desktop viewport,
+  category filtering, search/no-results/reset, populated basket card state,
+  product detail open/add/keyboard close/mouse close, backend-driven detail and
+  catalog error states through the Vite proxy, keyboard focus on catalog search,
+  and console-error checks.
+
 ## Sprint 4: Basket And Checkout Polish
 
 **Goal**: Make basket and checkout feel like first-class parts of the polished

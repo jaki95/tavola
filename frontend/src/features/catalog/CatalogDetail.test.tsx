@@ -44,8 +44,9 @@ describe("CatalogDetail", () => {
 
     expect(within(panel).getByText("Loading product details")).toBeInTheDocument();
     expect(within(panel).getByRole("status")).toHaveTextContent(
-      "Fetching detail for fresh-tagliatelle-250g."
+      "Fetching product details."
     );
+    expect(panel).not.toHaveTextContent("fresh-tagliatelle-250g");
   });
 
   test("keeps detail errors inside the dialog and lets customers close them", () => {
@@ -70,6 +71,7 @@ describe("CatalogDetail", () => {
     expect(within(panel).getByRole("alert")).toHaveTextContent(
       "Request failed with status 404."
     );
+    expect(panel).not.toHaveTextContent("fresh-tagliatelle-250g");
 
     fireEvent.click(within(panel).getByRole("button", { name: "Close product detail" }));
 

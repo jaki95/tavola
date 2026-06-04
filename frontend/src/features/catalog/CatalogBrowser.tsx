@@ -43,7 +43,7 @@ export function CatalogBrowser({
             <p className="eyebrow">Fresh from the counter</p>
             <h1 id="catalog-title">Catalog</h1>
             <p className="catalog-browser__lede">
-              Browse real deli products, then add your picks to the basket.
+              Browse deli products and add your picks to the basket.
             </p>
           </div>
         </div>

@@ -194,7 +194,7 @@ describe("CatalogGrid", () => {
       name: "Add another Fresh Tagliatelle to basket, 2 in basket"
     });
 
-    expect(within(addButton).getByText("Add another")).toBeInTheDocument();
+    expect(within(addButton).getByText("Add")).toBeInTheDocument();
     expect(within(addButton).getByText("2 in basket")).toBeInTheDocument();
   });
 
