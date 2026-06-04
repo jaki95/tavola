@@ -241,6 +241,24 @@ describe("useBasket", () => {
     expect(result.current.basket.basket).toEqual(tagliatelleBasket);
   });
 
+  test("applies a backend-returned basket after a cross-workflow update", async () => {
+    const client = createBasketClient({
+      createResults: [success(tagliatelleBasket)]
+    });
+
+    const { result } = renderHook(() => useBasket({ client, storage }));
+    await waitFor(() => {
+      expect(result.current.basket.status).toBe("success");
+    });
+
+    act(() => {
+      result.current.applyBasket(emptyBasket);
+    });
+
+    expect(result.current.basket.basket).toEqual(emptyBasket);
+    expect(storage.getItem("tavola:basket_id")).toBe("basket-1");
+  });
+
   test("ignores stale create responses when a newer basket load wins", async () => {
     const staleCreate = createDeferred<ApiResult<Basket>>();
     const currentCreate = createDeferred<ApiResult<Basket>>();
