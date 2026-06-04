@@ -47,11 +47,51 @@ proposals rather than Codex-specific operations. The attribution belongs in the
 Planner surface only; accepted basket and order summaries should return to
 Tavola meal-plan language without repeating Codex branding.
 
-In its empty or input state, the Planner should appear as a compact first-
-viewport band rather than a large hero panel. The supported desktop viewport
-should still show the beginning of catalog browsing, including at least part of
-the first product row. The Planner may expand after a menu proposal is ready
-because the customer is then actively reviewing the AI-assisted output.
+Catalog and Planner are sibling storefront workflows, selected from the top
+banner/navigation while the Basket remains visible as the persistent right-side
+companion. Catalog is the default workflow because Tavola's first demonstrator
+path proves ordinary commerce before AI planning. In its empty or input state,
+the Planner should remain compact rather than becoming a large hero panel. The
+Planner may expand after a menu proposal is ready because the customer is then
+actively reviewing the AI-assisted output.
+
+The Basket should remain visible on both Shop and Plan workflows, including when
+it is empty, so the commerce state stays anchored and planner acceptance is
+immediately legible.
+
+Customer-facing navigation should label these workflows as **Shop** and
+**Plan**, while product/domain language may continue to use **Catalog** and
+**Planner** for precision.
+
+The Plan workflow page heading should remain **Plan a menu**, because it
+describes the customer's task more clearly than the short navigation label.
+The Shop workflow page heading should be **Shop**, while supporting copy may use
+the word Catalog when referring to the product set.
+
+The top banner should prioritize the Tavola brand and the Shop/Plan workflow
+navigation. Backend service status is demonstrator plumbing, not customer-facing
+navigation, and should not appear in the primary storefront header.
+Shop and Plan are in-page storefront workflow tabs, not route-level destinations
+or deep links in the current demonstrator.
+Each fresh page load should start on Shop rather than preserving the previous
+workflow. Selecting the Tavola brand should also return the customer to Shop
+without clearing Basket or Planner state.
+Switching away from Plan while a planner session is in Planning should not cancel
+the session; the customer may browse Shop while Tavola continues planning.
+Proposal review edits, such as removed proposal lines or adjusted quantities,
+should persist when switching between Shop and Plan.
+
+When a menu proposal becomes ready while the customer is viewing Shop, the Plan
+navigation item should show a restrained proposal-ready indicator. The
+top banner should not become a full status dashboard for planner loading,
+errors, or accepted states; Planning continues silently when the customer is in
+Shop. The proposal-ready indicator should clear when the
+customer opens the Plan workflow; the proposal itself remains available for
+review until accepted or changed.
+
+Switching between Catalog and Planner should preserve Catalog browsing context
+such as category and search, but it should not preserve an open product detail
+surface across workflows.
 
 A customer describes an occasion or meal need, such as a small dinner party,
 picnic, antipasti board, or family lunch. Codex works inside a bounded planning
@@ -69,6 +109,11 @@ mutate the basket directly. A proposal can include a customer-readable menu
 explanation, course sections, SKU lines, quantities, server-priced totals, and
 concise per-line rationale. The customer can remove lines or adjust quantities
 before accepting the proposal into the basket.
+
+After a customer accepts a menu proposal, Tavola should keep them in the Planner
+workflow and update the persistent Basket visibly. This preserves the proposal
+review context while still letting the customer switch to Catalog for extra
+items or proceed to checkout from the Basket.
 
 Planner proposals should include customer-facing explainability that helps the
 customer trust the suggestion. This should describe planning evidence in Tavola
@@ -603,13 +648,13 @@ enhancements.
 - Keep future **Menu proposal** review visually distinct from actual **Basket
   lines** until the customer accepts the proposal into the basket.
 - On the desktop opening screen, avoid a separate masthead between the top bar
-  and the commerce flow. Let **Catalog browsing** be the first meaningful content.
-- The opening catalog header should be compact and action-oriented; prefer copy
-  like "Catalog", "Fresh from the counter", and "Browse real deli products, then
-  add your picks to the basket."
+  and the commerce flow. Let **Shop** be the first meaningful content.
+- The opening Shop header should be compact and action-oriented; prefer copy
+  like "Shop", "Fresh from the counter", and "Browse Tavola's catalog, then add
+  your picks to the basket."
 - Catalog product counts are useful metadata, not primary content. Present counts
   inline or compactly rather than as a large summary card on the opening screen.
-- At a `1366x768` desktop viewport, the opening screen should show the catalog
+- At a `1366x768` desktop viewport, the opening screen should show the Shop
   heading, browsing controls, and at least the top half of the first row of
   product cards without scrolling.
 - Customer-facing **Category** filters should remain visible on the desktop
@@ -628,8 +673,7 @@ enhancements.
   Use **Product** or item in user-facing text.
 - "Storefront workspace" was used in early UI copy for the opening screen, but it
   is not canonical customer-facing language. The opening screen should be framed
-  around **Catalog browsing**, with the **Basket** visible as supporting context.
-- "Backend connected" describes implementation health, not customer-facing
-  commerce language. When the UI exposes this demonstrator affordance, prefer
-  quiet **service status** language such as "Service ready" or "Service
-  unavailable."
+  around **Shop**, with the **Basket** visible as supporting context.
+- "Backend connected" and service status language describe implementation
+  health, not customer-facing commerce. Do not expose this demonstrator
+  affordance in the primary storefront header.
