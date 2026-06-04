@@ -357,8 +357,15 @@ explicit loading, error, empty, and success values for the UI.
     equivalent currency-aware helper.
   - Formatting helpers are pure and independent from React components.
   - Facet labels avoid unsupported allergen or medical safety claims; use
-    Gluten-free, not Coeliac-safe or allergen-free.
+  Gluten-free, not Coeliac-safe or allergen-free.
 - **Validation**: Helper unit tests for currency, categories, and facet labels.
+
+**Implementation note (2026-06-04)**: Sprint 3 is implemented. Frontend catalog
+types live in `frontend/src/types/catalog.ts`, the typed catalog API client lives
+in `frontend/src/api/catalog.ts`, and pure category, money, and dietary facet
+formatting helpers live under `frontend/src/features/catalog/catalogFormat.ts`.
+The client keeps query-string construction and response validation out of React
+components.
 
 ## Sprint 4: Browsing UI
 
