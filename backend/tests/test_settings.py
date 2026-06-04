@@ -15,7 +15,7 @@ def test_settings_defaults_are_local_development_friendly() -> None:
     assert settings.environment == "local"
     assert settings.api_prefix == "/api"
     assert settings.planner_codex_enabled is False
-    assert settings.planner_codex_model == "gpt-5.2-codex"
+    assert settings.planner_codex_model == "gpt-5.5"
     assert settings.planner_codex_sandbox_mode == "read-only"
     assert settings.planner_codex_timeout_seconds == 60
     assert settings.planner_codex_max_retries == 1

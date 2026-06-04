@@ -17,7 +17,6 @@ _REQUIRED_TOOL_NAMES = frozenset(
     {
         "list_package_templates",
         "search_catalog",
-        "get_sku_detail",
         "validate_menu_proposal",
     }
 )
@@ -114,14 +113,14 @@ class PythonCodexSdkClient:
         try:
             sandbox = _sdk_sandbox(Sandbox, sandbox_mode)
             thread = codex.thread_start(
-                approval_mode=ApprovalMode.deny_all,
+                approval_mode=ApprovalMode.auto_review,
                 model=model,
                 sandbox=sandbox,
                 ephemeral=True,
             )
             turn_result = thread.run(
                 prompt,
-                approval_mode=ApprovalMode.deny_all,
+                approval_mode=ApprovalMode.auto_review,
                 model=model,
                 sandbox=sandbox,
             )
@@ -276,10 +275,24 @@ def _build_planner_prompt(
     return "\n".join(
         (
             "You are Tavola's Planner for a small Italian deli.",
-            "Use only Tavola MCP tools before proposing products.",
-            "Call list_package_templates before choosing a package template.",
-            "Call search_catalog and get_sku_detail before selecting products.",
-            "Call validate_menu_proposal before returning final JSON.",
+            "You MUST use Tavola MCP tools before proposing products.",
+            "Do not rely on memory, visible page data, or guessed catalog data.",
+            "Before final JSON, call these tools successfully in this order:",
+            "1. list_package_templates before choosing a package template.",
+            "2. search_catalog for candidate products.",
+            "3. validate_menu_proposal for the completed proposal.",
+            "After list_package_templates, your next action must be search_catalog.",
+            "After search_catalog, build a draft from the search result summaries "
+            "and call validate_menu_proposal.",
+            "Do not call get_sku_detail during the first pass; search_catalog "
+            "already returns product names, units, prices, availability, dietary "
+            "facets, and short descriptions.",
+            "Call get_sku_detail only if a selected product needs extra detail "
+            "that is missing from search_catalog.",
+            "Your final response is invalid unless this turn used all three "
+            "required Tavola tool names.",
+            "If any required Tavola MCP tool is unavailable, do not return a "
+            "menu proposal.",
             "SKU validity, availability, quantities, and totals must come from "
             "Tavola tools.",
             "Final JSON contract:",

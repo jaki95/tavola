@@ -119,7 +119,6 @@ def test_codex_adapter_configures_bounded_tools_and_validates_final_json() -> No
             tool_names=(
                 "list_package_templates",
                 "search_catalog",
-                "get_sku_detail",
                 "validate_menu_proposal",
             ),
         )
@@ -150,7 +149,20 @@ def test_codex_adapter_configures_bounded_tools_and_validates_final_json() -> No
         ),
     )
     assert client.prompt is not None
-    assert "Use only Tavola MCP tools" in client.prompt
+    assert "You MUST use Tavola MCP tools" in client.prompt
+    assert "Do not rely on memory, visible page data, or guessed catalog data" in (
+        client.prompt
+    )
+    assert "list_package_templates before choosing a package template" in client.prompt
+    assert "search_catalog for candidate products" in client.prompt
+    assert "validate_menu_proposal for the completed proposal" in client.prompt
+    assert "After list_package_templates, your next action must be search_catalog" in (
+        client.prompt
+    )
+    assert "Do not call get_sku_detail during the first pass" in client.prompt
+    assert "Your final response is invalid unless this turn used all three" in (
+        client.prompt
+    )
     assert "SKU validity, availability, quantities, and totals" in client.prompt
     assert "Final JSON contract" in client.prompt
     assert '"courses"' in client.prompt
@@ -291,6 +303,8 @@ def test_python_codex_sdk_client_starts_thread_with_mcp_server_config() -> None:
     )
     assert fake_codex.started_model == "codex-test-model"
     assert fake_codex.started_sandbox == "read-only"
+    assert fake_codex.started_approval_mode == "auto_review"
+    assert fake_codex.thread.ran_approval_mode == "auto_review"
     assert fake_codex.thread.ran_prompt == "Plan dinner"
     assert fake_codex.was_closed is True
 
@@ -302,7 +316,6 @@ def test_codex_adapter_maps_malformed_json_to_typed_failure() -> None:
             tool_names=(
                 "list_package_templates",
                 "search_catalog",
-                "get_sku_detail",
                 "validate_menu_proposal",
             ),
         )
@@ -333,7 +346,6 @@ def test_codex_adapter_maps_tool_failure_to_typed_failure() -> None:
             tool_names=(
                 "list_package_templates",
                 "search_catalog",
-                "get_sku_detail",
                 "validate_menu_proposal",
             ),
             tool_error="validate_menu_proposal failed",
@@ -374,7 +386,6 @@ def required_tool_names() -> tuple[str, ...]:
     return (
         "list_package_templates",
         "search_catalog",
-        "get_sku_detail",
         "validate_menu_proposal",
     )
 
@@ -407,11 +418,13 @@ class FakeCodex:
         self.thread = FakeThread()
         self.started_model = None
         self.started_sandbox = None
+        self.started_approval_mode = None
         self.was_closed = False
 
     def thread_start(self, **kwargs):
         self.started_model = kwargs["model"]
         self.started_sandbox = kwargs["sandbox"]
+        self.started_approval_mode = kwargs["approval_mode"].value
         return self.thread
 
     def close(self) -> None:
@@ -421,10 +434,11 @@ class FakeCodex:
 class FakeThread:
     def __init__(self) -> None:
         self.ran_prompt = None
+        self.ran_approval_mode = None
 
     def run(self, prompt, **kwargs):
-        del kwargs
         self.ran_prompt = prompt
+        self.ran_approval_mode = kwargs["approval_mode"].value
         return FakeTurnResult()
 
 

@@ -107,7 +107,7 @@ class Settings:
         default_factory=lambda: _env_bool("TAVOLA_PLANNER_CODEX_ENABLED", False)
     )
     planner_codex_model: str = field(
-        default_factory=lambda: _env_str("TAVOLA_PLANNER_CODEX_MODEL", "gpt-5.2-codex")
+        default_factory=lambda: _env_str("TAVOLA_PLANNER_CODEX_MODEL", "gpt-5.5")
     )
     planner_codex_sandbox_mode: CodexSandboxMode = field(
         default_factory=_env_codex_sandbox_mode

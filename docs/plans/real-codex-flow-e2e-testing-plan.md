@@ -60,6 +60,87 @@ through backend smoke, browser approval, regression checks, and safe handoff.
 - Catalog, basket, and checkout remain usable.
 - Automated backend and frontend checks still pass after the live run.
 
+### Execution Findings: 2026-06-04 Live Local Codex Run
+
+Credential path tested:
+
+- Local Codex login declared with
+  `TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED=true`.
+- No credential values, auth files, raw transcripts, or stack traces were
+  recorded in the handoff.
+
+Live status and fallback findings:
+
+- Live backend status returned `enabled: true` and `mode: "real_codex"`.
+- Disabled fallback returned `enabled: false` and `mode: "disabled"` when live
+  credentials were not declared.
+- The frontend showed the live and disabled Planner states through the Vite
+  `/api/planner/status` proxy.
+- The catalog remained visible below the compact Planner band in both live and
+  disabled states.
+
+Model and SDK findings:
+
+- The previous default model `gpt-5.2-codex` failed for the local ChatGPT-backed
+  Codex account with an unsupported-model error.
+- `gpt-5.1-codex`, `gpt-5.1-codex-max`, `gpt-5.1-codex-mini`,
+  `gpt-5.5-codex`, `gpt-5.5-codex-max`, and `gpt-5.5-codex-mini` were also
+  unsupported through this credential path.
+- `gpt-5.5` was accepted by the local Codex SDK and is now the configured
+  default model.
+- The Python SDK was initially started with `ApprovalMode.deny_all`, which
+  caused Tavola MCP tool calls to be rejected as user-denied. The adapter now
+  uses `ApprovalMode.auto_review` while keeping the Codex sandbox at
+  `read-only`.
+
+MCP tool-use findings:
+
+- The original prompt required `list_package_templates`, `search_catalog`,
+  `get_sku_detail`, and `validate_menu_proposal`.
+- `search_catalog` already returns product identity, name, category, unit label,
+  price, short description, tags, dietary facets, availability, and image ID.
+  Requiring `get_sku_detail` for every selected product caused avoidable tool
+  calls for ordinary proposals.
+- The happy-path required tool contract was reduced to
+  `list_package_templates`, `search_catalog`, and `validate_menu_proposal`.
+  `get_sku_detail` remains available only when extra product detail is needed.
+
+Timing findings from a sanitized live trace for
+`Vegetarian dinner for 4 around £50`:
+
+```text
+total_run_ms 50481
+list_package_templates 0ms
+search_catalog 1ms
+search_catalog 1ms
+validate_menu_proposal 0ms
+tool_total_ms 2
+non_tool_elapsed_ms 50479
+```
+
+- MCP server execution was effectively instantaneous.
+- The second search was model-selected refinement: first query
+  `vegetarian dinner for 4 antipasto primo dessert around £50`, then broader
+  query `vegetarian`.
+- The measured latency came from the Codex model/app-server turn rather than
+  Tavola MCP handlers.
+
+Browser findings:
+
+- The browser reached a proposal-ready state for
+  `Vegetarian dinner for 4 around £50` in about 55 seconds after reducing the
+  required MCP tool contract.
+- The proposal rendered title, explanation, courses, product lines, quantities,
+  rationales, planner notes, item count, total, and Add/Replace actions.
+- Customer-facing UI did not show `SKU` or `sku_id`.
+- Editing a proposal quantity and using Add to basket succeeded; the basket and
+  catalog basket badges updated without page reload.
+- Browser console error logs were empty during the checked live status,
+  disabled fallback, proposal, and append-success states.
+
+Evidence screenshots were captured under `/private/tmp/` during the run and
+were not committed to the repository.
+
 ### Task 1.1: Verify Local Codex Auth Path
 
 - **Location**: Local shell, `backend/README.md`
