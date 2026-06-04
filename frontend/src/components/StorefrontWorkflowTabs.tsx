@@ -8,8 +8,8 @@ export type { StorefrontWorkflow };
 
 type StorefrontWorkflowTabsProps = {
   activeWorkflow: StorefrontWorkflow;
-  isPlanProposalReady?: boolean;
   onWorkflowChange: (workflow: StorefrontWorkflow) => void;
+  planBadgeLabel?: string;
 };
 
 const workflows: Array<{ id: StorefrontWorkflow; label: string }> = [
@@ -19,8 +19,8 @@ const workflows: Array<{ id: StorefrontWorkflow; label: string }> = [
 
 export function StorefrontWorkflowTabs({
   activeWorkflow,
-  isPlanProposalReady = false,
-  onWorkflowChange
+  onWorkflowChange,
+  planBadgeLabel
 }: StorefrontWorkflowTabsProps) {
   return (
     <div
@@ -28,31 +28,36 @@ export function StorefrontWorkflowTabs({
       className="storefront-workflow-tabs"
       role="tablist"
     >
-      {workflows.map((workflow) => (
-        <button
-          aria-label={
-            workflow.id === "plan" && isPlanProposalReady
-              ? "Plan, proposal ready"
-              : undefined
-          }
-          aria-controls={getWorkflowPanelId(workflow.id)}
-          aria-selected={activeWorkflow === workflow.id}
-          className="storefront-workflow-tabs__tab"
-          id={getWorkflowTabId(workflow.id)}
-          key={workflow.id}
-          onClick={() => onWorkflowChange(workflow.id)}
-          role="tab"
-          type="button"
-        >
-          {workflow.label}
-          {workflow.id === "plan" && isPlanProposalReady ? (
-            <span
-              aria-hidden="true"
-              className="storefront-workflow-tabs__ready-dot"
-            />
-          ) : null}
-        </button>
-      ))}
+      {workflows.map((workflow) => {
+        const badgeLabel = workflow.id === "plan" ? planBadgeLabel : undefined;
+
+        return (
+          <button
+            aria-controls={getWorkflowPanelId(workflow.id)}
+            aria-describedby={
+              badgeLabel ? `${getWorkflowTabId(workflow.id)}-badge` : undefined
+            }
+            aria-label={workflow.label}
+            aria-selected={activeWorkflow === workflow.id}
+            className="storefront-workflow-tabs__tab"
+            id={getWorkflowTabId(workflow.id)}
+            key={workflow.id}
+            onClick={() => onWorkflowChange(workflow.id)}
+            role="tab"
+            type="button"
+          >
+            <span>{workflow.label}</span>
+            {badgeLabel ? (
+              <span
+                className="storefront-workflow-tabs__badge"
+                id={`${getWorkflowTabId(workflow.id)}-badge`}
+              >
+                {badgeLabel}
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
     </div>
   );
 }

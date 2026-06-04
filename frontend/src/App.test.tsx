@@ -423,7 +423,7 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
-  test("marks Plan when a proposal becomes ready while Shop is visible", async () => {
+  test("badges Plan when a proposal becomes ready while Shop is active", async () => {
     vi.useFakeTimers();
     createPlannerSessionMock.mockResolvedValueOnce({
       ok: true,
@@ -445,30 +445,35 @@ describe("App", () => {
       target: { value: "Plan pasta for 2" }
     });
     fireEvent.click(within(planner).getByRole("button", { name: "Plan menu" }));
+
     await act(async () => {
       await Promise.resolve();
     });
     fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Shop" }));
 
+    expect(
+      within(storefrontHeader).getByRole("tab", { name: "Plan" })
+    ).not.toHaveAccessibleDescription("Proposal ready");
+
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2_000);
+      await Promise.resolve();
     });
+    const readyPlanTab = within(storefrontHeader).getByRole("tab", { name: "Plan" });
+    expect(readyPlanTab).toHaveAccessibleDescription("Proposal ready");
+    expect(within(readyPlanTab).getByText("Proposal ready")).toBeInTheDocument();
 
-    expect(
-      within(storefrontHeader).getByRole("tab", {
-        name: "Plan, proposal ready"
-      })
-    ).toHaveAttribute("aria-selected", "false");
-
-    fireEvent.click(
-      within(storefrontHeader).getByRole("tab", {
-        name: "Plan, proposal ready"
-      })
-    );
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Plan" }));
 
     expect(
       within(storefrontHeader).getByRole("tab", { name: "Plan" })
-    ).toHaveAttribute("aria-selected", "true");
+    ).not.toHaveAccessibleDescription("Proposal ready");
+    expect(
+      within(planner).getByRole("heading", {
+        level: 3,
+        name: "Fresh pasta supper"
+      })
+    ).toBeInTheDocument();
   });
 
   test("preserves catalog filters but closes detail after leaving Shop", async () => {

@@ -54,18 +54,19 @@ describe("StorefrontWorkflowTabs", () => {
     );
   });
 
-  test("can mark Plan when a hidden proposal is ready", () => {
+  test("shows a proposal-ready badge on the Plan tab without changing selection", () => {
     render(
       <StorefrontWorkflowTabs
         activeWorkflow="shop"
-        isPlanProposalReady
         onWorkflowChange={vi.fn()}
+        planBadgeLabel="Proposal ready"
       />
     );
 
-    const planTab = screen.getByRole("tab", { name: "Plan, proposal ready" });
+    const planTab = screen.getByRole("tab", { name: "Plan" });
 
-    expect(planTab).toHaveAttribute("aria-controls", getWorkflowPanelId("plan"));
-    expect(planTab.querySelector(".storefront-workflow-tabs__ready-dot")).not.toBeNull();
+    expect(planTab).toHaveAttribute("aria-selected", "false");
+    expect(planTab).toHaveAccessibleDescription("Proposal ready");
+    expect(within(planTab).getByText("Proposal ready")).toBeInTheDocument();
   });
 });

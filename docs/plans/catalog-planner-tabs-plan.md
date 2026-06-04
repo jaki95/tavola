@@ -167,6 +167,34 @@ planner, and basket behavior.
 
 ## Sprint 2: Desktop Layout and Interaction Polish
 
+**Status**: Completed June 4, 2026.
+
+**Implementation notes**:
+
+- Styled the top-banner Shop/Plan tabs, selected/focus-visible states, workflow
+  panel spacing, and sticky basket column in `frontend/src/styles.css`.
+- Added a `Proposal ready` Plan tab badge that appears only when a reviewable
+  planner proposal becomes ready while the customer is viewing Shop. The badge
+  clears when the customer opens Plan, while the proposal remains in the Planner
+  workflow for review.
+- Surfaced only a boolean reviewable-proposal signal from `PlannerWorkspace` to
+  `HomePage`; the Planner still owns proposal state and loading/error/accepted
+  states remain inside the Planner workflow.
+- Added App/component coverage for the proposal-ready badge and clear-on-open
+  behavior.
+
+**Completed validation**:
+
+- `cd frontend && npm test`
+- `cd frontend && npm run lint`
+- `cd frontend && npm run build`
+- Browser approval check at `http://127.0.0.1:5173/`: verified Shop default,
+  Plan unavailable/error state, empty and populated Basket, sticky side panel,
+  catalog add success, tab layout, and no console errors. Live planner proposal
+  success/loading could not be verified in browser because the local backend
+  reported Planner disabled; the ready-proposal badge path is covered by App
+  tests with a mocked ready planner session.
+
 **Goal**: Make the new tabbed layout feel calmer and less crammed at the
 supported desktop viewport.
 

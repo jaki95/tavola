@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { formatBasketMoney } from "../basket/basketFormat";
 import { getCatalogImageAsset } from "../catalog/catalogImages";
@@ -12,8 +12,8 @@ import { usePlanner, type PlannerClient } from "./usePlanner";
 
 type PlannerWorkspaceProps = {
   basket: Basket | null;
-  onProposalReady?: () => void;
   onBasketAccepted: (basket: Basket) => void;
+  onProposalReadyChange?: (isProposalReady: boolean) => void;
   client?: PlannerClient;
 };
 
@@ -25,31 +25,26 @@ const examplePrompts = [
 
 export function PlannerWorkspace({
   basket,
-  onProposalReady,
   onBasketAccepted,
+  onProposalReadyChange,
   client
 }: PlannerWorkspaceProps) {
   const planner = usePlanner({ client });
   const [prompt, setPrompt] = useState("");
   const [followUpAnswer, setFollowUpAnswer] = useState("");
   const [isConfirmingReplace, setIsConfirmingReplace] = useState(false);
-  const previousPlannerState = useRef(planner.state.status);
   const isPlanning = planner.state.status === "planning";
   const isAcceptPending = planner.state.status === "accept_pending";
   const isAccepted = planner.state.status === "accepted";
   const isPlannerUnavailable =
     planner.plannerStatus.status === "disabled" ||
     planner.plannerStatus.status === "error";
+  const hasReviewableProposal =
+    planner.state.status === "proposal_ready" && Boolean(planner.draftProposal);
 
   useEffect(() => {
-    if (
-      planner.state.status === "proposal_ready" &&
-      previousPlannerState.current !== "proposal_ready"
-    ) {
-      onProposalReady?.();
-    }
-    previousPlannerState.current = planner.state.status;
-  }, [onProposalReady, planner.state.status]);
+    onProposalReadyChange?.(hasReviewableProposal);
+  }, [hasReviewableProposal, onProposalReadyChange]);
 
   async function submitPrompt(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

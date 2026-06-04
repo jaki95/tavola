@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import {
   StorefrontWorkflowTabs,
@@ -18,19 +18,31 @@ export function HomePage() {
   const basket = useBasket();
   const [activeWorkflow, setActiveWorkflow] =
     useState<StorefrontWorkflow>("shop");
+  const activeWorkflowRef = useRef(activeWorkflow);
+  const [hasUnseenPlanProposal, setHasUnseenPlanProposal] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [isPlanProposalReady, setIsPlanProposalReady] = useState(false);
   const isBasketMutationPending = basket.mutation.status === "pending";
   const isBasketUpdating =
     isBasketMutationPending || basket.basket.status === "loading";
   const basketQuantities = getBasketQuantities(basket.basket.basket);
-
-  function changeWorkflow(workflow: StorefrontWorkflow) {
-    if (workflow === "plan") {
-      setIsPlanProposalReady(false);
-    }
+  const selectWorkflow = useCallback((workflow: StorefrontWorkflow) => {
+    activeWorkflowRef.current = workflow;
     setActiveWorkflow(workflow);
-  }
+
+    if (workflow === "plan") {
+      setHasUnseenPlanProposal(false);
+    }
+  }, []);
+  const handleProposalReadyChange = useCallback((isProposalReady: boolean) => {
+    if (!isProposalReady) {
+      setHasUnseenPlanProposal(false);
+      return;
+    }
+
+    if (activeWorkflowRef.current === "shop") {
+      setHasUnseenPlanProposal(true);
+    }
+  }, []);
 
   return (
     <div className="site-shell">
@@ -39,7 +51,7 @@ export function HomePage() {
           <div className="top-bar__brand-area">
             <button
               className="brand-mark brand-mark--compact"
-              onClick={() => changeWorkflow("shop")}
+              onClick={() => selectWorkflow("shop")}
               type="button"
             >
               <span className="brand-mark__name">Tavola</span>
@@ -48,8 +60,10 @@ export function HomePage() {
           </div>
           <StorefrontWorkflowTabs
             activeWorkflow={activeWorkflow}
-            isPlanProposalReady={isPlanProposalReady}
-            onWorkflowChange={changeWorkflow}
+            onWorkflowChange={selectWorkflow}
+            planBadgeLabel={
+              hasUnseenPlanProposal ? "Proposal ready" : undefined
+            }
           />
         </div>
       </header>
@@ -81,11 +95,7 @@ export function HomePage() {
               <PlannerWorkspace
                 basket={basket.basket.basket}
                 onBasketAccepted={basket.applyBasket}
-                onProposalReady={() => {
-                  if (activeWorkflow !== "plan") {
-                    setIsPlanProposalReady(true);
-                  }
-                }}
+                onProposalReadyChange={handleProposalReadyChange}
               />
             </section>
           </div>
