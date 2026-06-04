@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { act } from "react";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ApiResult } from "../../api/client";
 import type { Basket } from "../../types/basket";
@@ -209,6 +210,10 @@ describe("PlannerWorkspace", () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   test("submits a meal prompt and renders a reviewable proposal", async () => {
     const client = createPlannerClient({
       createResults: [success(readySession)]
@@ -234,6 +239,48 @@ describe("PlannerWorkspace", () => {
     expect(screen.getByText("Fresh Tagliatelle")).toBeInTheDocument();
     expect(screen.getByText("Prices were calculated by Tavola.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add to basket" })).toBeEnabled();
+  });
+
+  test("shows customer-safe progress copy while planning remains pending", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-04T12:00:00Z"));
+    const deferredCreate = createDeferred<ApiResult<PlannerSessionResponse>>();
+    const client = createPlannerClient({
+      createResults: [deferredCreate.promise]
+    });
+
+    renderPlannerWorkspace({ client });
+    submitReadyPrompt();
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Tavola is planning your menu."
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Checking the catalog and shaping a menu."
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Validating products and prices."
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(15_000);
+    });
+
+    const statusCopy = screen.getByRole("status").textContent ?? "";
+    expect(statusCopy).toBe("Still planning.");
+    expect(statusCopy).not.toMatch(
+      /codex|sdk|tool|thread|model|retry|token|credential/i
+    );
   });
 
   test("shows live planner mode and concise run summary", async () => {
@@ -516,4 +563,13 @@ async function shiftResult<T>(
 
 function success<T>(data: T): ApiResult<T> {
   return { ok: true, data };
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+
+  return { promise, resolve };
 }

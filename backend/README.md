@@ -47,7 +47,7 @@ planner runs. Because the current SDK beta depends on a prerelease runtime,
 
 Configure real runs with:
 
-- `TAVOLA_PLANNER_CODEX_MODEL`: Codex model name, default `gpt-5.2-codex`.
+- `TAVOLA_PLANNER_CODEX_MODEL`: Codex model name, default `gpt-5.5`.
 - `TAVOLA_PLANNER_CODEX_SANDBOX_MODE`: default `read-only`. Use
   `workspace-write` only if a later adapter spike proves the MCP setup needs
   write access.
@@ -76,6 +76,26 @@ Use `OPENAI_API_KEY` instead of
 API key. The smoke command starts one Codex-backed planner run with Tavola's
 bounded MCP tool server and prints the validated JSON proposal, or a structured
 failure if Codex output cannot be validated.
+
+Run an opt-in benchmark smoke to collect paste-safe timing evidence without
+printing the proposal by default:
+
+```sh
+TAVOLA_PLANNER_CODEX_ENABLED=true \
+TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED=true \
+uv run python -m tavola.infrastructure.codex_planner_smoke \
+  --benchmark --repeat 3 \
+  "Vegetarian dinner for 4 around GBP 50"
+```
+
+Benchmark output includes the selected model, timeout, retry count, sanitized
+timing events, per-run totals, and min/median/max elapsed milliseconds. It
+classifies valid runs under 10 seconds as `ideal`, valid runs under 30 seconds
+as `acceptable`, and valid runs at or above 30 seconds as `slow`. Slow valid
+runs exit zero; planner failures, malformed output, missing required Tavola tool
+use, technical timeout, and missing configuration exit nonzero. Do not paste
+prompts, raw Codex transcripts, tool arguments, credentials, stack traces, or
+proposal JSON into handoff notes.
 
 For an operator-facing walkthrough of the browser demo, persona prompts, safe
 planner notes, and customer-facing language rules, see

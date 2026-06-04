@@ -1,4 +1,5 @@
 import json
+import time
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from dataclasses import dataclass
@@ -35,6 +36,17 @@ class CodexSdkRunResult:
     tool_error: str | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class PlannerTimingEvent:
+    name: str
+    elapsed_ms: int
+    attributes: dict[str, object]
+
+
+class PlannerTimingSink(Protocol):
+    def __call__(self, event: PlannerTimingEvent) -> None: ...
+
+
 class CodexSdkClient(Protocol):
     def run(
         self,
@@ -44,6 +56,7 @@ class CodexSdkClient(Protocol):
         sandbox_mode: str,
         mcp_servers: tuple[CodexMcpServerConfig, ...],
         timeout_seconds: float,
+        timing_sink: PlannerTimingSink | None = None,
     ) -> CodexSdkRunResult:
         """Run one Codex task and return its final customer-safe output."""
 
@@ -70,6 +83,7 @@ class PythonCodexSdkClient:
         sandbox_mode: str,
         mcp_servers: tuple[CodexMcpServerConfig, ...],
         timeout_seconds: float,
+        timing_sink: PlannerTimingSink | None = None,
     ) -> CodexSdkRunResult:
         executor = ThreadPoolExecutor(max_workers=1)
         future = executor.submit(
@@ -78,6 +92,7 @@ class PythonCodexSdkClient:
             model=model,
             sandbox_mode=sandbox_mode,
             mcp_servers=mcp_servers,
+            timing_sink=timing_sink,
         )
         try:
             return future.result(timeout=timeout_seconds)
@@ -94,12 +109,15 @@ class PythonCodexSdkClient:
         model: str,
         sandbox_mode: str,
         mcp_servers: tuple[CodexMcpServerConfig, ...],
+        timing_sink: PlannerTimingSink | None,
     ) -> CodexSdkRunResult:
         if self._codex_factory is None:
             from openai_codex import ApprovalMode, Codex, CodexConfig, Sandbox
         else:
             from openai_codex import ApprovalMode, CodexConfig, Sandbox
 
+        run_started_at = time.perf_counter()
+        client_started_at = time.perf_counter()
         codex_config = CodexConfig(
             cwd=str(self._cwd) if self._cwd is not None else None,
             env=self._env,
@@ -110,26 +128,53 @@ class PythonCodexSdkClient:
             if self._codex_factory is not None
             else Codex(codex_config)
         )
+        _emit_timing(
+            timing_sink,
+            "sdk_client_create",
+            started_at=client_started_at,
+            attributes={"mcp_server_count": len(mcp_servers)},
+        )
         try:
             sandbox = _sdk_sandbox(Sandbox, sandbox_mode)
+            thread_started_at = time.perf_counter()
             thread = codex.thread_start(
                 approval_mode=ApprovalMode.auto_review,
                 model=model,
                 sandbox=sandbox,
                 ephemeral=True,
             )
+            _emit_timing(
+                timing_sink,
+                "sdk_thread_start",
+                started_at=thread_started_at,
+                attributes={},
+            )
+            turn_started_at = time.perf_counter()
             turn_result = thread.run(
                 prompt,
                 approval_mode=ApprovalMode.auto_review,
                 model=model,
                 sandbox=sandbox,
             )
+            _emit_timing(
+                timing_sink,
+                "sdk_turn_run",
+                started_at=turn_started_at,
+                attributes={},
+            )
             tool_error = None
             if getattr(turn_result, "error", None) is not None:
                 tool_error = str(turn_result.error)
+            tool_names = _extract_tool_names(getattr(turn_result, "items", ()))
+            _emit_timing(
+                timing_sink,
+                "tool_names_detected",
+                started_at=run_started_at,
+                attributes={"tool_names": tool_names},
+            )
             return CodexSdkRunResult(
                 final_output=getattr(turn_result, "final_response", None) or "",
-                tool_names=_extract_tool_names(getattr(turn_result, "items", ())),
+                tool_names=tool_names,
                 tool_error=tool_error,
             )
         finally:
@@ -184,6 +229,7 @@ class CodexMenuPlannerAgent:
         sandbox_mode: str = "read-only",
         timeout_seconds: float = 60.0,
         max_retries: int = 1,
+        timing_sink: PlannerTimingSink | None = None,
         mcp_server_command: tuple[str, ...] = (
             "python",
             "-m",
@@ -195,6 +241,7 @@ class CodexMenuPlannerAgent:
         self._sandbox_mode = sandbox_mode
         self._timeout_seconds = timeout_seconds
         self._max_retries = max_retries
+        self._timing_sink = timing_sink
         self._mcp_servers = (
             CodexMcpServerConfig(
                 name=_PLANNER_MCP_SERVER_NAME,
@@ -208,11 +255,13 @@ class CodexMenuPlannerAgent:
         customer_request: str,
         follow_up_answers: tuple[str, ...] = (),
     ) -> MenuPlannerAgentResponse:
+        run_started_at = time.perf_counter()
         prompt = _build_planner_prompt(customer_request, follow_up_answers)
         malformed_failure = _failure(
             PlannerAgentErrorCode.MALFORMED_OUTPUT,
             "Planner returned malformed proposal JSON.",
         )
+        repair_attempts = 0
         for attempt in range(self._max_retries + 1):
             try:
                 run_result = self._client.run(
@@ -221,46 +270,121 @@ class CodexMenuPlannerAgent:
                     sandbox_mode=self._sandbox_mode,
                     mcp_servers=self._mcp_servers,
                     timeout_seconds=self._timeout_seconds,
+                    timing_sink=self._timing_sink,
                 )
             except TimeoutError:
-                return _failure(
+                response = _failure(
                     PlannerAgentErrorCode.TIMEOUT,
                     "Planner run timed out before Tavola could validate a proposal.",
                 )
+                _emit_timing(
+                    self._timing_sink,
+                    "timeout",
+                    started_at=run_started_at,
+                    attributes={"timeout_seconds": self._timeout_seconds},
+                )
+                _emit_total_timing(
+                    self._timing_sink,
+                    started_at=run_started_at,
+                    response=response,
+                    repair_attempts=repair_attempts,
+                )
+                return response
             except Exception:
-                return _failure(
+                response = _failure(
                     PlannerAgentErrorCode.TOOL_FAILURE,
                     "Planner run failed before Tavola could validate a proposal.",
                 )
+                _emit_total_timing(
+                    self._timing_sink,
+                    started_at=run_started_at,
+                    response=response,
+                    repair_attempts=repair_attempts,
+                )
+                return response
 
             if run_result.tool_error is not None:
-                return _failure(
+                response = _failure(
                     PlannerAgentErrorCode.TOOL_FAILURE,
                     "Planner tool execution failed before Tavola could validate "
                     "a proposal.",
                 )
+                _emit_total_timing(
+                    self._timing_sink,
+                    started_at=run_started_at,
+                    response=response,
+                    repair_attempts=repair_attempts,
+                )
+                return response
             if not _used_required_tools(run_result.tool_names):
-                return _failure(
+                response = _failure(
                     PlannerAgentErrorCode.MISSING_TOOL_USE,
                     "Planner did not verify catalog and pricing with Tavola tools.",
                 )
+                _emit_parse_timing(
+                    self._timing_sink,
+                    started_at=run_started_at,
+                    result="missing_tool_use",
+                )
+                _emit_total_timing(
+                    self._timing_sink,
+                    started_at=run_started_at,
+                    response=response,
+                    repair_attempts=repair_attempts,
+                )
+                return response
 
             parsed_response, repair_reason = _parse_final_output(run_result)
             if parsed_response is not None:
+                _emit_parse_timing(
+                    self._timing_sink,
+                    started_at=run_started_at,
+                    result=_response_status(parsed_response),
+                )
+                _emit_total_timing(
+                    self._timing_sink,
+                    started_at=run_started_at,
+                    response=parsed_response,
+                    repair_attempts=repair_attempts,
+                )
                 return parsed_response
 
             malformed_failure = _failure(
                 PlannerAgentErrorCode.MALFORMED_OUTPUT,
                 repair_reason,
             )
+            _emit_parse_timing(
+                self._timing_sink,
+                started_at=run_started_at,
+                result="malformed_output",
+            )
             if attempt >= self._max_retries:
+                _emit_total_timing(
+                    self._timing_sink,
+                    started_at=run_started_at,
+                    response=malformed_failure,
+                    repair_attempts=repair_attempts,
+                )
                 return malformed_failure
+            repair_attempts += 1
+            _emit_timing(
+                self._timing_sink,
+                "repair_attempt",
+                started_at=run_started_at,
+                attributes={"repair_attempts": repair_attempts},
+            )
             prompt = _build_repair_prompt(
                 customer_request=customer_request,
                 follow_up_answers=follow_up_answers,
                 repair_reason=repair_reason,
             )
 
+        _emit_total_timing(
+            self._timing_sink,
+            started_at=run_started_at,
+            response=malformed_failure,
+            repair_attempts=repair_attempts,
+        )
         return malformed_failure
 
 
@@ -461,6 +585,66 @@ def _item_value(item: Any, key: str) -> Any:
     if isinstance(item, dict):
         return item.get(key)
     return getattr(item, key, None)
+
+
+def _emit_timing(
+    timing_sink: PlannerTimingSink | None,
+    name: str,
+    *,
+    started_at: float,
+    attributes: dict[str, object],
+) -> None:
+    if timing_sink is None:
+        return
+    timing_sink(
+        PlannerTimingEvent(
+            name=name,
+            elapsed_ms=max(0, round((time.perf_counter() - started_at) * 1000)),
+            attributes=attributes,
+        )
+    )
+
+
+def _emit_parse_timing(
+    timing_sink: PlannerTimingSink | None,
+    *,
+    started_at: float,
+    result: str,
+) -> None:
+    _emit_timing(
+        timing_sink,
+        "parse_result",
+        started_at=started_at,
+        attributes={"result": result},
+    )
+
+
+def _emit_total_timing(
+    timing_sink: PlannerTimingSink | None,
+    *,
+    started_at: float,
+    response: MenuPlannerAgentResponse,
+    repair_attempts: int,
+) -> None:
+    _emit_timing(
+        timing_sink,
+        "total_elapsed",
+        started_at=started_at,
+        attributes={
+            "status": _response_status(response),
+            "repair_attempts": repair_attempts,
+        },
+    )
+
+
+def _response_status(response: MenuPlannerAgentResponse) -> str:
+    if response.raw_proposal is not None:
+        return "proposal_ready"
+    if response.follow_up_question is not None:
+        return "needs_input"
+    if response.failure is not None:
+        return response.failure.code.value
+    return "unknown"
 
 
 def _failure(

@@ -14,6 +14,7 @@ from tavola.infrastructure.codex_planner import (
     CodexMcpServerConfig,
     CodexMenuPlannerAgent,
     CodexSdkRunResult,
+    PlannerTimingEvent,
     PythonCodexSdkClient,
 )
 
@@ -57,7 +58,9 @@ class CapturingCodexClient:
         sandbox_mode: str,
         mcp_servers: tuple[CodexMcpServerConfig, ...],
         timeout_seconds: float,
+        timing_sink=None,
     ) -> CodexSdkRunResult:
+        del timing_sink
         self.prompt = prompt
         self.model = model
         self.sandbox_mode = sandbox_mode
@@ -85,8 +88,9 @@ class SequencedCodexClient:
         sandbox_mode: str,
         mcp_servers: tuple[CodexMcpServerConfig, ...],
         timeout_seconds: float,
+        timing_sink=None,
     ) -> CodexSdkRunResult:
-        del model, sandbox_mode, mcp_servers, timeout_seconds
+        del model, sandbox_mode, mcp_servers, timeout_seconds, timing_sink
         assert self.prompts is not None
         self.prompts.append(prompt)
         return self.results.pop(0)
@@ -204,6 +208,72 @@ def test_codex_adapter_repairs_malformed_json_once() -> None:
     assert "not json" not in client.prompts[1]
 
 
+def test_codex_adapter_emits_sanitized_timing_events_for_success() -> None:
+    events: list[PlannerTimingEvent] = []
+    planner = PlanMenuFromRequest(
+        agent=CodexMenuPlannerAgent(
+            client=CapturingCodexClient(
+                result=CodexSdkRunResult(
+                    final_output=json.dumps(valid_raw_proposal()),
+                    tool_names=required_tool_names(),
+                )
+            ),
+            model="codex-test-model",
+            timing_sink=events.append,
+        ),
+        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+    )
+
+    result = planner(customer_request="Vegetarian dinner for 2")
+
+    assert result.status == ProposalStatus.PROPOSAL_READY
+    assert [event.name for event in events] == [
+        "parse_result",
+        "total_elapsed",
+    ]
+    assert events[0].attributes == {"result": "proposal_ready"}
+    assert events[1].attributes == {
+        "status": "proposal_ready",
+        "repair_attempts": 0,
+    }
+
+
+def test_codex_adapter_emits_repair_attempt_timing_without_raw_output() -> None:
+    events: list[PlannerTimingEvent] = []
+    client = SequencedCodexClient(
+        results=[
+            CodexSdkRunResult(
+                final_output="not json",
+                tool_names=required_tool_names(),
+            ),
+            CodexSdkRunResult(
+                final_output=json.dumps(valid_raw_proposal()),
+                tool_names=required_tool_names(),
+            ),
+        ]
+    )
+    planner = PlanMenuFromRequest(
+        agent=CodexMenuPlannerAgent(
+            client=client,
+            model="codex-test-model",
+            max_retries=1,
+            timing_sink=events.append,
+        ),
+        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+    )
+
+    result = planner(customer_request="Vegetarian dinner for 2")
+
+    assert result.status == ProposalStatus.PROPOSAL_READY
+    assert [(event.name, event.attributes) for event in events] == [
+        ("parse_result", {"result": "malformed_output"}),
+        ("repair_attempt", {"repair_attempts": 1}),
+        ("parse_result", {"result": "proposal_ready"}),
+        ("total_elapsed", {"status": "proposal_ready", "repair_attempts": 1}),
+    ]
+    assert all("not json" not in str(event.attributes) for event in events)
+
+
 def test_codex_adapter_repairs_output_contract_failure_once() -> None:
     client = SequencedCodexClient(
         results=[
@@ -267,6 +337,7 @@ def test_codex_adapter_stops_after_configured_repair_attempts() -> None:
 
 def test_python_codex_sdk_client_starts_thread_with_mcp_server_config() -> None:
     created_clients: list[FakeCodex] = []
+    events: list[PlannerTimingEvent] = []
 
     def codex_factory(config):
         client = FakeCodex(config)
@@ -286,6 +357,7 @@ def test_python_codex_sdk_client_starts_thread_with_mcp_server_config() -> None:
             ),
         ),
         timeout_seconds=10,
+        timing_sink=events.append,
     )
 
     assert result.final_output == '{"title": "Dinner"}'
@@ -307,6 +379,21 @@ def test_python_codex_sdk_client_starts_thread_with_mcp_server_config() -> None:
     assert fake_codex.thread.ran_approval_mode == "auto_review"
     assert fake_codex.thread.ran_prompt == "Plan dinner"
     assert fake_codex.was_closed is True
+    assert [event.name for event in events] == [
+        "sdk_client_create",
+        "sdk_thread_start",
+        "sdk_turn_run",
+        "tool_names_detected",
+    ]
+    assert events[0].attributes == {"mcp_server_count": 1}
+    assert events[3].attributes == {
+        "tool_names": (
+            "list_package_templates",
+            "search_catalog",
+            "get_sku_detail",
+            "validate_menu_proposal",
+        )
+    }
 
 
 def test_codex_adapter_maps_malformed_json_to_typed_failure() -> None:

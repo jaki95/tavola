@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ApiResult } from "../../api/client";
 import type { Basket } from "../../types/basket";
@@ -200,6 +200,10 @@ describe("usePlanner", () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   test("starts empty and loads a proposal from a prompt", async () => {
     const client = createPlannerClient({
       createResults: [success(readySession)]
@@ -219,6 +223,38 @@ describe("usePlanner", () => {
     expect(result.current.state.status).toBe("proposal_ready");
     expect(result.current.state.session?.planner_session_id).toBe("planner-1");
     expect(result.current.draftProposal?.title).toBe("Vegetarian dinner for four");
+  });
+
+  test("tracks elapsed time while a planner request is loading", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-04T12:00:00Z"));
+    const deferredCreate = createDeferred<ApiResult<PlannerSessionResponse>>();
+    const client = createPlannerClient({
+      createResults: [deferredCreate.promise]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    let submitPromise!: Promise<void>;
+    act(() => {
+      submitPromise = result.current.submitPrompt("Vegetarian dinner for 4");
+    });
+
+    expect(result.current.state.status).toBe("loading");
+    expect(result.current.planningElapsedMs).toBe(0);
+
+    act(() => {
+      vi.advanceTimersByTime(7_000);
+    });
+
+    expect(result.current.planningElapsedMs).toBe(7_000);
+
+    await act(async () => {
+      deferredCreate.resolve(success(readySession));
+      await submitPromise;
+    });
+
+    expect(result.current.state.status).toBe("proposal_ready");
+    expect(result.current.planningElapsedMs).toBeNull();
   });
 
   test("keeps the original request visible while answering a follow-up", async () => {

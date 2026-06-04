@@ -122,6 +122,8 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
     message: "Checking planner availability."
   });
   const [draftProposal, setDraftProposal] = useState<MenuProposal | null>(null);
+  const [planningStartedAtMs, setPlanningStartedAtMs] = useState<number | null>(null);
+  const [planningElapsedMs, setPlanningElapsedMs] = useState<number | null>(null);
 
   const currentSession = state.session;
 
@@ -154,30 +156,65 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
     };
   }, [client]);
 
-  const applySession = useCallback((session: PlannerSessionResponse) => {
-    setDraftProposal(session.menu_proposal);
-
-    if (session.status === "needs_input") {
-      setState({ status: "needs_input", session, message: null });
+  useEffect(() => {
+    if (state.status !== "loading" || planningStartedAtMs === null) {
+      setPlanningElapsedMs(null);
       return;
     }
 
-    if (session.status === "proposal_ready") {
-      setState({ status: "proposal_ready", session, message: null });
-      return;
+    const startedAtMs = planningStartedAtMs;
+
+    function updateElapsed() {
+      setPlanningElapsedMs(Date.now() - startedAtMs);
     }
 
-    if (session.status === "failed") {
-      setState({
-        status: "failed",
-        session,
-        message: errorMessageFromSession(session)
-      });
-      return;
-    }
+    updateElapsed();
+    const intervalId = window.setInterval(updateElapsed, 1000);
 
-    setState({ status: "proposal_ready", session, message: null });
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [planningStartedAtMs, state.status]);
+
+  const startPlanning = useCallback((session: PlannerSessionResponse | null) => {
+    setPlanningStartedAtMs(Date.now());
+    setPlanningElapsedMs(0);
+    setState({ status: "loading", session, message: null });
   }, []);
+
+  const stopPlanningTimer = useCallback(() => {
+    setPlanningStartedAtMs(null);
+    setPlanningElapsedMs(null);
+  }, []);
+
+  const applySession = useCallback(
+    (session: PlannerSessionResponse) => {
+      stopPlanningTimer();
+      setDraftProposal(session.menu_proposal);
+
+      if (session.status === "needs_input") {
+        setState({ status: "needs_input", session, message: null });
+        return;
+      }
+
+      if (session.status === "proposal_ready") {
+        setState({ status: "proposal_ready", session, message: null });
+        return;
+      }
+
+      if (session.status === "failed") {
+        setState({
+          status: "failed",
+          session,
+          message: errorMessageFromSession(session)
+        });
+        return;
+      }
+
+      setState({ status: "proposal_ready", session, message: null });
+    },
+    [stopPlanningTimer]
+  );
 
   const submitPrompt = useCallback(
     async (message: string) => {
@@ -195,6 +232,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
         plannerStatus.status === "disabled" ||
         plannerStatus.status === "error"
       ) {
+        stopPlanningTimer();
         setState({
           status: "failed",
           session: currentSession,
@@ -204,7 +242,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
       }
 
       setDraftProposal(null);
-      setState({ status: "loading", session: null, message: null });
+      startPlanning(null);
       const result = await client.createSession({ message: trimmedMessage });
 
       if (result.ok) {
@@ -212,19 +250,21 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
         return;
       }
 
+      stopPlanningTimer();
       setState({
         status: "failed",
         session: null,
         message: result.error.message
       });
     },
-    [applySession, client, currentSession, plannerStatus]
+    [applySession, client, currentSession, plannerStatus, startPlanning, stopPlanningTimer]
   );
 
   const submitFollowUp = useCallback(
     async (message: string) => {
       const trimmedMessage = message.trim();
       if (!currentSession || currentSession.status !== "needs_input") {
+        stopPlanningTimer();
         setState({
           status: "failed",
           session: currentSession,
@@ -233,6 +273,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
         return;
       }
       if (!trimmedMessage) {
+        stopPlanningTimer();
         setState({
           status: "validation_error",
           session: currentSession,
@@ -241,7 +282,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
         return;
       }
 
-      setState({ status: "loading", session: currentSession, message: null });
+      startPlanning(currentSession);
       const result = await client.answerFollowUp(currentSession.planner_session_id, {
         message: trimmedMessage
       });
@@ -251,13 +292,14 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
         return;
       }
 
+      stopPlanningTimer();
       setState({
         status: "failed",
         session: currentSession,
         message: result.error.message
       });
     },
-    [applySession, client, currentSession]
+    [applySession, client, currentSession, startPlanning, stopPlanningTimer]
   );
 
   const setLineQuantity = useCallback((skuId: string, quantity: number) => {
@@ -312,6 +354,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
       }
 
       if (!currentSession || !draftProposal) {
+        stopPlanningTimer();
         setState({
           status: "validation_error",
           session: currentSession,
@@ -320,6 +363,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
         return null;
       }
 
+      stopPlanningTimer();
       setState({ status: "accept_pending", session: currentSession, message: null });
       const result = await client.acceptProposal(currentSession.planner_session_id, {
         basket_id: basketId,
@@ -349,7 +393,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
       });
       return result.data.basket;
     },
-    [client, currentSession, draftProposal, state.status]
+    [client, currentSession, draftProposal, state.status, stopPlanningTimer]
   );
 
   const hasProposalLines = useMemo(
@@ -361,6 +405,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
     state,
     plannerStatus,
     draftProposal,
+    planningElapsedMs,
     hasProposalLines,
     submitPrompt,
     submitFollowUp,

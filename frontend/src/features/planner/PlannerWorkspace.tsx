@@ -137,7 +137,7 @@ export function PlannerWorkspace({
 
       {planner.state.status === "loading" ? (
         <p className="planner-workspace__status" role="status">
-          Planning menu.
+          {planningProgressMessage(planner.planningElapsedMs)}
         </p>
       ) : null}
 
@@ -230,6 +230,24 @@ function plannerStatusLabel(
   }
 
   return "Live planner mode";
+}
+
+function planningProgressMessage(elapsedMs: number | null): string {
+  const elapsed = elapsedMs ?? 0;
+
+  if (elapsed >= 30_000) {
+    return "Still planning.";
+  }
+
+  if (elapsed >= 15_000) {
+    return "Validating products and prices.";
+  }
+
+  if (elapsed >= 5_000) {
+    return "Checking the catalog and shaping a menu.";
+  }
+
+  return "Tavola is planning your menu.";
 }
 
 function ProposalReview({

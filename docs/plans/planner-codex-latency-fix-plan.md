@@ -130,6 +130,24 @@ that points at specific controllable causes.
 - **Validation**:
   - `cd frontend && npm test -- PlannerWorkspace usePlanner`
 
+### Sprint 1 Implementation Note
+
+- Added sanitized backend timing events for SDK client creation, thread start,
+  turn run, detected tool names, parse result, repair attempts, timeout, and
+  total elapsed time.
+- Added opt-in benchmark smoke output with repeat runs, threshold
+  classification, and min/median/max totals; proposal JSON remains off by
+  default in benchmark mode.
+- Added frontend elapsed-time tracking for pending planner requests and
+  customer-safe progress copy that avoids Codex SDK internals.
+- Real Codex benchmark on `gpt-5.5` for `Vegetarian dinner for 4 around GBP 50`
+  produced three slow runs: one timeout at 60,004 ms and two valid proposals at
+  51,976 ms and 53,332 ms.
+- Browser approval was run against isolated ports `8011` and `5175` with real
+  Codex enabled. The live UI showed the 0/5/15/30-second progress messages and
+  then surfaced a customer-visible timeout failure for `Classic Italian dinner
+  for 2`.
+
 ## Sprint 2: Shrink The Codex Turn
 
 **Goal**: Reduce model reasoning time while preserving the bounded catalog,
