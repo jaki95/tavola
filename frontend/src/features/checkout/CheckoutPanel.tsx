@@ -13,12 +13,14 @@ import {
 type CheckoutPanelProps = {
   basket: BasketLoadState;
   client?: CheckoutClient;
+  isBasketUpdating: boolean;
   onCheckoutSuccess: (basket: Basket) => void;
 };
 
 export function CheckoutPanel({
   basket,
   client,
+  isBasketUpdating,
   onCheckoutSuccess
 }: CheckoutPanelProps) {
   const {
@@ -37,7 +39,10 @@ export function CheckoutPanel({
   const isBasketEmpty = !visibleBasket || visibleBasket.lines.length === 0;
   const isPending = submission.status === "pending";
   const canSubmit =
-    !isBasketEmpty && pickupWindows.status === "success" && !isPending;
+    !isBasketEmpty &&
+    !isBasketUpdating &&
+    pickupWindows.status === "success" &&
+    !isPending;
 
   useEffect(() => {
     const firstPickupWindow = pickupWindows.pickupWindows[0];
@@ -55,6 +60,9 @@ export function CheckoutPanel({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!canSubmit) {
+      return;
+    }
 
     const result = await submitCheckout(visibleBasket, formValues);
     if (result) {
@@ -95,6 +103,12 @@ export function CheckoutPanel({
           {isBasketEmpty ? (
             <p className="checkout-panel__empty">
               Add at least one deli item before checkout.
+            </p>
+          ) : null}
+
+          {isBasketUpdating ? (
+            <p className="checkout-panel__status" role="status">
+              Basket is updating.
             </p>
           ) : null}
 

@@ -32,6 +32,8 @@ type HomePageProps = {
 export function HomePage({ backendStatus }: HomePageProps) {
   const basket = useBasket();
   const isBasketMutationPending = basket.mutation.status === "pending";
+  const isBasketUpdating =
+    isBasketMutationPending || basket.basket.status === "loading";
   const basketQuantities = getBasketQuantities(basket.basket.basket);
 
   return (
@@ -86,6 +88,7 @@ export function HomePage({ backendStatus }: HomePageProps) {
             />
             <CheckoutPanel
               basket={basket.basket}
+              isBasketUpdating={isBasketUpdating}
               onCheckoutSuccess={basket.applyBasket}
             />
           </div>

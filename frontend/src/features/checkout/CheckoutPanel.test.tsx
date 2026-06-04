@@ -142,6 +142,26 @@ describe("CheckoutPanel", () => {
     expect(within(panel).getAllByText("£8.50").length).toBeGreaterThan(0);
   });
 
+  test("blocks checkout while the basket is updating", async () => {
+    const client = createCheckoutClient({
+      pickupWindowResults: [success({ pickup_windows: pickupWindows })],
+      checkoutResults: [success(checkoutResponse)]
+    });
+
+    renderCheckoutPanel({ client, isBasketUpdating: true });
+
+    const panel = screen.getByRole("region", { name: "Pickup checkout" });
+
+    expect(await within(panel).findByText("Basket is updating.")).toBeInTheDocument();
+    expect(
+      within(panel).getByRole("button", { name: "Create pickup order" })
+    ).toBeDisabled();
+
+    fireEvent.submit(within(panel).getByRole("button", { name: "Create pickup order" }));
+
+    expect(client.createCheckout).not.toHaveBeenCalled();
+  });
+
   test("disables submission while checkout is pending", async () => {
     const deferredCheckout = createDeferred<ApiResult<CheckoutResponse>>();
     const client = createCheckoutClient({
@@ -239,16 +259,19 @@ function renderCheckoutPanel({
     pickupWindowResults: [success({ pickup_windows: pickupWindows })],
     checkoutResults: [success(checkoutResponse)]
   }),
+  isBasketUpdating = false,
   onCheckoutSuccess = vi.fn()
 }: {
   basket?: BasketLoadState;
   client?: CheckoutClient;
+  isBasketUpdating?: boolean;
   onCheckoutSuccess?: (basket: Basket) => void;
 } = {}) {
   render(
     <CheckoutPanel
       basket={basket}
       client={client}
+      isBasketUpdating={isBasketUpdating}
       onCheckoutSuccess={onCheckoutSuccess}
     />
   );
