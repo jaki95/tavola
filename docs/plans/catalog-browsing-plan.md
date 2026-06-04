@@ -357,7 +357,7 @@ explicit loading, error, empty, and success values for the UI.
     equivalent currency-aware helper.
   - Formatting helpers are pure and independent from React components.
   - Facet labels avoid unsupported allergen or medical safety claims; use
-  Gluten-free, not Coeliac-safe or allergen-free.
+    Gluten-free, not Coeliac-safe or allergen-free.
 - **Validation**: Helper unit tests for currency, categories, and facet labels.
 
 **Implementation note (2026-06-04)**: Sprint 3 is implemented. Frontend catalog
