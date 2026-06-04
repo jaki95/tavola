@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   acceptProposal,
   answerFollowUp,
   createPlannerSession,
   fetchPlannerSession,
+  getPlannerStatus,
   validateProposal
 } from "../../api/planner";
 import type { ApiResult } from "../../api/client";
@@ -17,10 +18,12 @@ import type {
   MenuProposal,
   PlannerFollowUpRequest,
   PlannerSessionResponse,
+  PlannerStatusResponse,
   ValidateMenuProposalRequest
 } from "../../types/planner";
 
 export type PlannerClient = {
+  getStatus: () => Promise<ApiResult<PlannerStatusResponse>>;
   createSession: (
     request: CreatePlannerSessionRequest
   ) => Promise<ApiResult<PlannerSessionResponse>>;
@@ -70,6 +73,28 @@ export type PlannerUiState =
       session: PlannerSessionResponse;
       message: string;
       basket: Basket;
+  };
+
+export type PlannerAvailabilityState =
+  | {
+      status: "loading";
+      mode: null;
+      message: string;
+    }
+  | {
+      status: "available";
+      mode: "real_codex";
+      message: string;
+    }
+  | {
+      status: "disabled";
+      mode: "disabled";
+      message: string;
+    }
+  | {
+      status: "error";
+      mode: null;
+      message: string;
     };
 
 type UsePlannerOptions = {
@@ -77,6 +102,7 @@ type UsePlannerOptions = {
 };
 
 const defaultPlannerClient: PlannerClient = {
+  getStatus: getPlannerStatus,
   createSession: createPlannerSession,
   answerFollowUp,
   fetchSession: fetchPlannerSession,
@@ -90,9 +116,43 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
     session: null,
     message: null
   });
+  const [plannerStatus, setPlannerStatus] = useState<PlannerAvailabilityState>({
+    status: "loading",
+    mode: null,
+    message: "Checking planner availability."
+  });
   const [draftProposal, setDraftProposal] = useState<MenuProposal | null>(null);
 
   const currentSession = state.session;
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadPlannerStatus() {
+      const result = await client.getStatus();
+
+      if (!isCurrent) {
+        return;
+      }
+
+      if (!result.ok) {
+        setPlannerStatus({
+          status: "error",
+          mode: null,
+          message: "Planner status is unavailable right now."
+        });
+        return;
+      }
+
+      setPlannerStatus(plannerAvailabilityFromResponse(result.data));
+    }
+
+    void loadPlannerStatus();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [client]);
 
   const applySession = useCallback((session: PlannerSessionResponse) => {
     setDraftProposal(session.menu_proposal);
@@ -131,6 +191,18 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
         return;
       }
 
+      if (
+        plannerStatus.status === "disabled" ||
+        plannerStatus.status === "error"
+      ) {
+        setState({
+          status: "failed",
+          session: currentSession,
+          message: plannerStatus.message
+        });
+        return;
+      }
+
       setDraftProposal(null);
       setState({ status: "loading", session: null, message: null });
       const result = await client.createSession({ message: trimmedMessage });
@@ -146,7 +218,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
         message: result.error.message
       });
     },
-    [applySession, client, currentSession]
+    [applySession, client, currentSession, plannerStatus]
   );
 
   const submitFollowUp = useCallback(
@@ -287,6 +359,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
 
   return {
     state,
+    plannerStatus,
     draftProposal,
     hasProposalLines,
     submitPrompt,
@@ -296,6 +369,46 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
     validateProposal: validateDraftProposal,
     acceptProposal: acceptDraftProposal
   };
+}
+
+function plannerAvailabilityFromResponse(
+  response: PlannerStatusResponse
+): PlannerAvailabilityState {
+  if (!response.enabled || response.mode === "disabled") {
+    return {
+      status: "disabled",
+      mode: "disabled",
+      message: safePlannerStatusMessage(response, "disabled")
+    };
+  }
+
+  return {
+    status: "available",
+    mode: response.mode,
+    message: safePlannerStatusMessage(response, response.mode)
+  };
+}
+
+function safePlannerStatusMessage(
+  response: PlannerStatusResponse,
+  mode: "real_codex" | "disabled"
+): string {
+  const message = response.message.trim();
+  if (message && !containsInternalSetupLanguage(message)) {
+    return message;
+  }
+
+  if (mode === "real_codex") {
+    return "Live planning is ready.";
+  }
+
+  return "Planner is unavailable right now. You can still browse products and build a basket.";
+}
+
+function containsInternalSetupLanguage(message: string): boolean {
+  return /\b(sdk|token|credential|secret|stack|trace|python|fastapi|uvicorn|openai)\b/i.test(
+    message
+  );
 }
 
 function updateProposalLineQuantity(

@@ -20,10 +20,12 @@ import type {
   MenuProposalLine,
   PlannerNote,
   PlannerCourseId,
+  PlannerMode,
   PlannerFollowUpRequest,
   PlannerPackageTemplateId,
   PlannerSessionResponse,
   PlannerStatus,
+  PlannerStatusResponse,
   PlannerValidationError,
   PlannerValidationErrorCode,
   ValidateMenuProposalRequest
@@ -36,6 +38,7 @@ const plannerStatusSet = new Set<string>([
   "accepted",
   "failed"
 ]);
+const plannerModeSet = new Set<string>(["real_codex", "disabled"]);
 const plannerCourseIdSet = new Set<string>([
   "antipasto",
   "primo",
@@ -58,6 +61,26 @@ const plannerValidationErrorCodeSet = new Set<string>([
   "unsupported_course",
   "invalid_proposal"
 ]);
+
+export async function getPlannerStatus(): Promise<ApiResult<PlannerStatusResponse>> {
+  const result = await apiGetJson<unknown>("/planner/status");
+
+  if (!result.ok) {
+    return result;
+  }
+
+  if (isPlannerStatusResponse(result.data)) {
+    return {
+      ok: true,
+      data: result.data
+    };
+  }
+
+  return {
+    ok: false,
+    error: invalidPlannerStatusResponseError
+  };
+}
 
 export async function createPlannerSession(
   request: CreatePlannerSessionRequest
@@ -173,6 +196,17 @@ function mapAcceptProposalResult(
 
 function plannerSessionPath(plannerSessionId: string): string {
   return `/planner/sessions/${encodeURIComponent(plannerSessionId)}`;
+}
+
+function isPlannerStatusResponse(
+  value: unknown
+): value is PlannerStatusResponse {
+  return (
+    isRecord(value) &&
+    typeof value["enabled"] === "boolean" &&
+    isPlannerMode(value["mode"]) &&
+    typeof value["message"] === "string"
+  );
 }
 
 function isPlannerSessionResponse(
@@ -360,6 +394,10 @@ function isPlannerStatus(value: unknown): value is PlannerStatus {
   return typeof value === "string" && plannerStatusSet.has(value);
 }
 
+function isPlannerMode(value: unknown): value is PlannerMode {
+  return typeof value === "string" && plannerModeSet.has(value);
+}
+
 function isPlannerCourseId(value: unknown): value is PlannerCourseId {
   return typeof value === "string" && plannerCourseIdSet.has(value);
 }
@@ -407,6 +445,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 const invalidPlannerSessionResponseError: ApiError = {
   kind: "invalid_response",
   message: "The Tavola API returned an invalid planner response."
+};
+
+const invalidPlannerStatusResponseError: ApiError = {
+  kind: "invalid_response",
+  message: "The Tavola API returned an invalid planner status response."
 };
 
 const invalidPlannerAcceptResponseError: ApiError = {

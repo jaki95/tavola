@@ -69,6 +69,29 @@ class CapturingCodexClient:
         return self.result
 
 
+@dataclass
+class SequencedCodexClient:
+    results: list[CodexSdkRunResult]
+    prompts: list[str] | None = None
+
+    def __post_init__(self) -> None:
+        self.prompts = []
+
+    def run(
+        self,
+        *,
+        prompt: str,
+        model: str,
+        sandbox_mode: str,
+        mcp_servers: tuple[CodexMcpServerConfig, ...],
+        timeout_seconds: float,
+    ) -> CodexSdkRunResult:
+        del model, sandbox_mode, mcp_servers, timeout_seconds
+        assert self.prompts is not None
+        self.prompts.append(prompt)
+        return self.results.pop(0)
+
+
 def test_codex_adapter_configures_bounded_tools_and_validates_final_json() -> None:
     client = CapturingCodexClient(
         result=CodexSdkRunResult(
@@ -129,7 +152,105 @@ def test_codex_adapter_configures_bounded_tools_and_validates_final_json() -> No
     assert client.prompt is not None
     assert "Use only Tavola MCP tools" in client.prompt
     assert "SKU validity, availability, quantities, and totals" in client.prompt
+    assert "Final JSON contract" in client.prompt
+    assert '"courses"' in client.prompt
+    assert '"sku_id"' in client.prompt
+    assert "Return JSON only, without Markdown" in client.prompt
     assert "Vegetarian dinner for 2" in client.prompt
+
+
+def test_codex_adapter_repairs_malformed_json_once() -> None:
+    client = SequencedCodexClient(
+        results=[
+            CodexSdkRunResult(
+                final_output="not json",
+                tool_names=required_tool_names(),
+            ),
+            CodexSdkRunResult(
+                final_output=json.dumps(valid_raw_proposal()),
+                tool_names=required_tool_names(),
+            ),
+        ]
+    )
+    planner = PlanMenuFromRequest(
+        agent=CodexMenuPlannerAgent(
+            client=client,
+            model="codex-test-model",
+            max_retries=1,
+        ),
+        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+    )
+
+    result = planner(customer_request="Vegetarian dinner for 2")
+
+    assert result.status == ProposalStatus.PROPOSAL_READY
+    assert result.menu_proposal is not None
+    assert result.menu_proposal.total.amount_minor == 850
+    assert client.prompts is not None
+    assert len(client.prompts) == 2
+    assert "Repair your previous planner output" in client.prompts[1]
+    assert "not json" not in client.prompts[1]
+
+
+def test_codex_adapter_repairs_output_contract_failure_once() -> None:
+    client = SequencedCodexClient(
+        results=[
+            CodexSdkRunResult(
+                final_output=json.dumps({"title": "Missing proposal fields"}),
+                tool_names=required_tool_names(),
+            ),
+            CodexSdkRunResult(
+                final_output=json.dumps(valid_raw_proposal()),
+                tool_names=required_tool_names(),
+            ),
+        ]
+    )
+    planner = PlanMenuFromRequest(
+        agent=CodexMenuPlannerAgent(
+            client=client,
+            model="codex-test-model",
+            max_retries=1,
+        ),
+        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+    )
+
+    result = planner(customer_request="Vegetarian dinner for 2")
+
+    assert result.status == ProposalStatus.PROPOSAL_READY
+    assert client.prompts is not None
+    assert len(client.prompts) == 2
+    assert "Final output did not match Tavola's JSON contract" in client.prompts[1]
+
+
+def test_codex_adapter_stops_after_configured_repair_attempts() -> None:
+    client = SequencedCodexClient(
+        results=[
+            CodexSdkRunResult(
+                final_output="not json",
+                tool_names=required_tool_names(),
+            ),
+            CodexSdkRunResult(
+                final_output="still not json",
+                tool_names=required_tool_names(),
+            ),
+        ]
+    )
+    planner = PlanMenuFromRequest(
+        agent=CodexMenuPlannerAgent(
+            client=client,
+            model="codex-test-model",
+            max_retries=1,
+        ),
+        catalog_repository=StaticCatalogRepository([make_sku()]),
+    )
+
+    result = planner(customer_request="Dinner for two")
+
+    assert result.status == ProposalStatus.FAILED
+    assert result.agent_error is not None
+    assert result.agent_error.code == PlannerAgentErrorCode.MALFORMED_OUTPUT
+    assert client.prompts is not None
+    assert len(client.prompts) == 2
 
 
 def test_python_codex_sdk_client_starts_thread_with_mcp_server_config() -> None:
@@ -247,6 +368,37 @@ def _run_agent(run_result: CodexSdkRunResult):
         catalog_repository=StaticCatalogRepository([make_sku()]),
     )
     return planner(customer_request="Dinner for two")
+
+
+def required_tool_names() -> tuple[str, ...]:
+    return (
+        "list_package_templates",
+        "search_catalog",
+        "get_sku_detail",
+        "validate_menu_proposal",
+    )
+
+
+def valid_raw_proposal() -> dict[str, object]:
+    return {
+        "title": "Weeknight Pasta",
+        "explanation": "A compact pasta proposal.",
+        "planner_notes": ["Catalog identities checked."],
+        "party_size": 2,
+        "package_template_id": "primo-only",
+        "courses": [
+            {
+                "course": "primo",
+                "lines": [
+                    {
+                        "sku_id": "fresh-tagliatelle-250g",
+                        "quantity": 2,
+                        "rationale": "A flexible pasta course.",
+                    }
+                ],
+            }
+        ],
+    }
 
 
 class FakeCodex:

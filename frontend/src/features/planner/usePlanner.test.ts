@@ -6,7 +6,8 @@ import type { Basket } from "../../types/basket";
 import type {
   AcceptMenuProposalResponse,
   MenuProposal,
-  PlannerSessionResponse
+  PlannerSessionResponse,
+  PlannerStatusResponse
 } from "../../types/planner";
 import { usePlanner, type PlannerClient } from "./usePlanner";
 
@@ -248,6 +249,53 @@ describe("usePlanner", () => {
     expect(result.current.state.status).toBe("proposal_ready");
   });
 
+  test("loads disabled planner status and blocks prompt submission", async () => {
+    const client = createPlannerClient({
+      statusResult: success({
+        enabled: false,
+        mode: "disabled",
+        message: "Planner setup is incomplete."
+      })
+    });
+
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await waitFor(() => {
+      expect(result.current.plannerStatus.status).toBe("disabled");
+    });
+
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4 around £50");
+    });
+
+    expect(client.createSession).not.toHaveBeenCalled();
+    expect(result.current.state.status).toBe("failed");
+    expect(result.current.state.message).toBe("Planner setup is incomplete.");
+  });
+
+  test("keeps internal setup wording out of planner status copy", async () => {
+    const client = createPlannerClient({
+      statusResult: success({
+        enabled: false,
+        mode: "disabled",
+        message: "Missing Codex SDK token in backend credentials."
+      })
+    });
+
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await waitFor(() => {
+      expect(result.current.plannerStatus.status).toBe("disabled");
+    });
+
+    expect(result.current.plannerStatus.message).toBe(
+      "Planner is unavailable right now. You can still browse products and build a basket."
+    );
+    expect(result.current.plannerStatus.message).not.toMatch(
+      /sdk|token|credential|stack/i
+    );
+  });
+
   test("clears a stale proposal when a new planner request fails", async () => {
     const client = createPlannerClient({
       createResults: [
@@ -472,11 +520,17 @@ describe("usePlanner", () => {
 });
 
 function createPlannerClient({
+  statusResult = success({
+    enabled: true,
+    mode: "real_codex",
+    message: "Planner is running with live Codex assistance."
+  }),
   createResults = [],
   followUpResults = [],
   validateResults = [],
   acceptResults = []
 }: {
+  statusResult?: ApiResult<PlannerStatusResponse>;
   createResults?: Array<
     ApiResult<PlannerSessionResponse> | Promise<ApiResult<PlannerSessionResponse>>
   >;
@@ -491,6 +545,7 @@ function createPlannerClient({
   >;
 }): PlannerClient {
   return {
+    getStatus: vi.fn(async () => await statusResult),
     createSession: vi.fn(async () => await shiftResult(createResults, "create")),
     answerFollowUp: vi.fn(
       async () => await shiftResult(followUpResults, "follow-up")

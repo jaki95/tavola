@@ -6,7 +6,8 @@ import type { Basket } from "../../types/basket";
 import type {
   AcceptMenuProposalResponse,
   MenuProposal,
-  PlannerSessionResponse
+  PlannerSessionResponse,
+  PlannerStatusResponse
 } from "../../types/planner";
 import { PlannerWorkspace } from "./PlannerWorkspace";
 import type { PlannerClient } from "./usePlanner";
@@ -235,6 +236,51 @@ describe("PlannerWorkspace", () => {
     expect(screen.getByRole("button", { name: "Add to basket" })).toBeEnabled();
   });
 
+  test("shows live planner mode and concise run summary", async () => {
+    const client = createPlannerClient({
+      statusResult: success({
+        enabled: true,
+        mode: "real_codex",
+        message: "Live planner is ready."
+      }),
+      createResults: [success(readySession)]
+    });
+
+    renderPlannerWorkspace({ client });
+
+    expect(await screen.findByText("Live planner mode")).toBeInTheDocument();
+    expect(screen.getByText("Live planner is ready.")).toBeInTheDocument();
+  });
+
+  test("disables prompt submission when the planner is unavailable", async () => {
+    const client = createPlannerClient({
+      statusResult: success({
+        enabled: false,
+        mode: "disabled",
+        message: "Planner setup is incomplete."
+      })
+    });
+
+    renderPlannerWorkspace({ client });
+
+    expect(await screen.findByText("Planner unavailable")).toBeInTheDocument();
+    expect(
+      screen.getByText("Planner setup is incomplete.")
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Meal request")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Plan menu" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Classic Italian dinner for 2" })
+    ).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Meal request"), {
+      target: { value: "Vegetarian dinner for 4 around £50" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Plan menu" }));
+
+    expect(client.createSession).not.toHaveBeenCalled();
+  });
+
   test("answers a required follow-up while preserving the original request", async () => {
     const client = createPlannerClient({
       createResults: [success(needsInputSession)],
@@ -424,10 +470,16 @@ function submitReadyPrompt() {
 }
 
 function createPlannerClient({
+  statusResult = success({
+    enabled: true,
+    mode: "real_codex",
+    message: "Planner is running with live Codex assistance."
+  }),
   createResults = [],
   followUpResults = [],
   acceptResults = []
 }: {
+  statusResult?: ApiResult<PlannerStatusResponse>;
   createResults?: Array<
     ApiResult<PlannerSessionResponse> | Promise<ApiResult<PlannerSessionResponse>>
   >;
@@ -439,6 +491,7 @@ function createPlannerClient({
   >;
 }): PlannerClient {
   return {
+    getStatus: vi.fn(async () => await statusResult),
     createSession: vi.fn(async () => await shiftResult(createResults, "create")),
     answerFollowUp: vi.fn(
       async () => await shiftResult(followUpResults, "follow-up")

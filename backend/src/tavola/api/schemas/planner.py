@@ -4,6 +4,7 @@ from pydantic import BaseModel, StrictInt, StringConstraints
 
 from tavola.api.schemas.basket import BasketResponse
 from tavola.application.planner import MealPlanGrouping
+from tavola.config.settings import PlannerRuntimeStatus
 from tavola.domain.planner import (
     Course,
     PlannerSession,
@@ -17,6 +18,22 @@ NonBlankString = Annotated[str, StringConstraints(strip_whitespace=True, min_len
 
 class PlannerMessageRequest(BaseModel):
     message: NonBlankString
+
+
+class PlannerRuntimeStatusResponse(BaseModel):
+    enabled: bool
+    mode: Literal["real_codex", "disabled"]
+    message: str
+
+    @classmethod
+    def from_settings(
+        cls, status: PlannerRuntimeStatus
+    ) -> "PlannerRuntimeStatusResponse":
+        return cls(
+            enabled=status.enabled,
+            mode=status.mode,
+            message=status.message,
+        )
 
 
 class PlannerNoteRequest(BaseModel):

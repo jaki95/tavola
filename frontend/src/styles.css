@@ -301,6 +301,39 @@ h1 {
   font-weight: 850;
 }
 
+.planner-mode-pill {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  max-width: 18rem;
+  padding: 7px 10px;
+  border: 1px solid rgb(45 101 68 / 24%);
+  border-radius: 7px;
+  background: rgb(45 101 68 / 8%);
+  color: var(--color-basil);
+  text-align: right;
+}
+
+.planner-mode-pill span {
+  font-size: 0.76rem;
+  font-weight: 950;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.planner-mode-pill small {
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.planner-mode-pill--disabled {
+  border-color: rgb(157 47 34 / 26%);
+  background: rgb(157 47 34 / 7%);
+  color: var(--color-tomato-dark);
+}
+
 .planner-composer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(8.5rem, 9.5rem);

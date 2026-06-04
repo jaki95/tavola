@@ -545,6 +545,15 @@ before basket mutation.
 **Goal**: Make the real-Codex planner reliable enough for a demonstrator and
 verify the full browser workflow.
 
+**Implementation note (2026-06-04)**: Sprint 5 is implemented with a real-or-
+disabled runtime contract. The Codex adapter now uses a stricter JSON contract,
+one bounded repair retry for malformed or contract-invalid output, and safe
+typed failure mapping. The API exposes planner runtime status so the storefront
+can show live Codex availability or a disabled state without a deterministic
+runtime planner. Browser approval in this workspace verified the disabled
+planner state, Vite proxy, and ordinary catalog-to-basket flow; proposal,
+follow-up, validation, and accept browser states require live Codex credentials.
+
 **Demo/Validation**:
 
 - Backend and frontend run together through the Vite proxy.

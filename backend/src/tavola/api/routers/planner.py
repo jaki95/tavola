@@ -15,6 +15,7 @@ from tavola.api.schemas.planner import (
     PlannerMessageRequest,
     PlannerProposalAcceptanceRequest,
     PlannerProposalValidationRequest,
+    PlannerRuntimeStatusResponse,
     PlannerSessionResponse,
 )
 from tavola.application.basket import (
@@ -37,6 +38,7 @@ from tavola.application.planner import (
     RevalidateMenuProposal,
     StartPlannerSession,
 )
+from tavola.config.settings import Settings
 from tavola.domain.planner import (
     PlannerSession,
     PlannerSessionId,
@@ -44,6 +46,13 @@ from tavola.domain.planner import (
 )
 
 router = APIRouter(prefix="/planner", tags=["planner"])
+
+
+@router.get("/status", response_model=PlannerRuntimeStatusResponse)
+def get_planner_status() -> PlannerRuntimeStatusResponse:
+    return PlannerRuntimeStatusResponse.from_settings(
+        Settings().planner_runtime_status()
+    )
 
 
 @router.post(

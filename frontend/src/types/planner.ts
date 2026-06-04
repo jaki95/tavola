@@ -7,6 +7,14 @@ export type PlannerStatus =
   | "accepted"
   | "failed";
 
+export type PlannerMode = "real_codex" | "disabled";
+
+export type PlannerStatusResponse = {
+  enabled: boolean;
+  mode: PlannerMode;
+  message: string;
+};
+
 export type PlannerCourseId = "antipasto" | "primo" | "dessert" | "aperitivo";
 
 export type PlannerPackageTemplateId =
