@@ -390,6 +390,30 @@ should guide future planner UI work.
     implemented.
 - **Validation**: Documentation review.
 
+### Sprint 5 Implementation Notes
+
+- Frontend verification passed with `cd frontend && npm test`,
+  `cd frontend && npm run lint`, and `cd frontend && npm run build`.
+- Browser approval used the Codex in-app Browser at the supported desktop
+  viewport (`1280x720`) against the Vite proxy-backed app. Verified catalog
+  success and no-results states, empty and populated basket states, basket
+  quantity validation error, product detail success and API error, checkout
+  success and API error, service/catalog/basket API-down states, accessible
+  controls, visible basket rail beside catalog, first catalog row visibility,
+  and no unexpected console errors.
+- The final desktop screenshot was compared against
+  `docs/plans/assets/tavola-planner-band-visual-reference.png`: the implemented
+  storefront preserves the compact planner band, warm paper surfaces, red serif
+  hierarchy, food-led product cards, and calm right-side basket rail without
+  claiming new planner behavior beyond the separate planner feature slice.
+- Loading and mutation-pending states were covered by the existing frontend
+  component tests but were too brief to capture manually in-browser on the local
+  dev server; no unchecked functional state remains outside that browser timing
+  limitation.
+- `docs/plans/codex-menu-to-basket-planner-plan.md` now references this visual
+  direction for future planner composition while keeping the planner
+  implementation separate from this visual refresh.
+
 ## Testing Strategy
 
 - Existing frontend unit/component tests should continue to cover behavior.
