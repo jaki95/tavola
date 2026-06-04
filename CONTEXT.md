@@ -218,6 +218,9 @@ Use these terms consistently when shaping the codebase:
   menu proposal.
 - Planner session: A bounded AI-assisted workflow for turning a meal request
   into a menu proposal.
+- Planning: The in-progress state of a planner session before Tavola has
+  returned a follow-up question, menu proposal, or failure.
+  _Avoid_: Processing, job, run, Codex run in customer-facing or domain language.
 - Menu proposal: The planner's suggested meal or occasion plan while it is being
   reviewed, including after deterministic validation and before basket
   acceptance.
@@ -253,6 +256,15 @@ Initial product/SKU relationship:
   version. Follow-ups can fill missing information before proposal creation, and
   customer edits can revalidate the current proposal, but comparison between
   multiple simultaneous proposals is out of scope.
+- A live **Planner session** starts in **Planning** and later becomes either a
+  follow-up question, a menu proposal, or a failure.
+- Answering a follow-up question in a live **Planner session** returns the
+  session to **Planning** before it can become a menu proposal or failure.
+- **Planning** applies only when the live Planner is available; a disabled
+  Planner should not create a planner session.
+- Live **Planning** should show calm slow-state copy if it lasts longer than 30
+  seconds, but a demo run may continue until the backend timeout so a slow Codex
+  response can still complete.
 - Follow-up questions happen before a menu proposal exists. After a menu
   proposal is ready, the first version supports deterministic product removal,
   quantity editing, revalidation, and acceptance rather than conversational
