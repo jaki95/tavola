@@ -275,6 +275,71 @@ describe("PlannerWorkspace", () => {
     expect(screen.getByRole("button", { name: "Add to basket" })).toBeEnabled();
   });
 
+  test("renders proposal copy without internal SKU language", async () => {
+    vi.useFakeTimers();
+    const firstCourse = proposal.courses[0]!;
+    const firstLine = firstCourse.lines[0]!;
+    const proposalWithInternalCopy: MenuProposal = {
+      ...proposal,
+      title: "SKU-backed dinner",
+      explanation: "A validated SKU proposal using a package template.",
+      planner_notes: [
+        {
+          note_type: "evidence",
+          source: "tavola",
+          message: "Validated by Tavola for SKU validity and template fit."
+        }
+      ],
+      courses: [
+        {
+          ...firstCourse,
+          lines: [
+            {
+              ...firstLine,
+              rationale: "This SKU works well for the course."
+            }
+          ]
+        }
+      ],
+      warnings: ["One SKU was adjusted."]
+    };
+    const client = createPlannerClient({
+      createResults: [success(planningSession)],
+      fetchResults: [
+        success({
+          ...readySession,
+          menu_proposal: proposalWithInternalCopy
+        })
+      ]
+    });
+
+    renderPlannerWorkspace({ client });
+    submitReadyPrompt();
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    expect(screen.getByRole("heading", { name: "product-backed dinner" })).toBeInTheDocument();
+    expect(
+      screen.getByText("A validated product proposal using a menu structure.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Validated by Tavola for product validity and menu structure fit.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("This product works well for the course.")
+    ).toBeInTheDocument();
+    expect(screen.getByText("One product was adjusted.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Menu proposal")).not.toHaveTextContent(/sku/i);
+    expect(screen.getByLabelText("Menu proposal")).not.toHaveTextContent(
+      /template/i
+    );
+  });
+
   test("shows customer-safe progress copy while planning remains pending", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-04T12:00:00Z"));

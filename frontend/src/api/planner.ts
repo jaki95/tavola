@@ -165,7 +165,7 @@ function mapPlannerSessionResult(
   if (isPlannerSessionResponse(result.data)) {
     return {
       ok: true,
-      data: result.data
+      data: sanitizePlannerSessionResponse(result.data)
     };
   }
 
@@ -197,6 +197,63 @@ function mapAcceptProposalResult(
 
 function plannerSessionPath(plannerSessionId: string): string {
   return `/planner/sessions/${encodeURIComponent(plannerSessionId)}`;
+}
+
+function sanitizePlannerSessionResponse(
+  response: PlannerSessionResponse
+): PlannerSessionResponse {
+  return {
+    ...response,
+    follow_up_question:
+      response.follow_up_question === null
+        ? null
+        : sanitizeCustomerPlannerText(response.follow_up_question),
+    menu_proposal:
+      response.menu_proposal === null
+        ? null
+        : sanitizeMenuProposal(response.menu_proposal),
+    validation_errors: response.validation_errors.map((error) => ({
+      ...error,
+      message: sanitizeCustomerPlannerText(error.message)
+    }))
+  };
+}
+
+function sanitizeMenuProposal(proposal: MenuProposal): MenuProposal {
+  return {
+    ...proposal,
+    title: sanitizeCustomerPlannerText(proposal.title),
+    explanation: sanitizeCustomerPlannerText(proposal.explanation),
+    planner_notes: proposal.planner_notes.map((note) => ({
+      ...note,
+      message: sanitizeCustomerPlannerText(note.message)
+    })),
+    courses: proposal.courses.map((course) => ({
+      ...course,
+      course_label: sanitizeCustomerPlannerText(course.course_label),
+      lines: course.lines.map((line) => ({
+        ...line,
+        name: sanitizeCustomerPlannerText(line.name),
+        category_label: sanitizeCustomerPlannerText(line.category_label),
+        rationale: sanitizeCustomerPlannerText(line.rationale)
+      }))
+    })),
+    warnings: proposal.warnings.map(sanitizeCustomerPlannerText)
+  };
+}
+
+function sanitizeCustomerPlannerText(value: string): string {
+  return value
+    .replace(/\bTavola tools\b/gi, "Tavola checks")
+    .replace(/\bplanner tool execution\b/gi, "planner checks")
+    .replace(/\bpackage templates\b/gi, "menu structures")
+    .replace(/\bpackage template\b/gi, "menu structure")
+    .replace(/\btemplates\b/gi, "menu structures")
+    .replace(/\btemplate\b/gi, "menu structure")
+    .replace(/\bsku_id\b/gi, "product")
+    .replace(/\bsku ids\b/gi, "products")
+    .replace(/\bskus\b/gi, "products")
+    .replace(/\bsku\b/gi, "product");
 }
 
 function isPlannerStatusResponse(

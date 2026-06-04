@@ -53,7 +53,7 @@ def test_list_package_templates_exposes_courses_and_instructions() -> None:
     )
     assert "Do not mutate baskets or checkout orders." in result["instructions"]
     assert result["recommended_next_action"] == (
-        "Choose one template, then call search_catalog for matching products."
+        "Choose one menu structure, then call search_catalog for matching products."
     )
     assert set(tools.available_tool_names()) == {
         "list_package_templates",

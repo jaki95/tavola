@@ -42,6 +42,79 @@ Use the benchmark smoke in `backend/README.md` to compare `low` against
 model name, reasoning effort, retry count, timeout, status, benchmark class, and
 sanitized timing totals.
 
+## Latency Benchmark Checklist
+
+Tavola's live Planner benchmark target is below 10 seconds for an ideal run and
+below 30 seconds for an acceptable demo run. Runs above 30 seconds are benchmark
+misses even when the Planning UX remains customer-safe and the backend continues
+until the 60-second technical timeout.
+
+Use only the Codex SDK runtime path for benchmark decisions. Do not benchmark or
+select a fake runtime planner, direct Responses API fallback, or alternate model
+route outside the SDK.
+
+Primary benchmark persona:
+
+```text
+Vegetarian dinner for 4 around GBP 50
+```
+
+Recommended comparison personas:
+
+- `Classic Italian dinner for 2`
+- `Antipasti spread for a party`
+- `Help me plan Sunday lunch`, followed by a party-size answer in the browser
+- An unsupported safety or allergy-like constraint request that Tavola cannot
+  honestly satisfy from current catalog facets
+
+For the primary persona, run at least three real Codex benchmark repeats:
+
+```sh
+cd backend
+TAVOLA_PLANNER_CODEX_ENABLED=true \
+TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED=true \
+uv run python -m tavola.infrastructure.codex_planner_smoke \
+  --benchmark --repeat 3 \
+  "Vegetarian dinner for 4 around GBP 50"
+```
+
+Record this paste-safe handoff shape:
+
+```text
+model: <model>
+reasoning_effort: <low|sdk-default|...>
+timeout_seconds: <seconds>
+max_retries: <count>
+primary_persona_totals_ms: min <n>, median <n>, max <n>
+primary_persona_classes: <ideal|acceptable|slow|failed>
+decision: <below 10s achieved|below 30s accepted|above 30s demo slow-path>
+notes: <proposal validity, timeout/failure count, browser-observed wait>
+```
+
+Do not record prompts beyond the approved persona labels, raw Codex transcripts,
+tool arguments, final proposal JSON, customer personal details, credential
+paths, token values, stack traces, or SDK trace output.
+
+Previous latency evidence showed Tavola MCP handlers were effectively instant:
+the live `Vegetarian dinner for 4 around GBP 50` trace spent about 2 ms in MCP
+tool handlers and about 50 seconds outside those handlers. Treat new benchmark
+work as Codex SDK/model/config and UX evidence unless timing data proves a
+different backend bottleneck.
+
+Latest benchmark decision from the 2026-06-04 real Codex SDK run:
+
+```text
+model: gpt-5.5
+reasoning_effort: low
+timeout_seconds: 60
+max_retries: 0
+primary_persona_totals_ms: min 36493, median 50090, max 60007
+primary_persona_classes: slow, slow, slow
+decision: above 30s demo slow-path
+notes: 2 valid proposals, 1 technical timeout; browser-observed proposal
+  readiness was about 65 seconds for one successful live run
+```
+
 Live planner prompts send Tavola planner context, including bounded catalog and
 proposal-validation details, through the configured Codex credential path. Get
 explicit operator approval before running live smoke prompts or browser flows

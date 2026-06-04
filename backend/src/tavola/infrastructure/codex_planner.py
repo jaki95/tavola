@@ -318,8 +318,7 @@ class CodexMenuPlannerAgent:
             if run_result.tool_error is not None:
                 response = _failure(
                     PlannerAgentErrorCode.TOOL_FAILURE,
-                    "Planner tool execution failed before Tavola could validate "
-                    "a proposal.",
+                    "Planner checks failed before Tavola could validate a proposal.",
                 )
                 _emit_total_timing(
                     self._timing_sink,
@@ -331,7 +330,7 @@ class CodexMenuPlannerAgent:
             if not _used_required_tools(run_result.tool_names):
                 response = _failure(
                     PlannerAgentErrorCode.MISSING_TOOL_USE,
-                    "Planner did not verify catalog and pricing with Tavola tools.",
+                    "Planner did not verify catalog and pricing with Tavola checks.",
                 )
                 _emit_parse_timing(
                     self._timing_sink,
@@ -411,8 +410,8 @@ def _build_planner_prompt(
     return "\n".join(
         (
             "You are Tavola's Planner for a small Italian deli.",
-            "Minimum contract: use package templates; call list_package_templates, "
-            "search_catalog, and validate_menu_proposal before any menu proposal.",
+            "Minimum contract: choose a menu structure with list_package_templates; "
+            "call search_catalog and validate_menu_proposal before any menu proposal.",
             "If party size is missing, ask one follow-up question instead of "
             "guessing quantities.",
             "Use search_catalog summaries for product names, units, prices, "
@@ -420,6 +419,8 @@ def _build_planner_prompt(
             "Call get_sku_detail only when a chosen product needs extra detail.",
             "Do not invent products or prices; Tavola validation owns SKU "
             "validity, availability, quantities, and totals.",
+            "In customer-facing text, say menu structure or course structure; "
+            "do not mention templates.",
             "Apply supported vegetarian, vegan, gluten-free, no-alcohol, and "
             "budget constraints honestly. Explain unsupported constraints.",
             "Final JSON contract:",
