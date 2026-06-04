@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { App } from "./App";
-import { createBasket } from "./api/basket";
+import { addBasketLine, createBasket } from "./api/basket";
 import { getCatalog, getCatalogProduct } from "./api/catalog";
 import { createCheckout, listPickupWindows } from "./api/checkout";
 import {
@@ -43,6 +43,7 @@ vi.mock("./api/planner", () => ({
 }));
 
 const createBasketMock = vi.mocked(createBasket);
+const addBasketLineMock = vi.mocked(addBasketLine);
 const getCatalogMock = vi.mocked(getCatalog);
 const getCatalogProductMock = vi.mocked(getCatalogProduct);
 const listPickupWindowsMock = vi.mocked(listPickupWindows);
@@ -104,6 +105,19 @@ const tagliatelleBasket: Basket = {
   currency: "GBP",
   item_count: 2,
   line_count: 1
+};
+
+const tagliatelleBasketAfterCatalogAdd: Basket = {
+  ...tagliatelleBasket,
+  lines: [
+    {
+      ...tagliatelleBasket.lines[0],
+      quantity: 3,
+      line_total_minor: 1275
+    }
+  ],
+  total_minor: 1275,
+  item_count: 3
 };
 
 const pickupWindow: PickupWindow = {
@@ -186,6 +200,10 @@ describe("App", () => {
     createBasketMock.mockResolvedValue({
       ok: true,
       data: emptyBasket
+    });
+    addBasketLineMock.mockResolvedValue({
+      ok: true,
+      data: tagliatelleBasketAfterCatalogAdd
     });
     getCatalogMock.mockResolvedValue({
       ok: true,
@@ -329,11 +347,20 @@ describe("App", () => {
   });
 
   test("selecting the Tavola brand returns to Shop without clearing planner state", async () => {
+    createBasketMock.mockResolvedValue({
+      ok: true,
+      data: tagliatelleBasket
+    });
+
     render(<App />);
 
     const storefrontHeader = screen.getByRole("banner", {
       name: "Tavola storefront"
     });
+    const basketPanel = await screen.findByRole("region", {
+      name: "Current basket"
+    });
+    expect(within(basketPanel).getByText("Fresh Tagliatelle")).toBeInTheDocument();
 
     fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Plan" }));
     const planner = screen.getByRole("region", { name: "Plan a menu" });
@@ -353,6 +380,7 @@ describe("App", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Shop" })
     ).toBeInTheDocument();
+    expect(within(basketPanel).getByText("Fresh Tagliatelle")).toBeInTheDocument();
 
     fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Plan" }));
 
@@ -571,6 +599,33 @@ describe("App", () => {
       basket_id: "basket-1",
       mode: "append",
       menu_proposal: plannerProposal
+    });
+
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Shop" }));
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Shop" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "View details for Fresh Tagliatelle" })
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Add another Fresh Tagliatelle to basket, 2 in basket"
+      })
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "Add another Fresh Tagliatelle to basket, 3 in basket"
+        })
+      ).toBeInTheDocument();
+    });
+    expect(addBasketLineMock).toHaveBeenCalledWith("basket-1", {
+      sku_id: "fresh-tagliatelle-250g",
+      quantity: 1
     });
   });
 });
