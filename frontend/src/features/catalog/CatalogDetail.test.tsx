@@ -115,10 +115,30 @@ describe("CatalogDetail", () => {
     expect(within(panel).getByText("Vegetarian")).toBeInTheDocument();
     expect(
       within(panel).getByRole("img", { name: "Fresh Tagliatelle product image" })
-    ).toHaveTextContent("fresh tagliatelle 250g");
+    ).toBeInTheDocument();
     expect(within(panel).queryByRole("button", { name: /add/i })).not.toBeInTheDocument();
     expect(within(panel).queryByText(/basket/i)).not.toBeInTheDocument();
     expect(within(panel).queryByText(/good for/i)).not.toBeInTheDocument();
     expect(within(panel).queryByText("primo")).not.toBeInTheDocument();
+  });
+
+  test("renders the detail product image as a static asset with stable desktop dimensions", () => {
+    render(
+      <CatalogDetail
+        detail={{ status: "success", skuId: tagliatelle.sku_id, product: tagliatelle }}
+        onClose={vi.fn()}
+      />
+    );
+
+    const panel = screen.getByRole("complementary", { name: "Product detail" });
+    const productImage = within(panel).getByRole("img", {
+      name: "Fresh Tagliatelle product image"
+    });
+
+    expect(productImage).toBeInstanceOf(HTMLImageElement);
+    expect(productImage).toHaveAttribute("src", expect.stringMatching(/\S/));
+    expect(productImage).toHaveAttribute("width", expect.stringMatching(/^[1-9]\d*$/));
+    expect(productImage).toHaveAttribute("height", expect.stringMatching(/^[1-9]\d*$/));
+    expect(productImage).toBeEmptyDOMElement();
   });
 });

@@ -57,6 +57,49 @@ describe("CatalogGrid", () => {
     ).not.toBeInTheDocument();
   });
 
+  test("renders known catalog image IDs as static image assets with stable dimensions", () => {
+    render(
+      <CatalogGrid
+        products={[tagliatelle]}
+        onSelectProduct={vi.fn()}
+        onResetFilters={vi.fn()}
+      />
+    );
+
+    const productImage = screen.getByRole("img", {
+      name: "Fresh Tagliatelle product image"
+    });
+
+    expect(productImage).toBeInstanceOf(HTMLImageElement);
+    expect(productImage).toHaveAttribute("src", expect.stringMatching(/\S/));
+    expect(productImage).toHaveAttribute("width", expect.stringMatching(/^[1-9]\d*$/));
+    expect(productImage).toHaveAttribute("height", expect.stringMatching(/^[1-9]\d*$/));
+    expect(productImage).toBeEmptyDOMElement();
+  });
+
+  test("renders a designed fallback image for unknown image IDs without leaking backend identifiers", () => {
+    const productWithUnknownImage = {
+      ...tagliatelle,
+      image_id: "missing-demo-image-id"
+    };
+
+    render(
+      <CatalogGrid
+        products={[productWithUnknownImage]}
+        onSelectProduct={vi.fn()}
+        onResetFilters={vi.fn()}
+      />
+    );
+
+    const productImage = screen.getByRole("img", {
+      name: "Fresh Tagliatelle product image"
+    });
+
+    expect(productImage).toBeInstanceOf(HTMLImageElement);
+    expect(productImage).toHaveAttribute("src", expect.stringMatching(/\S/));
+    expect(productImage).not.toHaveTextContent("missing demo image id");
+  });
+
   test("renders only available products from browse results", () => {
     const unavailableLasagne = {
       ...tagliatelle,

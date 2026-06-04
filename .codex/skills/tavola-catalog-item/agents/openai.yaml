@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tavola Catalog Item"
+  short_description: "Add or revise Tavola catalog SKUs with reviewed images"
+  default_prompt: "Use $tavola-catalog-item to add a new Tavola catalog SKU from this product idea."

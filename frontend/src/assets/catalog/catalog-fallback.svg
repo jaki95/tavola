@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720" role="img" aria-labelledby="title desc">
+  <title id="title">Tavola catalog image fallback</title>
+  <desc id="desc">A simple Tavola deli counter illustration used when a product image is unavailable.</desc>
+  <rect width="960" height="720" fill="#fffef9"/>
+  <rect y="488" width="960" height="232" fill="#d9eadc"/>
+  <path d="M0 96h960v392H0z" fill="#f0e4ce"/>
+  <path d="M0 96h960" stroke="#d9cbb4" stroke-width="4"/>
+  <path d="M162 536c92-74 208-112 348-112 102 0 200 28 288 84" fill="none" stroke="#18553d" stroke-width="18" stroke-linecap="round"/>
+  <ellipse cx="480" cy="390" rx="250" ry="70" fill="#fffef9" stroke="#d9cbb4" stroke-width="10"/>
+  <circle cx="396" cy="346" r="62" fill="#9d2f22"/>
+  <circle cx="493" cy="334" r="70" fill="#d39b20"/>
+  <circle cx="576" cy="356" r="56" fill="#235a72"/>
+  <path d="M333 306c44-44 96-70 156-78 66-10 128 8 188 54" fill="none" stroke="#18553d" stroke-width="14" stroke-linecap="round"/>
+  <path d="M210 162h540" stroke="#d9cbb4" stroke-width="12" stroke-linecap="round"/>
+  <path d="M270 218h420" stroke="#d9cbb4" stroke-width="10" stroke-linecap="round" opacity=".75"/>
+</svg>

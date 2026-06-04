@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from "react";
 
 import { formatDietaryFacetBadges, formatMoney } from "./catalogFormat";
+import { getCatalogImageAsset } from "./catalogImages";
 import type { CatalogDetailState } from "./useCatalogBrowser";
 import type { CatalogProductDetail } from "../../types/catalog";
 
@@ -74,7 +75,7 @@ function PopulatedDetail({ product }: { product: CatalogProductDetail }) {
     <article
       className={`catalog-detail__content catalog-detail__content--${product.category_id}`}
     >
-      <CatalogImageFallback product={product} />
+      <CatalogProductImage product={product} />
 
       <div className="catalog-detail__body">
         <h2>{product.name}</h2>
@@ -107,20 +108,21 @@ function PopulatedDetail({ product }: { product: CatalogProductDetail }) {
   );
 }
 
-function CatalogImageFallback({ product }: { product: CatalogProductDetail }) {
+function CatalogProductImage({ product }: { product: CatalogProductDetail }) {
+  const image = getCatalogImageAsset(product.image_id, product.name);
+
   return (
-    <div
-      aria-label={`${product.name} product image`}
-      className="catalog-detail__image-fallback"
-      role="img"
-    >
-      {formatImageId(product.image_id)}
+    <div className="catalog-detail__image-frame">
+      <img
+        alt={image.alt}
+        className="catalog-detail__image"
+        decoding="async"
+        height={image.height}
+        src={image.src}
+        width={image.width}
+      />
     </div>
   );
-}
-
-function formatImageId(imageId: string): string {
-  return imageId.trim().replace(/[-_]+/g, " ");
 }
 
 function handleCloseButtonKeyDown(
