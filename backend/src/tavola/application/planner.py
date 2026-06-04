@@ -9,7 +9,7 @@ from tavola.application.basket import (
 )
 from tavola.application.catalog import CatalogRepository
 from tavola.domain.basket import Basket, BasketId
-from tavola.domain.catalog import Money
+from tavola.domain.catalog import CatalogSku, Money
 from tavola.domain.planner import (
     Course,
     CourseProposal,
@@ -645,6 +645,10 @@ class ValidateMenuProposal:
                         )
                     )
                     continue
+                course_product_error = _course_product_error(course.course, sku)
+                if course_product_error is not None:
+                    errors.append(course_product_error)
+                    continue
 
                 line_total = Money(
                     amount_minor=sku.price.amount_minor * line.quantity,
@@ -722,6 +726,28 @@ def _duplicate_errors(proposal: MenuProposal) -> list[PlannerValidationError]:
                 )
             seen_sku_ids.add(line.sku_id)
     return errors
+
+
+def _course_product_error(
+    course: Course,
+    sku: CatalogSku,
+) -> PlannerValidationError | None:
+    is_drink_product = sku.category.category_id == Course.DRINKS.value
+    if is_drink_product and course != Course.DRINKS:
+        return PlannerValidationError(
+            code=PlannerValidationErrorCode.INVALID_PROPOSAL,
+            message="Drink products must be placed in the Drinks course.",
+            sku_id=sku.sku_id,
+            course=course,
+        )
+    if course == Course.DRINKS and not is_drink_product:
+        return PlannerValidationError(
+            code=PlannerValidationErrorCode.INVALID_PROPOSAL,
+            message="Only drink products can be placed in the Drinks course.",
+            sku_id=sku.sku_id,
+            course=course,
+        )
+    return None
 
 
 def _editable_proposal_for_session(

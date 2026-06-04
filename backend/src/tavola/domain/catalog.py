@@ -10,6 +10,7 @@ _CATEGORY_DEFINITIONS = {
     "drinks": ("Drinks", 4),
     "pantry": ("Pantry", 5),
 }
+_DIETARY_FACET_IDS = ("vegetarian", "vegan", "gluten_free")
 
 
 def _require_text(value: str, field_name: str) -> None:
@@ -63,6 +64,14 @@ def catalog_categories() -> tuple[CatalogCategory, ...]:
             key=lambda item: item[1][1],
         )
     )
+
+
+def catalog_category_ids() -> tuple[str, ...]:
+    return tuple(category.category_id for category in catalog_categories())
+
+
+def catalog_dietary_facet_ids() -> tuple[str, ...]:
+    return _DIETARY_FACET_IDS
 
 
 @dataclass(frozen=True, slots=True)
