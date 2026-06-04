@@ -1,6 +1,8 @@
 import re
 from collections import Counter, defaultdict
+from collections.abc import Callable
 
+from tavola.domain.catalog import CatalogSku
 from tavola.infrastructure.catalog_seed import SEED_CATALOG
 
 EXPECTED_CATEGORY_COUNTS = {
@@ -20,6 +22,75 @@ EXPECTED_CATEGORY_ORDER = {
 }
 
 SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+ALCOHOL_RELATED_TERM_PATTERN = re.compile(
+    r"\b(?:alcohol|alcoholic|amaro|beer|chianti|cider|grappa|limoncello|"
+    r"marsala|prosecco|spritz|vermouth|wine)\b"
+)
+
+
+def _planner_discovery_text(sku: CatalogSku) -> str:
+    return " ".join(
+        (
+            sku.name,
+            sku.short_description,
+            sku.detail_description,
+            *sku.tags,
+        )
+    ).casefold()
+
+
+def _tagged_sku_ids(tag: str) -> set[str]:
+    return {sku.sku_id for sku in SEED_CATALOG if tag in sku.tags}
+
+
+def test_seed_catalog_dietary_tags_require_matching_structured_facets() -> None:
+    dietary_tag_facets: dict[str, Callable[[CatalogSku], bool]] = {
+        "vegan": lambda sku: sku.facets.is_vegan,
+        "vegetarian": lambda sku: sku.facets.is_vegetarian,
+        "gluten-free": lambda sku: sku.facets.is_gluten_free,
+    }
+
+    for tag, facet_matches in dietary_tag_facets.items():
+        tagged_sku_ids = _tagged_sku_ids(tag)
+
+        assert tagged_sku_ids
+        assert tagged_sku_ids == {
+            sku.sku_id for sku in SEED_CATALOG if tag in sku.tags and facet_matches(sku)
+        }
+
+
+def test_seed_catalog_alcohol_terms_match_contains_alcohol_facet() -> None:
+    alcohol_term_sku_ids = {
+        sku.sku_id
+        for sku in SEED_CATALOG
+        if ALCOHOL_RELATED_TERM_PATTERN.search(_planner_discovery_text(sku))
+    }
+    alcohol_facet_sku_ids = {
+        sku.sku_id for sku in SEED_CATALOG if sku.facets.contains_alcohol
+    }
+
+    assert alcohol_term_sku_ids
+    assert alcohol_term_sku_ids == alcohol_facet_sku_ids
+
+
+def test_seed_catalog_hard_constraint_facets_are_validation_truth() -> None:
+    vegan_facet_sku_ids = {sku.sku_id for sku in SEED_CATALOG if sku.facets.is_vegan}
+    vegetarian_facet_sku_ids = {
+        sku.sku_id for sku in SEED_CATALOG if sku.facets.is_vegetarian
+    }
+    gluten_free_facet_sku_ids = {
+        sku.sku_id for sku in SEED_CATALOG if sku.facets.is_gluten_free
+    }
+    alcohol_facet_sku_ids = {
+        sku.sku_id for sku in SEED_CATALOG if sku.facets.contains_alcohol
+    }
+
+    assert _tagged_sku_ids("vegan").issubset(vegan_facet_sku_ids)
+    assert _tagged_sku_ids("vegetarian").issubset(vegetarian_facet_sku_ids)
+    assert _tagged_sku_ids("gluten-free").issubset(gluten_free_facet_sku_ids)
+    assert alcohol_facet_sku_ids
+    assert vegetarian_facet_sku_ids - _tagged_sku_ids("vegetarian")
+    assert gluten_free_facet_sku_ids - _tagged_sku_ids("gluten-free")
 
 
 def test_seed_catalog_contains_twenty_unique_available_skus() -> None:

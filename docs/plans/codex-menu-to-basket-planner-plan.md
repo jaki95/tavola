@@ -161,6 +161,10 @@ HTTP, or React.
   invalid quantity, duplicate line, unsupported course, and defensive
   availability errors deterministically.
 
+**Implementation note (2026-06-04)**: Sprint 1 is implemented. Duplicate product
+identities are rejected during deterministic validation so course grouping stays
+unambiguous for proposal review.
+
 ### Task 1.1: Add Catalog Planner Data-Quality Tests
 
 - **Location**: `backend/tests/test_catalog_seed.py`
