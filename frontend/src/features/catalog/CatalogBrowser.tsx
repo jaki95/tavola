@@ -3,7 +3,17 @@ import { CatalogFilters } from "./CatalogFilters";
 import { CatalogGrid } from "./CatalogGrid";
 import { useCatalogBrowser } from "./useCatalogBrowser";
 
-export function CatalogBrowser() {
+type CatalogBrowserProps = {
+  basketQuantities?: Record<string, number>;
+  isAddPending?: boolean;
+  onAddProduct?: (skuId: string, quantity: number) => void;
+};
+
+export function CatalogBrowser({
+  basketQuantities = {},
+  isAddPending = false,
+  onAddProduct = () => {}
+}: CatalogBrowserProps) {
   const {
     catalog,
     detail,
@@ -72,14 +82,35 @@ export function CatalogBrowser() {
 
           <div className="catalog-browser__workspace">
             <CatalogGrid
+              basketQuantities={basketQuantities}
+              isAddPending={isAddPending}
+              onAddProduct={onAddProduct}
               onResetFilters={resetFilters}
               onSelectProduct={openDetail}
               products={catalog.products}
             />
-            <CatalogDetail detail={detail} onClose={closeDetail} />
           </div>
+
+          <CatalogDetail
+            basketQuantity={getDetailBasketQuantity(detail, basketQuantities)}
+            detail={detail}
+            isAddPending={isAddPending}
+            onAddProduct={onAddProduct}
+            onClose={closeDetail}
+          />
         </>
       )}
     </section>
   );
+}
+
+function getDetailBasketQuantity(
+  detail: ReturnType<typeof useCatalogBrowser>["detail"],
+  basketQuantities: Record<string, number>
+): number {
+  if (detail.status === "closed") {
+    return 0;
+  }
+
+  return basketQuantities[detail.skuId] ?? 0;
 }

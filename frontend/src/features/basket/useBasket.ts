@@ -64,7 +64,7 @@ const defaultBasketClient: BasketClient = {
 
 export function useBasket({
   client = defaultBasketClient,
-  storage = window.localStorage
+  storage = getBasketStorage()
 }: UseBasketOptions = {}) {
   const [basket, setBasket] = useState<BasketLoadState>({
     status: "loading",
@@ -214,5 +214,38 @@ export function useBasket({
     addLine,
     setLineQuantity,
     removeLine
+  };
+}
+
+function getBasketStorage(): Storage {
+  if (typeof window !== "undefined" && window.localStorage) {
+    return window.localStorage;
+  }
+
+  return createMemoryStorage();
+}
+
+function createMemoryStorage(): Storage {
+  const values = new Map<string, string>();
+
+  return {
+    get length() {
+      return values.size;
+    },
+    clear() {
+      values.clear();
+    },
+    getItem(key: string) {
+      return values.get(key) ?? null;
+    },
+    key(index: number) {
+      return Array.from(values.keys())[index] ?? null;
+    },
+    removeItem(key: string) {
+      values.delete(key);
+    },
+    setItem(key: string, value: string) {
+      values.set(key, value);
+    }
   };
 }

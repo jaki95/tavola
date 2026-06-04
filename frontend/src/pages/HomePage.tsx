@@ -2,6 +2,8 @@ import {
   BackendStatusPanel,
   type BackendStatus
 } from "../components/BackendStatusPanel";
+import { BasketPanel } from "../features/basket/BasketPanel";
+import { useBasket } from "../features/basket/useBasket";
 import { CatalogBrowser } from "../features/catalog/CatalogBrowser";
 
 const workflowItems = [
@@ -12,7 +14,8 @@ const workflowItems = [
   },
   {
     label: "Basket",
-    status: "Planned"
+    href: "#basket-panel-title",
+    status: "Active"
   },
   {
     label: "Checkout",
@@ -25,6 +28,10 @@ type HomePageProps = {
 };
 
 export function HomePage({ backendStatus }: HomePageProps) {
+  const basket = useBasket();
+  const isBasketMutationPending = basket.mutation.status === "pending";
+  const basketQuantities = getBasketQuantities(basket.basket.basket);
+
   return (
     <div className="site-shell">
       <header className="top-bar">
@@ -37,12 +44,14 @@ export function HomePage({ backendStatus }: HomePageProps) {
             <span>{workflowItems[0].label}</span>
             <span>{workflowItems[0].status}</span>
           </a>
-          {workflowItems.slice(1).map((item) => (
-            <button className="nav-placeholder" disabled key={item.label} type="button">
-              <span>{item.label}</span>
-              <span>{item.status}</span>
-            </button>
-          ))}
+          <a className="nav-link" href={workflowItems[1].href}>
+            <span>{workflowItems[1].label}</span>
+            <span>{workflowItems[1].status}</span>
+          </a>
+          <button className="nav-placeholder" disabled type="button">
+            <span>{workflowItems[2].label}</span>
+            <span>{workflowItems[2].status}</span>
+          </button>
         </nav>
       </header>
 
@@ -52,15 +61,40 @@ export function HomePage({ backendStatus }: HomePageProps) {
             <p className="eyebrow">Storefront workspace</p>
             <h1 id="app-title">Tavola</h1>
             <p className="intro">
-              A practical deli counter for browsing real products before basket
-              editing and mock pickup checkout arrive.
+              A practical deli counter for browsing real products and building a
+              backend-owned basket before mock pickup checkout.
             </p>
           </div>
           <BackendStatusPanel status={backendStatus} />
         </section>
 
-        <CatalogBrowser />
+        <div className="storefront-workspace__commerce">
+          <CatalogBrowser
+            basketQuantities={basketQuantities}
+            isAddPending={isBasketMutationPending}
+            onAddProduct={basket.addLine}
+          />
+          <BasketPanel
+            basket={basket.basket}
+            mutation={basket.mutation}
+            onReload={basket.reload}
+            onRemoveLine={basket.removeLine}
+            onSetLineQuantity={basket.setLineQuantity}
+          />
+        </div>
       </main>
     </div>
+  );
+}
+
+function getBasketQuantities(
+  basket: ReturnType<typeof useBasket>["basket"]["basket"]
+): Record<string, number> {
+  if (!basket) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    basket.lines.map((line) => [line.sku_id, line.quantity])
   );
 }
