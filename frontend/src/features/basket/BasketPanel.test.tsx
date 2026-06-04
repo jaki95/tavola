@@ -196,6 +196,8 @@ describe("BasketPanel", () => {
   });
 
   test("disables mutation controls while a basket mutation is pending", () => {
+    const onSetLineQuantity = vi.fn();
+
     renderBasketPanel({
       basket: {
         status: "success",
@@ -204,15 +206,24 @@ describe("BasketPanel", () => {
       mutation: {
         status: "pending",
         message: null
-      }
+      },
+      onSetLineQuantity
     });
 
+    const quantityInput = screen.getByLabelText("Quantity for Fresh Tagliatelle");
+
+    expect(quantityInput).toBeDisabled();
     expect(
       screen.getByRole("button", { name: "Increase Fresh Tagliatelle quantity" })
     ).toBeDisabled();
     expect(
       screen.getByRole("button", { name: "Remove Fresh Tagliatelle from basket" })
     ).toBeDisabled();
+
+    fireEvent.change(quantityInput, { target: { value: "4" } });
+    fireEvent.blur(quantityInput);
+
+    expect(onSetLineQuantity).not.toHaveBeenCalled();
   });
 });
 

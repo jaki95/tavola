@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { useState } from "react";
 import { describe, expect, test, vi } from "vitest";
 
 import { CatalogDetail } from "./CatalogDetail";
@@ -108,6 +109,73 @@ describe("CatalogDetail", () => {
     fireEvent.keyDown(closeButton, { key: "Enter" });
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  test("moves focus into the detail dialog and traps keyboard focus", () => {
+    const onClose = vi.fn();
+
+    render(
+      <>
+        <button type="button">Open product detail</button>
+        <CatalogDetail
+          detail={{ status: "success", skuId: tagliatelle.sku_id, product: tagliatelle }}
+          onClose={onClose}
+        />
+      </>
+    );
+
+    const panel = screen.getByRole("dialog", { name: "Product detail" });
+    const closeButton = within(panel).getByRole("button", {
+      name: "Close product detail"
+    });
+    const addButton = within(panel).getByRole("button", {
+      name: "Add Fresh Tagliatelle to basket"
+    });
+
+    expect(closeButton).toHaveFocus();
+
+    fireEvent.keyDown(addButton, { key: "Tab" });
+    expect(closeButton).toHaveFocus();
+
+    fireEvent.keyDown(closeButton, { key: "Tab", shiftKey: true });
+    expect(addButton).toHaveFocus();
+
+    fireEvent.keyDown(addButton, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  test("restores focus to the opener after closing the dialog", () => {
+    function DetailHarness() {
+      const [isOpen, setIsOpen] = useState(false);
+
+      return (
+        <>
+          <button type="button" onClick={() => setIsOpen(true)}>
+            Open product detail
+          </button>
+          {isOpen ? (
+            <CatalogDetail
+              detail={{
+                status: "success",
+                skuId: tagliatelle.sku_id,
+                product: tagliatelle
+              }}
+              onClose={() => setIsOpen(false)}
+            />
+          ) : null}
+        </>
+      );
+    }
+
+    render(<DetailHarness />);
+
+    const opener = screen.getByRole("button", { name: "Open product detail" });
+
+    opener.focus();
+    fireEvent.click(opener);
+    fireEvent.click(screen.getByRole("button", { name: "Close product detail" }));
+
+    expect(opener).toHaveFocus();
   });
 
   test("renders populated product detail from backend fields with a basket action", () => {

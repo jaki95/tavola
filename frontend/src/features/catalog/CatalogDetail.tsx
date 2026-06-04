@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from "react";
+import { useEffect, useRef, type KeyboardEvent } from "react";
 
 import { formatDietaryFacetBadges, formatMoney } from "./catalogFormat";
 import { getCatalogImageAsset } from "./catalogImages";
@@ -20,7 +20,29 @@ export function CatalogDetail({
   onAddProduct = () => {},
   onClose
 }: CatalogDetailProps) {
-  if (detail.status === "closed") {
+  const isOpen = detail.status !== "closed";
+  const dialogRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const previouslyFocusedElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = dialogRef.current;
+    const focusTarget = dialog ? getFocusableElements(dialog)[0] ?? dialog : null;
+
+    focusTarget?.focus();
+
+    return () => {
+      if (previouslyFocusedElement?.isConnected) {
+        previouslyFocusedElement.focus();
+      }
+    };
+  }, [isOpen]);
+
+  if (!isOpen) {
     return null;
   }
 
@@ -34,13 +56,11 @@ export function CatalogDetail({
         aria-label="Product detail"
         aria-modal="true"
         className="catalog-detail"
+        ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            onClose();
-          }
-        }}
+        onKeyDown={(event) => handleDialogKeyDown(event, onClose)}
       >
         <div className="catalog-detail__header">
           <button
@@ -68,6 +88,64 @@ export function CatalogDetail({
       </section>
     </div>
   );
+}
+
+function handleDialogKeyDown(
+  event: KeyboardEvent<HTMLElement>,
+  onClose: () => void
+) {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    onClose();
+    return;
+  }
+
+  if (event.key === "Tab") {
+    trapDialogFocus(event);
+  }
+}
+
+function trapDialogFocus(event: KeyboardEvent<HTMLElement>) {
+  const dialog = event.currentTarget;
+  const focusableElements = getFocusableElements(dialog);
+
+  if (focusableElements.length === 0) {
+    event.preventDefault();
+    dialog.focus();
+    return;
+  }
+
+  const firstElement = focusableElements[0]!;
+  const lastElement = focusableElements[focusableElements.length - 1]!;
+  const activeElement = document.activeElement;
+
+  if (event.shiftKey) {
+    if (activeElement === firstElement || !dialog.contains(activeElement)) {
+      event.preventDefault();
+      lastElement.focus();
+    }
+    return;
+  }
+
+  if (activeElement === lastElement || !dialog.contains(activeElement)) {
+    event.preventDefault();
+    firstElement.focus();
+  }
+}
+
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      [
+        "a[href]",
+        "button:not([disabled])",
+        "input:not([disabled])",
+        "select:not([disabled])",
+        "textarea:not([disabled])",
+        '[tabindex]:not([tabindex="-1"])'
+      ].join(",")
+    )
+  ).filter((element) => element.tabIndex >= 0);
 }
 
 function LoadingDetail({ skuId }: { skuId: string }) {

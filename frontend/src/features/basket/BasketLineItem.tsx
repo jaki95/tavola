@@ -32,6 +32,11 @@ export function BasketLineItem({
   });
 
   function submitDraftQuantity() {
+    if (isPending) {
+      setDraftQuantity(String(line.quantity));
+      return;
+    }
+
     const nextQuantity = Number.parseInt(draftQuantity, 10);
 
     if (!Number.isInteger(nextQuantity) || nextQuantity < 1) {
@@ -69,6 +74,7 @@ export function BasketLineItem({
           </button>
           <input
             aria-label={`Quantity for ${line.name}`}
+            disabled={isPending}
             inputMode="numeric"
             min={1}
             onBlur={submitDraftQuantity}
