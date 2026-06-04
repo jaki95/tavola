@@ -127,6 +127,24 @@ describe("apiSendJson", () => {
     });
   });
 
+  test("uses customer-friendly copy for server errors without details", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("Proxy error", { status: 500 }))
+    );
+
+    const result = await apiSendJson("/checkout", { method: "POST" });
+
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        kind: "http",
+        message: "Tavola could not complete the request. Please try again.",
+        status: 500
+      }
+    });
+  });
+
   test("preserves network errors", async () => {
     vi.stubGlobal(
       "fetch",

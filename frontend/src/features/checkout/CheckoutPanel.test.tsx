@@ -265,16 +265,20 @@ describe("CheckoutPanel", () => {
     expect(
       await within(panel).findByRole("heading", {
         level: 3,
-        name: "Order confirmed"
+        name: "Order confirmed. Thank you for shopping with us."
       })
     ).toBeInTheDocument();
+    expect(
+      within(panel).queryByRole("heading", {
+        level: 3,
+        name: "Basket review"
+      })
+    ).not.toBeInTheDocument();
     expect(within(panel).getByText("order-1")).toBeInTheDocument();
     expect(within(panel).getByText("ada@example.com")).toBeInTheDocument();
     expect(within(panel).getByText("Today afternoon pickup")).toBeInTheDocument();
     expect(within(panel).getByText("Fresh Tagliatelle x 2")).toBeInTheDocument();
-    expect(
-      within(panel).getByText("Thank you for shopping with us.")
-    ).toBeInTheDocument();
+    expect(within(panel).queryByText("£0.00")).not.toBeInTheDocument();
     const confirmation = within(panel).getByRole("status");
     expect(within(confirmation).getByText("2 items")).toBeInTheDocument();
     expect(onCheckoutSuccess).toHaveBeenCalledWith(emptyBasket);

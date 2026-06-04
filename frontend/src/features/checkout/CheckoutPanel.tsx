@@ -126,114 +126,121 @@ export function CheckoutPanel({
             <p className="eyebrow">Checkout</p>
             <h2 id="checkout-panel-title">Pickup checkout</h2>
           </div>
-          <CheckoutSummary basket={visibleBasket} />
+          {submission.status === "success" ? null : (
+            <CheckoutSummary basket={visibleBasket} />
+          )}
         </div>
 
-        <div className="checkout-panel__body">
-          <CheckoutReview
-            basket={visibleBasket}
-            isComplete={submission.status === "success"}
-          />
-
+        <div
+          className={
+            submission.status === "success"
+              ? "checkout-panel__body checkout-panel__body--complete"
+              : "checkout-panel__body"
+          }
+        >
           {submission.status === "success" ? (
             <CheckoutConfirmation
               onReset={resetCheckout}
               order={submission.order}
             />
           ) : (
-            <form className="checkout-form" onSubmit={handleSubmit}>
-              {isBasketEmpty ? (
-                <p className="checkout-panel__empty">
-                  Add at least one deli item before checkout.
-                </p>
-              ) : null}
+            <>
+              <CheckoutReview basket={visibleBasket} />
 
-              {isBasketUpdating ? (
-                <p className="checkout-panel__status" role="status">
-                  Basket is updating.
-                </p>
-              ) : null}
+              <form className="checkout-form" onSubmit={handleSubmit}>
+                {isBasketEmpty ? (
+                  <p className="checkout-panel__empty">
+                    Add at least one deli item before checkout.
+                  </p>
+                ) : null}
 
-              {pickupWindows.status === "loading" ? (
-                <p className="checkout-panel__status" role="status">
-                  Loading pickup windows.
-                </p>
-              ) : null}
+                {isBasketUpdating ? (
+                  <p className="checkout-panel__status" role="status">
+                    Basket is updating.
+                  </p>
+                ) : null}
 
-              {pickupWindows.status === "error" ? (
-                <div className="checkout-panel__alert" role="alert">
-                  <p>{pickupWindows.message}</p>
-                  <button type="button" onClick={reloadPickupWindows}>
-                    Retry windows
-                  </button>
-                </div>
-              ) : null}
+                {pickupWindows.status === "loading" ? (
+                  <p className="checkout-panel__status" role="status">
+                    Loading pickup windows.
+                  </p>
+                ) : null}
 
-              {pickupWindows.status === "empty" ? (
-                <p className="checkout-panel__alert" role="alert">
-                  {pickupWindows.message}
-                </p>
-              ) : null}
+                {pickupWindows.status === "error" ? (
+                  <div className="checkout-panel__alert" role="alert">
+                    <p>{pickupWindows.message}</p>
+                    <button type="button" onClick={reloadPickupWindows}>
+                      Retry windows
+                    </button>
+                  </div>
+                ) : null}
 
-              <label className="checkout-form__field">
-                <span>Contact name</span>
-                <input
-                  autoComplete="name"
-                  disabled={!canSubmit}
-                  onChange={(event) =>
-                    updateFormValue("contactName", event.target.value)
-                  }
-                  required
-                  type="text"
-                  value={formValues.contactName}
-                />
-              </label>
+                {pickupWindows.status === "empty" ? (
+                  <p className="checkout-panel__alert" role="alert">
+                    {pickupWindows.message}
+                  </p>
+                ) : null}
 
-              <label className="checkout-form__field">
-                <span>Contact email</span>
-                <input
-                  autoComplete="email"
-                  disabled={!canSubmit}
-                  onChange={(event) =>
-                    updateFormValue("contactEmail", event.target.value)
-                  }
-                  required
-                  type="email"
-                  value={formValues.contactEmail}
-                />
-              </label>
+                <label className="checkout-form__field">
+                  <span>Contact name</span>
+                  <input
+                    autoComplete="name"
+                    disabled={!canSubmit}
+                    onChange={(event) =>
+                      updateFormValue("contactName", event.target.value)
+                    }
+                    required
+                    type="text"
+                    value={formValues.contactName}
+                  />
+                </label>
 
-              <label className="checkout-form__field">
-                <span>Pickup window</span>
-                <select
-                  disabled={!canSubmit}
-                  onChange={(event) =>
-                    updateFormValue("pickupWindowId", event.target.value)
-                  }
-                  required
-                  value={formValues.pickupWindowId}
-                >
-                  {pickupWindows.pickupWindows.map((window) => (
-                    <option
-                      key={window.pickup_window_id}
-                      value={window.pickup_window_id}
-                    >
-                      {window.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <label className="checkout-form__field">
+                  <span>Contact email</span>
+                  <input
+                    autoComplete="email"
+                    disabled={!canSubmit}
+                    onChange={(event) =>
+                      updateFormValue("contactEmail", event.target.value)
+                    }
+                    required
+                    type="email"
+                    value={formValues.contactEmail}
+                  />
+                </label>
 
-              {submission.status === "error" ? (
-                <p className="checkout-panel__alert" role="alert">
-                  {submission.message}
-                </p>
-              ) : null}
+                <label className="checkout-form__field">
+                  <span>Pickup window</span>
+                  <select
+                    disabled={!canSubmit}
+                    onChange={(event) =>
+                      updateFormValue("pickupWindowId", event.target.value)
+                    }
+                    required
+                    value={formValues.pickupWindowId}
+                  >
+                    {pickupWindows.pickupWindows.map((window) => (
+                      <option
+                        key={window.pickup_window_id}
+                        value={window.pickup_window_id}
+                      >
+                        {window.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <button disabled={!canSubmit} type="submit">
-                {isPending ? "Creating order" : "Create pickup order"}
-              </button>
-            </form>
+                {submission.status === "error" ? (
+                  <p className="checkout-panel__alert" role="alert">
+                    {submission.message}
+                  </p>
+                ) : null}
+
+                <button disabled={!canSubmit} type="submit">
+                  {isPending ? "Creating order" : "Create pickup order"}
+                </button>
+              </form>
+            </>
           )}
         </div>
 
@@ -333,22 +340,7 @@ function CheckoutSummary({ basket }: { basket: Basket | null }) {
   );
 }
 
-function CheckoutReview({
-  basket,
-  isComplete
-}: {
-  basket: Basket | null;
-  isComplete: boolean;
-}) {
-  if (isComplete) {
-    return (
-      <div className="checkout-review checkout-review--empty">
-        <h3>Basket review</h3>
-        <p>Thank you for shopping with us.</p>
-      </div>
-    );
-  }
-
+function CheckoutReview({ basket }: { basket: Basket | null }) {
   if (!basket || basket.lines.length === 0) {
     return (
       <div className="checkout-review checkout-review--empty">
@@ -395,7 +387,7 @@ function CheckoutConfirmation({
 
   return (
     <div className="checkout-confirmation" role="status">
-      <h3>Order confirmed</h3>
+      <h3>Order confirmed. Thank you for shopping with us.</h3>
       <dl>
         <div>
           <dt>Order</dt>

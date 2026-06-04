@@ -329,6 +329,22 @@ commerce workspace.
   - Mock checkout scope remains unchanged.
 - **Validation**: Checkout tests and browser check for success/error paths.
 
+### Sprint 4 Implementation Notes
+
+- Basket rail now uses the refreshed paper/hairline treatment with a compact
+  red serif Basket title, product thumbnails from the existing catalog image
+  map, denser line-item controls, clearer total/count hierarchy, compact empty
+  and error states, and a stronger checkout action.
+- Checkout now shares the refreshed basket/card surface language with a clearer
+  review/form split, aligned success confirmation, visible validation/API
+  alerts, and unchanged mock pickup checkout behavior.
+- Generic 5xx API fallbacks now use customer-friendly Tavola copy while
+  preserving FastAPI validation detail messages for basket and checkout errors.
+- Browser approval covered empty basket, populated basket, basket quantity
+  validation error, checkout form, checkout success, checkout API error with
+  backend outage, Vite proxy-backed requests, keyboard focus visibility in the
+  modal, and console-error checks.
+
 ## Sprint 5: Browser Approval And Style Handoff
 
 **Goal**: Verify the refreshed visual system end to end and document how it

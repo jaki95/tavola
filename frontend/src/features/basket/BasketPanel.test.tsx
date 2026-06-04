@@ -53,7 +53,7 @@ describe("BasketPanel", () => {
     const panel = screen.getByRole("region", { name: "Current basket" });
 
     expect(
-      within(panel).getByRole("heading", { level: 2, name: "Current basket" })
+      within(panel).getByRole("heading", { level: 2, name: "Basket" })
     ).toBeInTheDocument();
     expect(within(panel).getByText("Your basket is empty.")).toBeInTheDocument();
     expect(
@@ -117,6 +117,11 @@ describe("BasketPanel", () => {
     const line = within(panel).getByRole("listitem", { name: /fresh tagliatelle/i });
 
     expect(within(line).getByText("250g")).toBeInTheDocument();
+    expect(
+      within(line).getByRole("img", {
+        name: "Fresh Tagliatelle product image"
+      })
+    ).toBeInTheDocument();
     expect(within(line).getByText("£4.25 each")).toBeInTheDocument();
     expect(within(line).getByText("£8.50")).toBeInTheDocument();
     expect(within(panel).getAllByText("£8.50")).toHaveLength(2);

@@ -42,7 +42,7 @@ describe("getHealth", () => {
       ok: false,
       error: {
         kind: "http",
-        message: "Request failed with status 503.",
+        message: "Tavola could not complete the request. Please try again.",
         status: 503
       }
     });

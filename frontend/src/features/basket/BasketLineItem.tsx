@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { formatBasketMoney } from "./basketFormat";
+import { getCatalogImageAsset } from "../catalog/catalogImages";
 import type { BasketLine } from "../../types/basket";
 
 type BasketLineItemProps = {
@@ -30,6 +31,7 @@ export function BasketLineItem({
     amount_minor: line.line_total_minor,
     currency: line.currency
   });
+  const image = getCatalogImageAsset(line.image_id, line.name);
 
   function submitDraftQuantity() {
     if (isPending) {
@@ -51,60 +53,73 @@ export function BasketLineItem({
 
   return (
     <li className="basket-line" aria-label={line.name}>
-      <div className="basket-line__summary">
-        <div>
-          <h3>{line.name}</h3>
-          <p>
-            <span>{line.unit_label}</span>
-            <span>{unitPrice} each</span>
-          </p>
-        </div>
-        <strong>{lineTotal}</strong>
-      </div>
+      <img
+        alt={image.alt}
+        className="basket-line__image"
+        height={image.height}
+        src={image.src}
+        width={image.width}
+      />
 
-      <div className="basket-line__controls">
-        <div className="basket-line__quantity" aria-label={`${line.name} quantity`}>
+      <div className="basket-line__content">
+        <div className="basket-line__summary">
+          <div>
+            <h3>{line.name}</h3>
+            <p>
+              <span>{line.unit_label}</span>
+              <span>{unitPrice} each</span>
+            </p>
+          </div>
+          <strong>{lineTotal}</strong>
+        </div>
+
+        <div className="basket-line__controls">
+          <div
+            className="basket-line__quantity"
+            aria-label={`${line.name} quantity`}
+          >
+            <button
+              aria-label={`Decrease ${line.name} quantity`}
+              disabled={isPending || line.quantity <= 1}
+              onClick={() => onSetLineQuantity(line.sku_id, line.quantity - 1)}
+              type="button"
+            >
+              -
+            </button>
+            <input
+              aria-label={`Quantity for ${line.name}`}
+              disabled={isPending}
+              inputMode="numeric"
+              min={1}
+              onBlur={submitDraftQuantity}
+              onChange={(event) => setDraftQuantity(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.currentTarget.blur();
+                }
+              }}
+              type="number"
+              value={draftQuantity}
+            />
+            <button
+              aria-label={`Increase ${line.name} quantity`}
+              disabled={isPending}
+              onClick={() => onSetLineQuantity(line.sku_id, line.quantity + 1)}
+              type="button"
+            >
+              +
+            </button>
+          </div>
           <button
-            aria-label={`Decrease ${line.name} quantity`}
-            disabled={isPending || line.quantity <= 1}
-            onClick={() => onSetLineQuantity(line.sku_id, line.quantity - 1)}
+            aria-label={`Remove ${line.name} from basket`}
+            className="basket-line__remove"
+            disabled={isPending}
+            onClick={() => onRemoveLine(line.sku_id)}
             type="button"
           >
-            -
-          </button>
-          <input
-            aria-label={`Quantity for ${line.name}`}
-            disabled={isPending}
-            inputMode="numeric"
-            min={1}
-            onBlur={submitDraftQuantity}
-            onChange={(event) => setDraftQuantity(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.currentTarget.blur();
-              }
-            }}
-            type="number"
-            value={draftQuantity}
-          />
-          <button
-            aria-label={`Increase ${line.name} quantity`}
-            disabled={isPending}
-            onClick={() => onSetLineQuantity(line.sku_id, line.quantity + 1)}
-            type="button"
-          >
-            +
+            Remove
           </button>
         </div>
-        <button
-          aria-label={`Remove ${line.name} from basket`}
-          className="basket-line__remove"
-          disabled={isPending}
-          onClick={() => onRemoveLine(line.sku_id)}
-          type="button"
-        >
-          Remove
-        </button>
       </div>
     </li>
   );

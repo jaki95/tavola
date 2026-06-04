@@ -111,7 +111,10 @@ async function requestJson<T>(
 }
 
 async function readHttpErrorMessage(response: Response): Promise<string> {
-  const fallbackMessage = `Request failed with status ${response.status}.`;
+  const fallbackMessage =
+    response.status >= 500
+      ? "Tavola could not complete the request. Please try again."
+      : `Request failed with status ${response.status}.`;
 
   try {
     return extractFastApiErrorMessage(await response.json()) ?? fallbackMessage;

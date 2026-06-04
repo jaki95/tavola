@@ -29,14 +29,14 @@ export function BasketPanel({
 
   return (
     <section
-      aria-labelledby="basket-panel-title"
+      aria-label="Current basket"
       className="basket-panel"
       id="basket-panel"
     >
       <div className="basket-panel__header">
         <div>
           <p className="eyebrow">Basket</p>
-          <h2 id="basket-panel-title">Current basket</h2>
+          <h2 id="basket-panel-title">Basket</h2>
         </div>
         <BasketSummary basket={visibleBasket} />
       </div>
