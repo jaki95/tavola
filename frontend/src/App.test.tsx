@@ -2,8 +2,10 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { App } from "./App";
+import { createBasket } from "./api/basket";
 import { getCatalog, getCatalogProduct } from "./api/catalog";
 import { getHealth } from "./api/health";
+import type { Basket } from "./types/basket";
 import type { CatalogListResponse, CatalogProductSummary } from "./types/catalog";
 
 vi.mock("./api/health", () => ({
@@ -15,6 +17,15 @@ vi.mock("./api/catalog", () => ({
   getCatalogProduct: vi.fn()
 }));
 
+vi.mock("./api/basket", () => ({
+  createBasket: vi.fn(),
+  getBasket: vi.fn(),
+  addBasketLine: vi.fn(),
+  setBasketLineQuantity: vi.fn(),
+  removeBasketLine: vi.fn()
+}));
+
+const createBasketMock = vi.mocked(createBasket);
 const getHealthMock = vi.mocked(getHealth);
 const getCatalogMock = vi.mocked(getCatalog);
 const getCatalogProductMock = vi.mocked(getCatalogProduct);
@@ -43,12 +54,27 @@ const catalogResponse: CatalogListResponse = {
   products: [tagliatelle]
 };
 
+const emptyBasket: Basket = {
+  basket_id: "basket-1",
+  lines: [],
+  total_minor: 0,
+  currency: "GBP",
+  item_count: 0,
+  line_count: 0
+};
+
 describe("App", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
   beforeEach(() => {
+    installLocalStorage();
+    window.localStorage.clear();
+    createBasketMock.mockResolvedValue({
+      ok: true,
+      data: emptyBasket
+    });
     getCatalogMock.mockResolvedValue({
       ok: true,
       data: catalogResponse
@@ -81,8 +107,8 @@ describe("App", () => {
       "#catalog-title"
     );
     expect(
-      screen.getByRole("button", { name: /basket planned/i })
-    ).toBeDisabled();
+      screen.getByRole("link", { name: /basket active/i })
+    ).toHaveAttribute("href", "#basket-panel-title");
     expect(
       screen.getByRole("button", { name: /checkout planned/i })
     ).toBeDisabled();
@@ -91,6 +117,9 @@ describe("App", () => {
         level: 3,
         name: "Fresh Tagliatelle"
       })
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole("region", { name: "Current basket" })
     ).toBeInTheDocument();
   });
 
@@ -135,3 +164,35 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 });
+
+function installLocalStorage() {
+  if (window.localStorage) {
+    return;
+  }
+
+  const values = new Map<string, string>();
+
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    value: {
+      get length() {
+        return values.size;
+      },
+      clear() {
+        values.clear();
+      },
+      getItem(key: string) {
+        return values.get(key) ?? null;
+      },
+      key(index: number) {
+        return Array.from(values.keys())[index] ?? null;
+      },
+      removeItem(key: string) {
+        values.delete(key);
+      },
+      setItem(key: string, value: string) {
+        values.set(key, value);
+      }
+    }
+  });
+}

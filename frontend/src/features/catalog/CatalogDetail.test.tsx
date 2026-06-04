@@ -95,7 +95,7 @@ describe("CatalogDetail", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  test("renders populated product detail from backend fields without purchase placeholders", () => {
+  test("renders populated product detail from backend fields with a basket action", () => {
     render(
       <CatalogDetail
         detail={{ status: "success", skuId: tagliatelle.sku_id, product: tagliatelle }}
@@ -116,10 +116,45 @@ describe("CatalogDetail", () => {
     expect(
       within(panel).getByRole("img", { name: "Fresh Tagliatelle product image" })
     ).toBeInTheDocument();
-    expect(within(panel).queryByRole("button", { name: /add/i })).not.toBeInTheDocument();
-    expect(within(panel).queryByText(/basket/i)).not.toBeInTheDocument();
+    expect(
+      within(panel).getByRole("button", { name: "Add Fresh Tagliatelle to basket" })
+    ).toBeInTheDocument();
     expect(within(panel).queryByText(/good for/i)).not.toBeInTheDocument();
     expect(within(panel).queryByText("primo")).not.toBeInTheDocument();
+  });
+
+  test("calls the detail add action with one unit of the selected SKU", () => {
+    const onAddProduct = vi.fn();
+
+    render(
+      <CatalogDetail
+        detail={{ status: "success", skuId: tagliatelle.sku_id, product: tagliatelle }}
+        onAddProduct={onAddProduct}
+        onClose={vi.fn()}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add Fresh Tagliatelle to basket" })
+    );
+
+    expect(onAddProduct).toHaveBeenCalledTimes(1);
+    expect(onAddProduct).toHaveBeenCalledWith("fresh-tagliatelle-250g", 1);
+  });
+
+  test("shows the detail add action pending state", () => {
+    render(
+      <CatalogDetail
+        detail={{ status: "success", skuId: tagliatelle.sku_id, product: tagliatelle }}
+        isAddPending={true}
+        onAddProduct={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Adding Fresh Tagliatelle to basket" })
+    ).toBeDisabled();
   });
 
   test("renders the detail product image as a static asset with stable desktop dimensions", () => {

@@ -377,6 +377,8 @@ h1 {
 .catalog-card button,
 .catalog-empty button,
 .catalog-detail__close,
+.catalog-detail__add,
+.basket-panel button,
 .catalog-filters__action {
   display: inline-flex;
   align-items: center;
@@ -400,6 +402,8 @@ h1 {
 .catalog-state button:hover,
 .catalog-card button:hover,
 .catalog-empty button:hover,
+.catalog-detail__add:hover,
+.basket-panel button:hover,
 .catalog-filters__action:hover {
   background: var(--color-tomato-dark);
   box-shadow:
@@ -411,11 +415,31 @@ h1 {
 .catalog-card button {
   width: 100%;
   justify-content: center;
-  min-height: 3.75rem;
-  margin-top: auto;
+  min-height: 3.3rem;
   line-height: 1.1;
   text-align: center;
   overflow-wrap: anywhere;
+}
+
+.catalog-card__actions {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.catalog-card button.catalog-card__detail-action {
+  border-color: var(--color-hairline);
+  background: rgb(255 254 249 / 82%);
+  color: var(--color-tomato);
+  box-shadow: inset 0 -2px 0 rgb(32 26 22 / 5%);
+}
+
+.catalog-card button.catalog-card__detail-action:hover {
+  background: #fffef9;
+  color: var(--color-tomato-dark);
+  box-shadow:
+    inset 0 -2px 0 rgb(32 26 22 / 6%),
+    0 10px 20px rgb(32 26 22 / 8%);
 }
 
 .catalog-filters {
@@ -528,6 +552,13 @@ h1 {
 .catalog-browser__workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+  align-items: start;
+  gap: 18px;
+}
+
+.storefront-workspace__commerce {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 390px);
   align-items: start;
   gap: 18px;
 }
@@ -748,6 +779,234 @@ h1 {
   border-radius: 8px;
   background: var(--color-paper);
   box-shadow: var(--shadow-soft);
+}
+
+.catalog-detail__add {
+  width: 100%;
+}
+
+.basket-panel {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgb(255 254 249 / 96%), rgb(255 254 249 / 88%)),
+    var(--color-paper);
+  box-shadow: var(--shadow-soft);
+}
+
+.basket-panel__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, auto);
+  gap: 12px;
+  align-items: start;
+  padding: 18px 18px 0;
+}
+
+.basket-panel__header h2 {
+  margin: 0;
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.basket-panel__summary {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  min-width: 7.5rem;
+  padding: 10px;
+  border: 1px solid rgb(24 85 61 / 22%);
+  border-radius: 7px;
+  background: var(--color-basil-soft);
+  color: var(--color-basil);
+}
+
+.basket-panel__summary span:first-child {
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.basket-panel__summary span:last-child {
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.basket-panel__status,
+.basket-panel__alert,
+.basket-panel__empty {
+  margin: 0 18px;
+}
+
+.basket-panel__status {
+  padding: 10px 12px;
+  border: 1px solid rgb(35 90 114 / 20%);
+  border-radius: 7px;
+  background: rgb(35 90 114 / 8%);
+  color: var(--color-enamel);
+  font-weight: 850;
+}
+
+.basket-panel__alert {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgb(157 47 34 / 26%);
+  border-left: 5px solid var(--color-tomato);
+  border-radius: 7px;
+  background: rgb(157 47 34 / 7%);
+  color: var(--color-tomato-dark);
+  font-weight: 800;
+}
+
+.basket-panel__alert p {
+  margin: 0;
+}
+
+.basket-panel__empty {
+  display: grid;
+  gap: 8px;
+  min-height: 178px;
+  padding: 18px;
+  border: 1px dashed rgb(32 26 22 / 22%);
+  border-radius: 8px;
+  background: rgb(245 247 241 / 70%);
+}
+
+.basket-panel__empty h3,
+.basket-panel__empty p {
+  margin: 0;
+}
+
+.basket-panel__empty h3 {
+  font-family: var(--font-display);
+}
+
+.basket-panel__empty p {
+  color: var(--color-muted);
+}
+
+.basket-panel__lines {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0 18px 18px;
+  list-style: none;
+}
+
+.basket-line {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 8px;
+  background: #fffef9;
+}
+
+.basket-line__summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 10px;
+  align-items: start;
+}
+
+.basket-line__summary h3 {
+  margin: 0;
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  line-height: 1.05;
+}
+
+.basket-line__summary p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 6px 0 0;
+  color: var(--color-muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.basket-line__summary strong {
+  color: var(--color-ink);
+  font-weight: 900;
+}
+
+.basket-line__controls {
+  display: grid;
+  grid-template-columns: max-content minmax(5.5rem, auto);
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.basket-line__quantity {
+  display: grid;
+  grid-template-columns: 2.25rem 3.25rem 2.25rem;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--color-hairline);
+  border-radius: 7px;
+  background: rgb(245 247 241 / 70%);
+}
+
+.basket-line__quantity button,
+.basket-line__quantity input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.45rem;
+}
+
+.basket-line__quantity button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-tomato);
+  box-shadow: none;
+}
+
+.basket-line__quantity button:hover {
+  background: rgb(157 47 34 / 8%);
+  box-shadow: none;
+  transform: none;
+}
+
+.basket-line__quantity input {
+  border: 0;
+  border-inline: 1px solid var(--color-hairline);
+  background: #fffef9;
+  color: var(--color-ink);
+  font-weight: 900;
+  text-align: center;
+}
+
+.basket-line__remove {
+  justify-self: end;
+  border-color: var(--color-hairline);
+  background: rgb(255 254 249 / 82%);
+  color: var(--color-tomato);
+  box-shadow: inset 0 -2px 0 rgb(32 26 22 / 5%);
+}
+
+.basket-line__remove:hover {
+  background: #fffef9;
+  color: var(--color-tomato-dark);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  transform: none;
 }
 
 .catalog-detail__header {

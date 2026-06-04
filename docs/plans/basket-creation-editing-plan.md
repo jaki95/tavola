@@ -357,7 +357,21 @@ basket in a persistent desktop-first surface.
   card or detail panel, edit quantity with buttons or numeric input, remove
   lines, and see totals update.
 
+**Progress**: Completed on 2026-06-04.
+
+- Added persistent basket presentation components with empty, loading, error,
+  validation-error, line editing, removal, and server-total display states.
+- Added add-to-basket controls to catalog cards and product detail while
+  preserving detail browsing.
+- Lifted basket state into the home page so catalog actions and the basket panel
+  share the backend-owned current basket.
+- Validation run: `cd frontend && npm test`; `cd frontend && npm run build`.
+- Browser approval run through the in-app browser with frontend dev server and
+  backend on the Vite proxy target.
+
 ### Task 4.1: Add Basket Presentation Components
+
+**Status**: Completed on 2026-06-04.
 
 - **Location**: `frontend/src/features/basket/BasketPanel.tsx`,
   `frontend/src/features/basket/BasketLineItem.tsx`,
@@ -381,6 +395,8 @@ basket in a persistent desktop-first surface.
 
 ### Task 4.2: Add Catalog Add-To-Basket Controls
 
+**Status**: Completed on 2026-06-04.
+
 - **Location**: `frontend/src/features/catalog/CatalogCard.tsx`,
   `frontend/src/features/catalog/CatalogDetail.tsx`,
   `frontend/src/features/catalog/CatalogGrid.tsx`,
@@ -400,6 +416,8 @@ basket in a persistent desktop-first surface.
   and preserving existing detail behavior.
 
 ### Task 4.3: Compose Basket State Into The Home Page
+
+**Status**: Completed on 2026-06-04.
 
 - **Location**: `frontend/src/pages/HomePage.tsx`,
   `frontend/src/features/catalog/CatalogBrowser.tsx`,

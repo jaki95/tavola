@@ -7,10 +7,17 @@ import type { CatalogProductSummary } from "../../types/catalog";
 
 type CatalogCardProps = {
   product: CatalogProductSummary;
+  isAddPending?: boolean;
+  onAddProduct?: (skuId: string, quantity: number) => void;
   onSelectProduct: (skuId: string) => void;
 };
 
-export function CatalogCard({ product, onSelectProduct }: CatalogCardProps) {
+export function CatalogCard({
+  product,
+  isAddPending = false,
+  onAddProduct = () => {},
+  onSelectProduct
+}: CatalogCardProps) {
   const dietaryBadges = formatDietaryFacetBadges(product);
   const image = getCatalogImageAsset(product.image_id, product.name);
 
@@ -56,13 +63,28 @@ export function CatalogCard({ product, onSelectProduct }: CatalogCardProps) {
             ))}
           </ul>
         ) : null}
-        <button
-          aria-label={`View details for ${product.name}`}
-          type="button"
-          onClick={() => onSelectProduct(product.sku_id)}
-        >
-          View details
-        </button>
+        <div className="catalog-card__actions">
+          <button
+            aria-label={
+              isAddPending
+                ? `Adding ${product.name} to basket`
+                : `Add ${product.name} to basket`
+            }
+            disabled={isAddPending}
+            type="button"
+            onClick={() => onAddProduct(product.sku_id, 1)}
+          >
+            {isAddPending ? "Adding" : "Add to basket"}
+          </button>
+          <button
+            aria-label={`View details for ${product.name}`}
+            className="catalog-card__detail-action"
+            type="button"
+            onClick={() => onSelectProduct(product.sku_id)}
+          >
+            View details
+          </button>
+        </div>
       </div>
     </article>
   );

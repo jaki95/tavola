@@ -7,10 +7,17 @@ import type { CatalogProductDetail } from "../../types/catalog";
 
 type CatalogDetailProps = {
   detail: CatalogDetailState;
+  isAddPending?: boolean;
+  onAddProduct?: (skuId: string, quantity: number) => void;
   onClose: () => void;
 };
 
-export function CatalogDetail({ detail, onClose }: CatalogDetailProps) {
+export function CatalogDetail({
+  detail,
+  isAddPending = false,
+  onAddProduct = () => {},
+  onClose
+}: CatalogDetailProps) {
   if (detail.status === "closed") {
     return null;
   }
@@ -40,7 +47,13 @@ export function CatalogDetail({ detail, onClose }: CatalogDetailProps) {
       {detail.status === "error" ? (
         <ErrorDetail message={detail.message} skuId={detail.skuId} />
       ) : null}
-      {detail.status === "success" ? <PopulatedDetail product={detail.product} /> : null}
+      {detail.status === "success" ? (
+        <PopulatedDetail
+          isAddPending={isAddPending}
+          onAddProduct={onAddProduct}
+          product={detail.product}
+        />
+      ) : null}
     </aside>
   );
 }
@@ -64,7 +77,15 @@ function ErrorDetail({ message, skuId }: { message: string; skuId: string }) {
   );
 }
 
-function PopulatedDetail({ product }: { product: CatalogProductDetail }) {
+function PopulatedDetail({
+  product,
+  isAddPending,
+  onAddProduct
+}: {
+  product: CatalogProductDetail;
+  isAddPending: boolean;
+  onAddProduct: (skuId: string, quantity: number) => void;
+}) {
   const facetLabels = formatDietaryFacetBadges(product);
   const price = formatMoney({
     amount_minor: product.unit_price_minor,
@@ -103,6 +124,19 @@ function PopulatedDetail({ product }: { product: CatalogProductDetail }) {
             ))}
           </ul>
         ) : null}
+        <button
+          aria-label={
+            isAddPending
+              ? `Adding ${product.name} to basket`
+              : `Add ${product.name} to basket`
+          }
+          className="catalog-detail__add"
+          disabled={isAddPending}
+          onClick={() => onAddProduct(product.sku_id, 1)}
+          type="button"
+        >
+          {isAddPending ? "Adding" : "Add to basket"}
+        </button>
       </div>
     </article>
   );

@@ -3,7 +3,15 @@ import { CatalogFilters } from "./CatalogFilters";
 import { CatalogGrid } from "./CatalogGrid";
 import { useCatalogBrowser } from "./useCatalogBrowser";
 
-export function CatalogBrowser() {
+type CatalogBrowserProps = {
+  isAddPending?: boolean;
+  onAddProduct?: (skuId: string, quantity: number) => void;
+};
+
+export function CatalogBrowser({
+  isAddPending = false,
+  onAddProduct = () => {}
+}: CatalogBrowserProps) {
   const {
     catalog,
     detail,
@@ -72,11 +80,18 @@ export function CatalogBrowser() {
 
           <div className="catalog-browser__workspace">
             <CatalogGrid
+              isAddPending={isAddPending}
+              onAddProduct={onAddProduct}
               onResetFilters={resetFilters}
               onSelectProduct={openDetail}
               products={catalog.products}
             />
-            <CatalogDetail detail={detail} onClose={closeDetail} />
+            <CatalogDetail
+              detail={detail}
+              isAddPending={isAddPending}
+              onAddProduct={onAddProduct}
+              onClose={closeDetail}
+            />
           </div>
         </>
       )}

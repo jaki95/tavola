@@ -53,8 +53,8 @@ describe("CatalogGrid", () => {
       within(item).getByRole("button", { name: "View details for Fresh Tagliatelle" })
     ).toBeInTheDocument();
     expect(
-      within(item).queryByRole("button", { name: /add/i })
-    ).not.toBeInTheDocument();
+      within(item).getByRole("button", { name: "Add Fresh Tagliatelle to basket" })
+    ).toBeInTheDocument();
   });
 
   test("renders known catalog image IDs as static image assets with stable dimensions", () => {
@@ -150,6 +150,42 @@ describe("CatalogGrid", () => {
 
     expect(onSelectProduct).toHaveBeenCalledTimes(1);
     expect(onSelectProduct).toHaveBeenCalledWith("fresh-tagliatelle-250g");
+  });
+
+  test("calls the add action callback with one unit of the selected SKU", () => {
+    const onAddProduct = vi.fn();
+
+    render(
+      <CatalogGrid
+        products={[tagliatelle]}
+        onAddProduct={onAddProduct}
+        onSelectProduct={vi.fn()}
+        onResetFilters={vi.fn()}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add Fresh Tagliatelle to basket" })
+    );
+
+    expect(onAddProduct).toHaveBeenCalledTimes(1);
+    expect(onAddProduct).toHaveBeenCalledWith("fresh-tagliatelle-250g", 1);
+  });
+
+  test("disables add actions while a basket mutation is pending", () => {
+    render(
+      <CatalogGrid
+        products={[tagliatelle]}
+        onAddProduct={vi.fn()}
+        onSelectProduct={vi.fn()}
+        onResetFilters={vi.fn()}
+        isAddPending={true}
+      />
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Adding Fresh Tagliatelle to basket" })
+    ).toBeDisabled();
   });
 
   test("shows an empty matching-products state with reset action", () => {
