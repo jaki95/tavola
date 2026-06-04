@@ -3,11 +3,11 @@ from uuid import uuid4
 
 from tavola.domain.planner import (
     FollowUpQuestion,
-    MenuProposal,
     PlannerSession,
     PlannerSessionId,
     PlannerValidationError,
     ProposalStatus,
+    ValidatedMenuProposal,
 )
 
 
@@ -21,13 +21,15 @@ class InMemoryPlannerSessionRepository:
         *,
         customer_request: str,
         status: ProposalStatus,
+        follow_up_answers: tuple[str, ...] = (),
         follow_up_question: FollowUpQuestion | None = None,
-        menu_proposal: MenuProposal | None = None,
+        menu_proposal: ValidatedMenuProposal | None = None,
         validation_errors: tuple[PlannerValidationError, ...] = (),
     ) -> PlannerSession:
         session = PlannerSession(
             planner_session_id=PlannerSessionId(self._id_generator()),
             customer_request=customer_request,
+            follow_up_answers=follow_up_answers,
             status=status,
             follow_up_question=follow_up_question,
             menu_proposal=menu_proposal,

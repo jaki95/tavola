@@ -3,7 +3,12 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Protocol
 
+from tavola.application.basket import (
+    BasketNotFound,
+    BasketRepository,
+)
 from tavola.application.catalog import CatalogRepository
+from tavola.domain.basket import Basket, BasketId
 from tavola.domain.catalog import Money
 from tavola.domain.planner import (
     Course,
@@ -29,8 +34,9 @@ class PlannerSessionRepository(Protocol):
         *,
         customer_request: str,
         status: ProposalStatus,
+        follow_up_answers: tuple[str, ...] = (),
         follow_up_question: FollowUpQuestion | None = None,
-        menu_proposal: MenuProposal | None = None,
+        menu_proposal: ValidatedMenuProposal | None = None,
         validation_errors: tuple[PlannerValidationError, ...] = (),
     ) -> PlannerSession:
         """Create and persist a planner session."""
@@ -78,8 +84,59 @@ class MenuPlannerAgentResponse:
 
 
 class MenuPlannerAgent(Protocol):
-    def plan_menu(self, *, customer_request: str) -> MenuPlannerAgentResponse:
+    def plan_menu(
+        self,
+        *,
+        customer_request: str,
+        follow_up_answers: tuple[str, ...] = (),
+    ) -> MenuPlannerAgentResponse:
         """Return a follow-up question or raw menu proposal from the planner."""
+
+
+class AcceptanceMode(StrEnum):
+    APPEND = "append"
+    REPLACE = "replace"
+
+
+class PlannerApplicationError(Exception):
+    code = "planner_error"
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(message)
+
+
+class PlannerInputInvalid(PlannerApplicationError):
+    code = "invalid_input"
+
+    def __init__(self, message: str = "message is required") -> None:
+        super().__init__(message)
+
+
+class PlannerSessionNotFound(PlannerApplicationError):
+    code = "planner_session_not_found"
+
+    def __init__(self, planner_session_id: str) -> None:
+        self.planner_session_id = planner_session_id
+        super().__init__("planner session not found")
+
+
+class PlannerSessionStateInvalid(PlannerApplicationError):
+    code = "planner_session_state_invalid"
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
+class PlannerProposalInvalid(PlannerApplicationError):
+    code = "planner_proposal_invalid"
+
+    def __init__(
+        self,
+        validation_errors: tuple[PlannerValidationError, ...],
+    ) -> None:
+        self.validation_errors = validation_errors
+        super().__init__("menu proposal is not valid")
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,6 +154,26 @@ class MenuPlannerRunResult:
     agent_error: PlannerAgentError | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class MealPlanCourseGrouping:
+    course: Course
+    line_sku_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class MealPlanGrouping:
+    title: str
+    party_size: int | None
+    package_template_id: str
+    courses: tuple[MealPlanCourseGrouping, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class AcceptedMenuProposal:
+    basket: Basket
+    meal_plan_grouping: MealPlanGrouping
+
+
 class PlanMenuFromRequest:
     """Ask a planner agent for a proposal and validate it through Tavola."""
 
@@ -109,7 +186,12 @@ class PlanMenuFromRequest:
         self._agent = agent
         self._validate_menu_proposal = ValidateMenuProposal(catalog_repository)
 
-    def __call__(self, *, customer_request: str) -> MenuPlannerRunResult:
+    def __call__(
+        self,
+        *,
+        customer_request: str,
+        follow_up_answers: tuple[str, ...] = (),
+    ) -> MenuPlannerRunResult:
         if not customer_request.strip():
             return MenuPlannerRunResult(
                 status=ProposalStatus.FAILED,
@@ -121,7 +203,10 @@ class PlanMenuFromRequest:
                 ),
             )
 
-        response = self._agent.plan_menu(customer_request=customer_request)
+        response = self._agent.plan_menu(
+            customer_request=customer_request,
+            follow_up_answers=follow_up_answers,
+        )
         if response.failure is not None:
             return MenuPlannerRunResult(
                 status=ProposalStatus.FAILED,
@@ -160,6 +245,214 @@ class PlanMenuFromRequest:
         return MenuPlannerRunResult(
             status=ProposalStatus.PROPOSAL_READY,
             menu_proposal=validation_result.menu_proposal,
+        )
+
+
+class StartPlannerSession:
+    def __init__(
+        self,
+        *,
+        planner_repository: PlannerSessionRepository,
+        agent: MenuPlannerAgent,
+        catalog_repository: CatalogRepository,
+    ) -> None:
+        self._planner_repository = planner_repository
+        self._plan_menu = PlanMenuFromRequest(
+            agent=agent,
+            catalog_repository=catalog_repository,
+        )
+
+    def __call__(self, *, message: str) -> PlannerSession:
+        customer_request = _require_message(message)
+        result = self._plan_menu(customer_request=customer_request)
+        return self._create_session_from_run(
+            customer_request=customer_request,
+            follow_up_answers=(),
+            result=result,
+        )
+
+    def _create_session_from_run(
+        self,
+        *,
+        customer_request: str,
+        follow_up_answers: tuple[str, ...],
+        result: MenuPlannerRunResult,
+    ) -> PlannerSession:
+        return self._planner_repository.create_session(
+            customer_request=customer_request,
+            follow_up_answers=follow_up_answers,
+            status=result.status,
+            follow_up_question=result.follow_up_question,
+            menu_proposal=result.menu_proposal,
+            validation_errors=result.validation_errors,
+        )
+
+
+class AnswerPlannerFollowUp:
+    def __init__(
+        self,
+        *,
+        planner_repository: PlannerSessionRepository,
+        agent: MenuPlannerAgent,
+        catalog_repository: CatalogRepository,
+    ) -> None:
+        self._planner_repository = planner_repository
+        self._plan_menu = PlanMenuFromRequest(
+            agent=agent,
+            catalog_repository=catalog_repository,
+        )
+
+    def __call__(self, *, planner_session_id: str, message: str) -> PlannerSession:
+        answer = _require_message(message)
+        session = _get_session_or_raise(
+            self._planner_repository,
+            planner_session_id,
+        )
+        if session.status != ProposalStatus.NEEDS_INPUT:
+            raise PlannerSessionStateInvalid(
+                "follow-up answers are accepted only while input is needed"
+            )
+
+        follow_up_answers = (*session.follow_up_answers, answer)
+        result = self._plan_menu(
+            customer_request=session.customer_request,
+            follow_up_answers=follow_up_answers,
+        )
+        updated = PlannerSession(
+            planner_session_id=session.planner_session_id,
+            customer_request=session.customer_request,
+            follow_up_answers=follow_up_answers,
+            status=result.status,
+            follow_up_question=result.follow_up_question,
+            menu_proposal=result.menu_proposal,
+            validation_errors=result.validation_errors,
+        )
+        self._planner_repository.save_session(updated)
+        return updated
+
+
+class RevalidateMenuProposal:
+    def __init__(
+        self,
+        *,
+        planner_repository: PlannerSessionRepository,
+        catalog_repository: CatalogRepository,
+    ) -> None:
+        self._planner_repository = planner_repository
+        self._validate_menu_proposal = ValidateMenuProposal(catalog_repository)
+
+    def __call__(
+        self,
+        *,
+        planner_session_id: str,
+        raw_proposal: dict[str, Any],
+    ) -> PlannerSession:
+        session = _get_session_or_raise(
+            self._planner_repository,
+            planner_session_id,
+        )
+        if session.status not in (
+            ProposalStatus.PROPOSAL_READY,
+            ProposalStatus.FAILED,
+        ):
+            raise PlannerSessionStateInvalid(
+                "menu proposal can be revalidated only after a proposal is ready"
+            )
+
+        validation_result = self._validate_menu_proposal.validate_raw(
+            _with_revalidation_note(raw_proposal)
+        )
+        if validation_result.menu_proposal is None:
+            updated = PlannerSession(
+                planner_session_id=session.planner_session_id,
+                customer_request=session.customer_request,
+                follow_up_answers=session.follow_up_answers,
+                status=ProposalStatus.FAILED,
+                validation_errors=validation_result.validation_errors,
+            )
+        else:
+            updated = PlannerSession(
+                planner_session_id=session.planner_session_id,
+                customer_request=session.customer_request,
+                follow_up_answers=session.follow_up_answers,
+                status=ProposalStatus.PROPOSAL_READY,
+                menu_proposal=validation_result.menu_proposal,
+            )
+        self._planner_repository.save_session(updated)
+        return updated
+
+
+class AcceptMenuProposal:
+    def __init__(
+        self,
+        *,
+        planner_repository: PlannerSessionRepository,
+        basket_repository: BasketRepository,
+        catalog_repository: CatalogRepository,
+    ) -> None:
+        self._planner_repository = planner_repository
+        self._basket_repository = basket_repository
+        self._validate_menu_proposal = ValidateMenuProposal(catalog_repository)
+
+    def __call__(
+        self,
+        *,
+        planner_session_id: str,
+        basket_id: str,
+        mode: AcceptanceMode,
+        raw_proposal: dict[str, Any],
+    ) -> AcceptedMenuProposal:
+        session = _get_session_or_raise(
+            self._planner_repository,
+            planner_session_id,
+        )
+        if session.status == ProposalStatus.ACCEPTED:
+            raise PlannerSessionStateInvalid("menu proposal has already been accepted")
+        if session.status != ProposalStatus.PROPOSAL_READY:
+            raise PlannerSessionStateInvalid(
+                "menu proposal can be accepted only after it is ready"
+            )
+
+        validation_result = self._validate_menu_proposal.validate_raw(raw_proposal)
+        if validation_result.menu_proposal is None:
+            raise PlannerProposalInvalid(validation_result.validation_errors)
+        menu_proposal = validation_result.menu_proposal
+
+        basket = _get_basket_or_raise(self._basket_repository, basket_id)
+        line_specs = tuple(
+            (line.sku, line.quantity)
+            for course in menu_proposal.courses
+            for line in course.lines
+        )
+        try:
+            if mode == AcceptanceMode.REPLACE:
+                updated_basket = basket.replace_lines(line_specs)
+            else:
+                updated_basket = basket
+                for sku, quantity in line_specs:
+                    updated_basket = updated_basket.add_line(sku, quantity=quantity)
+        except ValueError as error:
+            raise PlannerProposalInvalid(
+                (
+                    PlannerValidationError(
+                        code=PlannerValidationErrorCode.QUANTITY_EXCEEDS_MAX,
+                        message=str(error),
+                    ),
+                )
+            ) from error
+
+        self._basket_repository.save_basket(updated_basket)
+        accepted = PlannerSession(
+            planner_session_id=session.planner_session_id,
+            customer_request=session.customer_request,
+            follow_up_answers=session.follow_up_answers,
+            status=ProposalStatus.ACCEPTED,
+            menu_proposal=menu_proposal,
+        )
+        self._planner_repository.save_session(accepted)
+        return AcceptedMenuProposal(
+            basket=updated_basket,
+            meal_plan_grouping=_meal_plan_grouping(menu_proposal, updated_basket),
         )
 
 
@@ -288,6 +581,81 @@ def _duplicate_errors(proposal: MenuProposal) -> list[PlannerValidationError]:
     return errors
 
 
+def _require_message(message: str) -> str:
+    stripped = message.strip()
+    if not stripped:
+        raise PlannerInputInvalid()
+    return stripped
+
+
+def _get_session_or_raise(
+    repository: PlannerSessionRepository,
+    planner_session_id: str,
+) -> PlannerSession:
+    try:
+        parsed_session_id = PlannerSessionId(planner_session_id)
+    except ValueError as error:
+        raise PlannerSessionNotFound(planner_session_id) from error
+
+    session = repository.get_session(parsed_session_id)
+    if session is None:
+        raise PlannerSessionNotFound(planner_session_id)
+    return session
+
+
+def _get_basket_or_raise(
+    repository: BasketRepository,
+    basket_id: str,
+) -> Basket:
+    try:
+        parsed_basket_id = BasketId(basket_id)
+    except ValueError as error:
+        raise BasketNotFound(basket_id) from error
+
+    basket = repository.get_basket(parsed_basket_id)
+    if basket is None:
+        raise BasketNotFound(basket_id)
+    return basket
+
+
+def _with_revalidation_note(raw_proposal: dict[str, Any]) -> dict[str, Any]:
+    notes = raw_proposal.get("planner_notes", ())
+    if not _is_sequence(notes):
+        return raw_proposal
+    text_notes = tuple(notes)
+    if "Revalidated by Tavola." in text_notes:
+        return raw_proposal
+    return {
+        **raw_proposal,
+        "planner_notes": (*text_notes, "Revalidated by Tavola."),
+    }
+
+
+def _meal_plan_grouping(
+    menu_proposal: ValidatedMenuProposal,
+    basket: Basket,
+) -> MealPlanGrouping:
+    basket_sku_ids = {line.sku.sku_id for line in basket.lines}
+    courses = tuple(
+        MealPlanCourseGrouping(
+            course=course.course,
+            line_sku_ids=tuple(
+                line.sku.sku_id
+                for line in course.lines
+                if line.sku.sku_id in basket_sku_ids
+            ),
+        )
+        for course in menu_proposal.courses
+    )
+    non_empty_courses = tuple(course for course in courses if course.line_sku_ids)
+    return MealPlanGrouping(
+        title=menu_proposal.title,
+        party_size=menu_proposal.party_size,
+        package_template_id=menu_proposal.package_template_id,
+        courses=non_empty_courses,
+    )
+
+
 def _parse_raw_proposal(raw: dict[str, Any]) -> MenuProposal:
     if not isinstance(raw, Mapping):
         raise ValueError("proposal must be an object")
@@ -301,6 +669,7 @@ def _parse_raw_proposal(raw: dict[str, Any]) -> MenuProposal:
         courses=tuple(
             _parse_raw_course(raw_course) for raw_course in _items(raw, "courses")
         ),
+        warnings=tuple(_text_sequence(raw.get("warnings", ()), "warnings")),
     )
 
 

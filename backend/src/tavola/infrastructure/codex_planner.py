@@ -161,7 +161,12 @@ class FakeMenuPlannerAgent:
             )
         )
 
-    def plan_menu(self, *, customer_request: str) -> MenuPlannerAgentResponse:
+    def plan_menu(
+        self,
+        *,
+        customer_request: str,
+        follow_up_answers: tuple[str, ...] = (),
+    ) -> MenuPlannerAgentResponse:
         return self.response
 
 
@@ -196,10 +201,15 @@ class CodexMenuPlannerAgent:
             ),
         )
 
-    def plan_menu(self, *, customer_request: str) -> MenuPlannerAgentResponse:
+    def plan_menu(
+        self,
+        *,
+        customer_request: str,
+        follow_up_answers: tuple[str, ...] = (),
+    ) -> MenuPlannerAgentResponse:
         try:
             run_result = self._client.run(
-                prompt=_build_planner_prompt(customer_request),
+                prompt=_build_planner_prompt(customer_request, follow_up_answers),
                 model=self._model,
                 sandbox_mode=self._sandbox_mode,
                 mcp_servers=self._mcp_servers,
@@ -244,7 +254,14 @@ class CodexMenuPlannerAgent:
         return MenuPlannerAgentResponse(raw_proposal=raw_proposal)
 
 
-def _build_planner_prompt(customer_request: str) -> str:
+def _build_planner_prompt(
+    customer_request: str,
+    follow_up_answers: tuple[str, ...] = (),
+) -> str:
+    follow_up_text = (
+        "\n".join(f"- {answer}" for answer in follow_up_answers)
+        or "No follow-up answers yet."
+    )
     return "\n".join(
         (
             "You are Tavola's Planner for a small Italian deli.",
@@ -258,6 +275,8 @@ def _build_planner_prompt(customer_request: str) -> str:
             "party_size, package_template_id, courses, and optional warnings.",
             "Customer request:",
             customer_request,
+            "Follow-up answers:",
+            follow_up_text,
         )
     )
 
