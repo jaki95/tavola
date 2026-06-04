@@ -177,7 +177,15 @@ plus sauce.
 Drinks are contextual add-ons for planner proposals, not automatic parts of meal
 packages. The planner should include drinks only when the customer asks for them
 or the occasion clearly implies them, such as an aperitivo, picnic drinks, or a
-wine pairing.
+wine pairing. When included alongside a package template, drinks should appear
+as an optional Drinks course appended to the template's required courses.
+When the customer asks for drinks without mentioning alcohol, the planner may
+include alcoholic or non-alcoholic drinks and should explain any alcohol
+assumption. No-alcohol requests and clear no-alcohol signals remain hard
+constraints.
+If requested drinks cannot be satisfied from the current catalog, the planner
+may still return the closest valid food menu with a clear warning unless the
+customer made drinks the main request or a firm requirement.
 
 Accepted planner proposals may later carry lightweight meal-plan grouping
 metadata in the basket and order summary so the customer can still see the shape
@@ -275,15 +283,21 @@ Use these terms consistently when shaping the codebase:
 - Party size: The number of people the customer wants the menu proposal to
   serve, extracted from the meal request or a follow-up answer.
 - Course: A planner or menu structure role, such as Antipasto, Primo, Dessert,
-  or Aperitivo; courses are not the same as catalog categories.
-- Package template: A planner-only course structure such as Antipasto + Primo +
-  Dessert, used to shape a proposal without becoming a purchasable product.
+  Drinks, or Aperitivo; courses are not the same as catalog categories.
+- Package template: A planner-only required course structure such as Antipasto +
+  Primo + Dessert, used to shape a proposal without becoming a purchasable
+  product. Drinks may be appended as an optional course when requested or
+  clearly implied.
 - Meal-plan grouping: Optional basket or order metadata that preserves an
   accepted menu proposal's title, party size, package template, course names,
   and line grouping while SKU lines remain authoritative.
 - Validated menu proposal: A menu proposal that has passed deterministic
   application checks and is safe to present for basket acceptance.
   _Avoid_: Validated basket, basket proposal.
+- Catalog candidate: Implementation language for products returned to the
+  Planner during catalog filtering; it is not a customer-facing or domain term.
+  In domain and customer language, call these Products or items.
+  _Avoid_: Candidate product in customer-facing copy.
 
 Initial product/SKU relationship:
 
@@ -397,12 +411,20 @@ Category/course relationship:
 
 - Customers browse by category.
 - Planner proposals are organized by course.
+- Package templates define required courses. A Drinks course may be appended to
+  any template when drinks are requested or clearly implied.
+- For the Aperitivo template, food and snack items belong in the Aperitivo
+  course, while beverages belong in an appended Drinks course when drinks are
+  requested or clearly implied.
 - A product's category does not always determine its planner course. For
   example, a Pantry product such as sugo may support a Primo course when paired
   with fresh pasta.
 - Cross-category meaning belongs in tags rather than multiple categories. For
   example, pesto remains in Pantry but may carry tags such as `pasta`, `primo`,
   and `sauce`.
+- The Planner may use implementation-level catalog filtering to consider
+  Products before choosing proposal lines, but those intermediate matches are
+  not part of the customer-facing meal-plan model.
 
 ## Initial Commerce Model
 
