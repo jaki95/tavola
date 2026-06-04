@@ -74,6 +74,12 @@ Assumptions for this plan:
 - Stable category and dietary vocabularies are domain-owned; tag vocabulary is
   derived from available products.
 
+**Implementation note**: Sprint 1 is implemented. Domain/application behavior
+now supports catalog-native candidate filtering, repository-derived available
+tags, stable category and dietary vocabularies, and optional appended Drinks
+courses. Validation passed with the focused Sprint 1 backend tests and the full
+backend pytest suite.
+
 ### Task 1.1: Add catalog vocabulary helpers
 
 - **Location**: `backend/src/tavola/domain/catalog.py`

@@ -15,6 +15,21 @@ from tavola.domain.planner import (
 )
 
 
+def proposal_line(sku_id: str = "fresh-tagliatelle-250g") -> ProposalLine:
+    return ProposalLine(
+        sku_id=sku_id,
+        quantity=1,
+        rationale="A useful product for this course.",
+    )
+
+
+def course_proposal(
+    course: Course,
+    sku_id: str = "fresh-tagliatelle-250g",
+) -> CourseProposal:
+    return CourseProposal(course=course, lines=(proposal_line(sku_id),))
+
+
 def test_supported_package_templates_are_fixed_menu_structures() -> None:
     assert PackageTemplate.supported_ids() == (
         "antipasto-primo-dessert",
@@ -106,6 +121,77 @@ def test_menu_proposal_preserves_course_grouping_for_supported_template() -> Non
     assert proposal.template.courses == (Course.ANTIPASTO, Course.PRIMO)
     assert proposal.line_count == 2
     assert proposal.item_count == 3
+
+
+def test_menu_proposal_accepts_appended_drinks_without_changing_template() -> None:
+    proposal = MenuProposal(
+        title="Pasta With Drinks",
+        explanation="A pasta supper with a drink pairing.",
+        planner_notes=("Template checked.",),
+        party_size=2,
+        package_template_id="primo-only",
+        courses=(
+            CourseProposal(
+                course=Course.PRIMO,
+                lines=(
+                    ProposalLine(
+                        sku_id="fresh-tagliatelle-250g",
+                        quantity=2,
+                        rationale="Main pasta course.",
+                    ),
+                ),
+            ),
+            CourseProposal(
+                course=Course.DRINKS,
+                lines=(
+                    ProposalLine(
+                        sku_id="san-pellegrino-limonata-4x330ml",
+                        quantity=1,
+                        rationale="Bright drinks for the meal.",
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    assert proposal.template.courses == (Course.PRIMO,)
+    assert proposal.line_count == 2
+
+
+@pytest.mark.parametrize(
+    ("courses", "match"),
+    [
+        ((Course.PRIMO,), "courses must match package template"),
+        ((Course.DRINKS,), "courses must match package template"),
+        ((Course.DRINKS, Course.PRIMO), "courses must match package template"),
+        ((Course.PRIMO, Course.DRINKS, Course.DESSERT), "courses must match"),
+        (
+            (Course.PRIMO, Course.DESSERT, Course.DRINKS, Course.DRINKS),
+            "courses must match",
+        ),
+    ],
+)
+def test_menu_proposal_rejects_missing_misplaced_or_duplicate_drinks(
+    courses: tuple[Course, ...],
+    match: str,
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        MenuProposal(
+            title="Invalid Drinks Placement",
+            explanation="The course structure is invalid.",
+            planner_notes=("Template checked.",),
+            party_size=2,
+            package_template_id="primo-dessert",
+            courses=tuple(
+                course_proposal(course, f"line-{index}")
+                for index, course in enumerate(courses, start=1)
+            ),
+        )
+
+
+def test_course_proposal_rejects_empty_courses() -> None:
+    with pytest.raises(ValueError, match="course proposal requires at least one line"):
+        CourseProposal(course=Course.DRINKS, lines=())
 
 
 def test_menu_proposal_party_size_is_not_capped_by_basket_line_quantity() -> None:

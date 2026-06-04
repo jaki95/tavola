@@ -61,6 +61,19 @@ def make_sku(
     )
 
 
+def make_drinks_sku(
+    sku_id: str = "san-pellegrino-limonata-4x330ml",
+    *,
+    amount_minor: int = 600,
+) -> CatalogSku:
+    return make_sku(
+        sku_id,
+        name="San Pellegrino Limonata",
+        category=CatalogCategory("drinks", "Drinks", 4),
+        amount_minor=amount_minor,
+    )
+
+
 def make_proposal(*lines: ProposalLine) -> MenuProposal:
     return MenuProposal(
         title="Weeknight Pasta",
@@ -304,6 +317,106 @@ def test_validate_menu_proposal_preserves_course_grouping() -> None:
         Course.DESSERT,
     ]
     assert result.menu_proposal.total.amount_minor == 1800
+
+
+def test_validate_menu_proposal_prices_appended_drinks_course() -> None:
+    pasta = make_sku(amount_minor=425)
+    drinks = make_drinks_sku(amount_minor=600)
+    proposal = MenuProposal(
+        title="Pasta With Drinks",
+        explanation="A compact pasta proposal with drinks.",
+        planner_notes=("Catalog identities checked.",),
+        party_size=2,
+        package_template_id="primo-only",
+        courses=(
+            CourseProposal(
+                course=Course.PRIMO,
+                lines=(
+                    ProposalLine(
+                        sku_id="fresh-tagliatelle-250g",
+                        quantity=2,
+                        rationale="Main pasta course.",
+                    ),
+                ),
+            ),
+            CourseProposal(
+                course=Course.DRINKS,
+                lines=(
+                    ProposalLine(
+                        sku_id="san-pellegrino-limonata-4x330ml",
+                        quantity=1,
+                        rationale="Bright drink pairing.",
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    result = ValidateMenuProposal(StaticCatalogRepository([pasta, drinks]))(proposal)
+
+    assert result.validation_errors == ()
+    assert result.menu_proposal is not None
+    assert [course.course for course in result.menu_proposal.courses] == [
+        Course.PRIMO,
+        Course.DRINKS,
+    ]
+    assert result.menu_proposal.total.amount_minor == 1450
+    assert result.menu_proposal.item_count == 3
+    assert result.menu_proposal.line_count == 2
+    assert result.menu_proposal.courses[1].lines[0].line_total.amount_minor == 600
+
+
+def test_validate_menu_proposal_reports_unsupported_raw_course_name() -> None:
+    result = ValidateMenuProposal(StaticCatalogRepository([make_sku()])).validate_raw(
+        {
+            "title": "Weeknight Pasta",
+            "explanation": "A compact pasta proposal.",
+            "planner_notes": ("Catalog identities checked.",),
+            "party_size": 2,
+            "package_template_id": "primo-only",
+            "courses": (
+                {
+                    "course": "cocktail",
+                    "lines": (
+                        {
+                            "sku_id": "fresh-tagliatelle-250g",
+                            "quantity": 1,
+                            "rationale": "A flexible pasta course.",
+                        },
+                    ),
+                },
+            ),
+        }
+    )
+
+    assert result.menu_proposal is None
+    assert (
+        result.validation_errors[0].code
+        == PlannerValidationErrorCode.UNSUPPORTED_COURSE
+    )
+
+
+def test_validate_menu_proposal_reports_empty_raw_course() -> None:
+    result = ValidateMenuProposal(StaticCatalogRepository([make_sku()])).validate_raw(
+        {
+            "title": "Weeknight Pasta",
+            "explanation": "A compact pasta proposal.",
+            "planner_notes": ("Catalog identities checked.",),
+            "party_size": 2,
+            "package_template_id": "primo-only",
+            "courses": (
+                {
+                    "course": "drinks",
+                    "lines": (),
+                },
+            ),
+        }
+    )
+
+    assert result.menu_proposal is None
+    assert (
+        result.validation_errors[0].code == PlannerValidationErrorCode.INVALID_PROPOSAL
+    )
 
 
 def test_plan_menu_from_request_returns_follow_up_from_fake_agent() -> None:

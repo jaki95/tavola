@@ -5,6 +5,9 @@ from tavola.domain.catalog import (
     CatalogSku,
     DietaryFacets,
     Money,
+    catalog_categories,
+    catalog_category_ids,
+    catalog_dietary_facet_ids,
 )
 
 
@@ -53,6 +56,27 @@ def test_catalog_sku_keeps_customer_facing_catalog_data() -> None:
     assert sku.image_id == "fresh-tagliatelle-250g"
     assert sku.display_order == 1
     assert sku.is_available is True
+
+
+def test_catalog_category_ids_follow_display_order() -> None:
+    assert catalog_category_ids() == (
+        "antipasti",
+        "primi",
+        "desserts",
+        "drinks",
+        "pantry",
+    )
+    assert catalog_category_ids() == tuple(
+        category.category_id for category in catalog_categories()
+    )
+
+
+def test_catalog_dietary_facet_ids_expose_supported_planner_facets() -> None:
+    assert catalog_dietary_facet_ids() == (
+        "vegetarian",
+        "vegan",
+        "gluten_free",
+    )
 
 
 def test_dietary_facets_reject_vegan_without_vegetarian() -> None:
