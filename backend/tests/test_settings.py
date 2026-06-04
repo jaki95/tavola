@@ -65,7 +65,7 @@ def test_existing_codex_login_can_be_declared_without_committing_credentials(
     assert settings.use_real_codex_planner() is True
 
 
-def test_missing_codex_credentials_default_to_fake_planner(
+def test_missing_codex_credentials_default_to_disabled_planner(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
@@ -89,6 +89,46 @@ def test_missing_codex_credentials_can_raise_for_demo_setup(
         settings.use_real_codex_planner()
 
 
+def test_planner_runtime_status_reports_disabled_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("TAVOLA_PLANNER_CODEX_ENABLED", raising=False)
+    monkeypatch.delenv("TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED", raising=False)
+
+    status = Settings().planner_runtime_status()
+
+    assert status.enabled is False
+    assert status.mode == "disabled"
+    assert status.message == "Planner is not enabled for this environment."
+
+
+def test_planner_runtime_status_reports_disabled_when_real_mode_lacks_credentials(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("TAVOLA_PLANNER_CODEX_ENABLED", "true")
+
+    status = Settings().planner_runtime_status()
+
+    assert status.enabled is False
+    assert status.mode == "disabled"
+    assert status.message == "Planner needs local Codex access before live planning."
+
+
+def test_planner_runtime_status_reports_real_codex_mode_when_ready(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TAVOLA_PLANNER_CODEX_ENABLED", "true")
+    monkeypatch.setenv("TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED", "true")
+
+    status = Settings().planner_runtime_status()
+
+    assert status.enabled is True
+    assert status.mode == "real_codex"
+    assert status.message == "Planner is running with live Codex assistance."
+
+
 def test_menu_planner_agent_dependency_uses_settings_for_real_codex(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -99,11 +139,21 @@ def test_menu_planner_agent_dependency_uses_settings_for_real_codex(
     assert isinstance(get_menu_planner_agent(), CodexMenuPlannerAgent)
 
 
-def test_menu_planner_agent_dependency_returns_disabled_fake_by_default(
+def test_menu_planner_agent_dependency_returns_disabled_agent_by_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("TAVOLA_PLANNER_CODEX_ENABLED", raising=False)
+    monkeypatch.delenv("TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED", raising=False)
+
+    assert isinstance(get_menu_planner_agent(), FakeMenuPlannerAgent)
+
+
+def test_menu_planner_agent_dependency_returns_disabled_agent_without_credentials(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("TAVOLA_PLANNER_CODEX_ENABLED", "true")
     monkeypatch.delenv("TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED", raising=False)
 
     assert isinstance(get_menu_planner_agent(), FakeMenuPlannerAgent)

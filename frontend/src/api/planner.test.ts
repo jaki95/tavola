@@ -54,6 +54,12 @@ const plannerSession: PlannerSessionResponse = {
   validation_errors: []
 };
 
+const plannerStatus = {
+  enabled: true,
+  mode: "real_codex" as const,
+  message: "Planner is running with live Codex assistance."
+};
+
 const basket: Basket = {
   basket_id: "basket-1",
   lines: [
@@ -110,6 +116,18 @@ describe("planner API client", () => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ message: "Dinner for 4" })
+    });
+  });
+
+  test("fetches planner status for live mode visibility", async () => {
+    const { getPlannerStatus } = await loadPlannerClient();
+    const fetchMock = stubJsonResponse(plannerStatus);
+
+    const result = await getPlannerStatus();
+
+    expect(result).toEqual({ ok: true, data: plannerStatus });
+    expect(fetchMock).toHaveBeenCalledWith("/api/planner/status", {
+      headers: { Accept: "application/json" }
     });
   });
 
@@ -228,6 +246,28 @@ describe("planner API client", () => {
       error: {
         kind: "invalid_response",
         message: "The Tavola API returned an invalid planner response."
+      }
+    });
+  });
+
+  test.each([
+    ["missing enabled", { mode: "real_codex", message: "Ready." }],
+    ["unknown mode", { enabled: true, mode: "sdk", message: "Ready." }],
+    ["missing message", { enabled: true, mode: "real_codex" }]
+  ])("rejects a malformed planner status response: %s", async (
+    _caseName,
+    malformedResponse
+  ) => {
+    const { getPlannerStatus } = await loadPlannerClient();
+    stubJsonResponse(malformedResponse);
+
+    const result = await getPlannerStatus();
+
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        kind: "invalid_response",
+        message: "The Tavola API returned an invalid planner status response."
       }
     });
   });

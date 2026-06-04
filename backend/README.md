@@ -33,8 +33,8 @@ uv run pytest
 
 ## Planner Codex Configuration
 
-The menu-to-basket Planner defaults to deterministic fake behavior for local
-development and tests. Real Codex runs are opt-in:
+The menu-to-basket Planner is either live Codex-backed or disabled. Live Codex
+runs are opt-in:
 
 ```sh
 TAVOLA_PLANNER_CODEX_ENABLED=true
@@ -53,8 +53,8 @@ Configure real runs with:
   write access.
 - `TAVOLA_PLANNER_CODEX_TIMEOUT_SECONDS`: planner run timeout, default `60`.
 - `TAVOLA_PLANNER_CODEX_MAX_RETRIES`: adapter retry count, default `1`.
-- `TAVOLA_PLANNER_CODEX_MISSING_CREDENTIALS`: `disable` falls back to fake
-  behavior when credentials are missing; `error` raises during setup checks.
+- `TAVOLA_PLANNER_CODEX_MISSING_CREDENTIALS`: `disable` reports the Planner as
+  unavailable when credentials are missing; `error` raises during setup checks.
 - `TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED`: set to `true` only when relying
   on an existing local Codex login rather than an API key.
 
@@ -76,6 +76,10 @@ Use `OPENAI_API_KEY` instead of
 API key. The smoke command starts one Codex-backed planner run with Tavola's
 bounded MCP tool server and prints the validated JSON proposal, or a structured
 failure if Codex output cannot be validated.
+
+For an operator-facing walkthrough of the browser demo, persona prompts, safe
+planner notes, and customer-facing language rules, see
+[`docs/demo-codex-planner.md`](../docs/demo-codex-planner.md).
 
 Run quality checks:
 

@@ -34,6 +34,9 @@ export function PlannerWorkspace({
   const isPlanning = planner.state.status === "loading";
   const isAcceptPending = planner.state.status === "accept_pending";
   const isAccepted = planner.state.status === "accepted";
+  const isPlannerUnavailable =
+    planner.plannerStatus.status === "disabled" ||
+    planner.plannerStatus.status === "error";
 
   async function submitPrompt(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -84,13 +87,14 @@ export function PlannerWorkspace({
             <span className="planner-workspace__codex">powered by Codex</span>
           </div>
         </div>
+        <PlannerStatusPill plannerStatus={planner.plannerStatus} />
       </div>
 
       <form className="planner-composer" onSubmit={submitPrompt}>
         <label className="planner-composer__field">
           <span>Meal request</span>
           <textarea
-            disabled={isPlanning}
+            disabled={isPlanning || isPlannerUnavailable}
             name="meal-request"
             onChange={(event) => setPrompt(event.target.value)}
             placeholder="Vegetarian dinner for 4 around £50"
@@ -98,7 +102,10 @@ export function PlannerWorkspace({
             value={prompt}
           />
         </label>
-        <button disabled={isPlanning || !prompt.trim()} type="submit">
+        <button
+          disabled={isPlanning || isPlannerUnavailable || !prompt.trim()}
+          type="submit"
+        >
           {isPlanning ? "Planning" : "Plan menu"}
         </button>
       </form>
@@ -107,6 +114,7 @@ export function PlannerWorkspace({
         <span>Try an example</span>
         {examplePrompts.map((examplePrompt) => (
           <button
+            disabled={isPlanning || isPlannerUnavailable}
             key={examplePrompt}
             onClick={() => setPrompt(examplePrompt)}
             type="button"
@@ -120,6 +128,12 @@ export function PlannerWorkspace({
         <span>Checks products against Tavola&apos;s catalog</span>
         <span>Prices calculated by Tavola</span>
       </div>
+
+      {isPlannerUnavailable ? (
+        <p className="planner-workspace__alert" role="alert">
+          {planner.plannerStatus.message}
+        </p>
+      ) : null}
 
       {planner.state.status === "loading" ? (
         <p className="planner-workspace__status" role="status">
@@ -177,6 +191,45 @@ export function PlannerWorkspace({
       ) : null}
     </section>
   );
+}
+
+function PlannerStatusPill({
+  plannerStatus
+}: {
+  plannerStatus: ReturnType<typeof usePlanner>["plannerStatus"];
+}) {
+  const label = plannerStatusLabel(plannerStatus);
+  const className = [
+    "planner-mode-pill",
+    plannerStatus.status === "disabled" || plannerStatus.status === "error"
+      ? "planner-mode-pill--disabled"
+      : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <div className={className} aria-label="Planner mode">
+      <span>{label}</span>
+      {plannerStatus.status === "disabled" || plannerStatus.status === "error" ? null : (
+        <small>{plannerStatus.message}</small>
+      )}
+    </div>
+  );
+}
+
+function plannerStatusLabel(
+  plannerStatus: ReturnType<typeof usePlanner>["plannerStatus"]
+): string {
+  if (plannerStatus.status === "loading") {
+    return "Checking planner";
+  }
+
+  if (plannerStatus.status === "disabled" || plannerStatus.status === "error") {
+    return "Planner unavailable";
+  }
+
+  return "Live planner mode";
 }
 
 function ProposalReview({

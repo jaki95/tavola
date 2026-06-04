@@ -48,6 +48,7 @@ def get_menu_planner_agent() -> MenuPlannerAgent:
             model=settings.planner_codex_model,
             sandbox_mode=settings.planner_codex_sandbox_mode,
             timeout_seconds=settings.planner_codex_timeout_seconds,
+            max_retries=settings.planner_codex_max_retries,
         )
     return FakeMenuPlannerAgent.with_failure(
         PlannerAgentErrorCode.TOOL_FAILURE,

@@ -4,10 +4,18 @@ from typing import Literal
 
 CodexSandboxMode = Literal["read-only", "workspace-write", "danger-full-access"]
 MissingCredentialsBehavior = Literal["disable", "error"]
+PlannerRuntimeMode = Literal["real_codex", "disabled"]
 
 
 class MissingPlannerCodexCredentialsError(RuntimeError):
     """Raised when real Codex is required but no credential source is configured."""
+
+
+@dataclass(frozen=True, slots=True)
+class PlannerRuntimeStatus:
+    enabled: bool
+    mode: PlannerRuntimeMode
+    message: str
 
 
 def _env_str(name: str, default: str) -> str:
@@ -133,3 +141,22 @@ class Settings:
             )
             raise MissingPlannerCodexCredentialsError(msg)
         return False
+
+    def planner_runtime_status(self) -> PlannerRuntimeStatus:
+        if not self.planner_codex_enabled:
+            return PlannerRuntimeStatus(
+                enabled=False,
+                mode="disabled",
+                message="Planner is not enabled for this environment.",
+            )
+        if self.planner_codex_credentials_configured:
+            return PlannerRuntimeStatus(
+                enabled=True,
+                mode="real_codex",
+                message="Planner is running with live Codex assistance.",
+            )
+        return PlannerRuntimeStatus(
+            enabled=False,
+            mode="disabled",
+            message="Planner needs local Codex access before live planning.",
+        )

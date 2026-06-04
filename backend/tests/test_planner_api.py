@@ -230,6 +230,17 @@ def test_start_planner_session_returns_proposal_response_shape(
     assert response.json() == expected_session_response()
 
 
+def test_planner_status_reports_demo_mode(client: PlannerApiHarness) -> None:
+    response = client.client.get("/api/planner/status")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "enabled": False,
+        "mode": "disabled",
+        "message": "Planner is not enabled for this environment.",
+    }
+
+
 def test_follow_up_answer_completes_session(client: PlannerApiHarness) -> None:
     client.use_agent(
         FakeMenuPlannerAgent.with_follow_up(

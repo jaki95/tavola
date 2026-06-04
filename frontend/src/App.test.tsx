@@ -6,7 +6,11 @@ import { createBasket } from "./api/basket";
 import { getCatalog, getCatalogProduct } from "./api/catalog";
 import { createCheckout, listPickupWindows } from "./api/checkout";
 import { getHealth } from "./api/health";
-import { acceptProposal, createPlannerSession } from "./api/planner";
+import {
+  acceptProposal,
+  createPlannerSession,
+  getPlannerStatus
+} from "./api/planner";
 import type { Basket } from "./types/basket";
 import type { CatalogListResponse, CatalogProductSummary } from "./types/catalog";
 import type { CheckoutResponse, PickupWindow } from "./types/checkout";
@@ -35,6 +39,7 @@ vi.mock("./api/checkout", () => ({
 }));
 
 vi.mock("./api/planner", () => ({
+  getPlannerStatus: vi.fn(),
   createPlannerSession: vi.fn(),
   answerFollowUp: vi.fn(),
   fetchPlannerSession: vi.fn(),
@@ -48,6 +53,7 @@ const getCatalogMock = vi.mocked(getCatalog);
 const getCatalogProductMock = vi.mocked(getCatalogProduct);
 const listPickupWindowsMock = vi.mocked(listPickupWindows);
 const createCheckoutMock = vi.mocked(createCheckout);
+const getPlannerStatusMock = vi.mocked(getPlannerStatus);
 const createPlannerSessionMock = vi.mocked(createPlannerSession);
 const acceptProposalMock = vi.mocked(acceptProposal);
 
@@ -205,6 +211,14 @@ describe("App", () => {
     createCheckoutMock.mockResolvedValue({
       ok: true,
       data: checkoutResponse
+    });
+    getPlannerStatusMock.mockResolvedValue({
+      ok: true,
+      data: {
+        enabled: true,
+        mode: "real_codex",
+        message: "Planner is running with live Codex assistance."
+      }
     });
     createPlannerSessionMock.mockResolvedValue({
       ok: true,

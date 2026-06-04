@@ -22,6 +22,11 @@ default proxy target is `http://localhost:8000`; set
 `VITE_BACKEND_PROXY_TARGET` to point at a different backend during local
 development.
 
+The storefront includes Tavola's Planner workspace. For the Codex Planner demo
+script, supported persona prompts, expected follow-up behavior, and safe
+customer-facing copy rules, see
+[`docs/demo-codex-planner.md`](../docs/demo-codex-planner.md).
+
 Run tests:
 
 ```sh
