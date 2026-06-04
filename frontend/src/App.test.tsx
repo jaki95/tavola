@@ -1,12 +1,14 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { App } from "./App";
 import { createBasket } from "./api/basket";
 import { getCatalog, getCatalogProduct } from "./api/catalog";
+import { createCheckout, listPickupWindows } from "./api/checkout";
 import { getHealth } from "./api/health";
 import type { Basket } from "./types/basket";
 import type { CatalogListResponse, CatalogProductSummary } from "./types/catalog";
+import type { CheckoutResponse, PickupWindow } from "./types/checkout";
 
 vi.mock("./api/health", () => ({
   getHealth: vi.fn()
@@ -25,10 +27,17 @@ vi.mock("./api/basket", () => ({
   removeBasketLine: vi.fn()
 }));
 
+vi.mock("./api/checkout", () => ({
+  listPickupWindows: vi.fn(),
+  createCheckout: vi.fn()
+}));
+
 const createBasketMock = vi.mocked(createBasket);
 const getHealthMock = vi.mocked(getHealth);
 const getCatalogMock = vi.mocked(getCatalog);
 const getCatalogProductMock = vi.mocked(getCatalogProduct);
+const listPickupWindowsMock = vi.mocked(listPickupWindows);
+const createCheckoutMock = vi.mocked(createCheckout);
 
 const tagliatelle: CatalogProductSummary = {
   sku_id: "fresh-tagliatelle-250g",
@@ -63,6 +72,50 @@ const emptyBasket: Basket = {
   line_count: 0
 };
 
+const tagliatelleBasket: Basket = {
+  basket_id: "basket-1",
+  lines: [
+    {
+      sku_id: "fresh-tagliatelle-250g",
+      name: "Fresh Tagliatelle",
+      category_id: "primi",
+      category_label: "Primi",
+      unit_label: "250g",
+      quantity: 2,
+      unit_price_minor: 425,
+      line_total_minor: 850,
+      currency: "GBP",
+      image_id: "fresh-tagliatelle-250g"
+    }
+  ],
+  total_minor: 850,
+  currency: "GBP",
+  item_count: 2,
+  line_count: 1
+};
+
+const pickupWindow: PickupWindow = {
+  pickup_window_id: "today-afternoon",
+  label: "Today afternoon pickup",
+  display_order: 1
+};
+
+const checkoutResponse: CheckoutResponse = {
+  order: {
+    order_id: "order-1",
+    basket_id: "basket-1",
+    contact_name: "Ada Lovelace",
+    contact_email: "ada@example.com",
+    pickup_window: pickupWindow,
+    lines: tagliatelleBasket.lines,
+    total_minor: 850,
+    currency: "GBP",
+    item_count: 2,
+    line_count: 1
+  },
+  basket: emptyBasket
+};
+
 describe("App", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -85,6 +138,14 @@ describe("App", () => {
         ...tagliatelle,
         detail_description: "Silky tagliatelle made for a simple Tavola supper."
       }
+    });
+    listPickupWindowsMock.mockResolvedValue({
+      ok: true,
+      data: { pickup_windows: [pickupWindow] }
+    });
+    createCheckoutMock.mockResolvedValue({
+      ok: true,
+      data: checkoutResponse
     });
   });
 
@@ -120,6 +181,56 @@ describe("App", () => {
     expect(
       await screen.findByRole("region", { name: "Current basket" })
     ).toBeInTheDocument();
+    expect(
+      await screen.findByRole("region", { name: "Pickup checkout" })
+    ).toBeInTheDocument();
+  });
+
+  test("synchronizes the visible basket after checkout succeeds", async () => {
+    getHealthMock.mockResolvedValue({
+      ok: true,
+      data: { service: "Tavola API", status: "ok" }
+    });
+    createBasketMock.mockResolvedValue({
+      ok: true,
+      data: tagliatelleBasket
+    });
+
+    render(<App />);
+
+    const basketPanel = await screen.findByRole("region", {
+      name: "Current basket"
+    });
+    expect(within(basketPanel).getByText("Fresh Tagliatelle")).toBeInTheDocument();
+
+    const checkoutPanel = await screen.findByRole("region", {
+      name: "Pickup checkout"
+    });
+    fireEvent.change(await within(checkoutPanel).findByLabelText("Contact name"), {
+      target: { value: "Ada Lovelace" }
+    });
+    fireEvent.change(within(checkoutPanel).getByLabelText("Contact email"), {
+      target: { value: "ada@example.com" }
+    });
+    fireEvent.click(
+      within(checkoutPanel).getByRole("button", { name: "Create pickup order" })
+    );
+
+    expect(
+      await within(checkoutPanel).findByRole("heading", {
+        level: 3,
+        name: "Order confirmed"
+      })
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(basketPanel).getByText("Your basket is empty.")).toBeInTheDocument();
+    });
+    expect(createCheckoutMock).toHaveBeenCalledWith({
+      basket_id: "basket-1",
+      contact_name: "Ada Lovelace",
+      contact_email: "ada@example.com",
+      pickup_window_id: "today-afternoon"
+    });
   });
 
   test("shows the backend status loading state by default", () => {

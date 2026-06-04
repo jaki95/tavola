@@ -211,6 +211,7 @@ export function useBasket({
     basket,
     mutation,
     reload: loadCurrentBasket,
+    applyBasket,
     addLine,
     setLineQuantity,
     removeLine

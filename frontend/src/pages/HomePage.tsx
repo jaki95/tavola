@@ -4,6 +4,7 @@ import {
 } from "../components/BackendStatusPanel";
 import { BasketPanel } from "../features/basket/BasketPanel";
 import { useBasket } from "../features/basket/useBasket";
+import { CheckoutPanel } from "../features/checkout/CheckoutPanel";
 import { CatalogBrowser } from "../features/catalog/CatalogBrowser";
 
 type HomePageProps = {
@@ -13,6 +14,8 @@ type HomePageProps = {
 export function HomePage({ backendStatus }: HomePageProps) {
   const basket = useBasket();
   const isBasketMutationPending = basket.mutation.status === "pending";
+  const isBasketUpdating =
+    isBasketMutationPending || basket.basket.status === "loading";
   const basketQuantities = getBasketQuantities(basket.basket.basket);
 
   return (
@@ -34,13 +37,20 @@ export function HomePage({ backendStatus }: HomePageProps) {
             isAddPending={isBasketMutationPending}
             onAddProduct={basket.addLine}
           />
-          <BasketPanel
-            basket={basket.basket}
-            mutation={basket.mutation}
-            onReload={basket.reload}
-            onRemoveLine={basket.removeLine}
-            onSetLineQuantity={basket.setLineQuantity}
-          />
+          <div className="storefront-main__side-panel">
+            <BasketPanel
+              basket={basket.basket}
+              mutation={basket.mutation}
+              onReload={basket.reload}
+              onRemoveLine={basket.removeLine}
+              onSetLineQuantity={basket.setLineQuantity}
+            />
+            <CheckoutPanel
+              basket={basket.basket}
+              isBasketUpdating={isBasketUpdating}
+              onCheckoutSuccess={basket.applyBasket}
+            />
+          </div>
         </div>
       </main>
     </div>
