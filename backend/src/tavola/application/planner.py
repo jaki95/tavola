@@ -1,3 +1,4 @@
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -147,7 +148,7 @@ class ValidateMenuProposal:
     ) -> MenuProposalValidationResult:
         try:
             proposal = _parse_raw_proposal(raw_proposal)
-        except ValueError as error:
+        except (TypeError, ValueError) as error:
             return MenuProposalValidationResult(
                 menu_proposal=None,
                 validation_errors=(_validation_error_from_value_error(error),),
@@ -174,36 +175,76 @@ def _duplicate_errors(proposal: MenuProposal) -> list[PlannerValidationError]:
 
 
 def _parse_raw_proposal(raw: dict[str, Any]) -> MenuProposal:
+    if not isinstance(raw, Mapping):
+        raise ValueError("proposal must be an object")
+
     return MenuProposal(
-        title=str(raw.get("title", "")),
-        explanation=str(raw.get("explanation", "")),
-        planner_notes=tuple(raw.get("planner_notes", ())),
+        title=_required_text(raw, "title"),
+        explanation=_required_text(raw, "explanation"),
+        planner_notes=tuple(_text_sequence(raw.get("planner_notes"), "planner_notes")),
         party_size=raw.get("party_size"),
-        package_template_id=str(raw.get("package_template_id", "")),
+        package_template_id=_required_text(raw, "package_template_id"),
         courses=tuple(
-            CourseProposal(
-                course=Course(str(raw_course.get("course", ""))),
-                lines=tuple(
-                    ProposalLine(
-                        sku_id=str(raw_line.get("sku_id", "")),
-                        quantity=raw_line.get("quantity"),
-                        rationale=str(raw_line.get("rationale", "")),
-                    )
-                    for raw_line in raw_course.get("lines", ())
-                ),
-            )
-            for raw_course in raw.get("courses", ())
+            _parse_raw_course(raw_course) for raw_course in _items(raw, "courses")
         ),
     )
 
 
-def _validation_error_from_value_error(error: ValueError) -> PlannerValidationError:
+def _parse_raw_course(raw_course: Any) -> CourseProposal:
+    if not isinstance(raw_course, Mapping):
+        raise ValueError("course must be an object")
+    return CourseProposal(
+        course=Course(_required_text(raw_course, "course")),
+        lines=tuple(
+            _parse_raw_line(raw_line) for raw_line in _items(raw_course, "lines")
+        ),
+    )
+
+
+def _parse_raw_line(raw_line: Any) -> ProposalLine:
+    if not isinstance(raw_line, Mapping):
+        raise ValueError("line must be an object")
+    return ProposalLine(
+        sku_id=_required_text(raw_line, "sku_id"),
+        quantity=raw_line.get("quantity"),
+        rationale=_required_text(raw_line, "rationale"),
+    )
+
+
+def _required_text(raw: Mapping[str, Any], field_name: str) -> str:
+    value = raw.get(field_name)
+    if type(value) is not str:
+        raise ValueError(f"{field_name} must be text")
+    return value
+
+
+def _text_sequence(value: Any, field_name: str) -> tuple[str, ...]:
+    if not _is_sequence(value):
+        raise ValueError(f"{field_name} must be a sequence")
+    notes = tuple(value)
+    if any(type(note) is not str for note in notes):
+        raise ValueError(f"{field_name} must contain text")
+    return notes
+
+
+def _items(raw: Mapping[str, Any], field_name: str) -> tuple[Any, ...]:
+    value = raw.get(field_name)
+    if not _is_sequence(value):
+        raise ValueError(f"{field_name} must be a sequence")
+    return tuple(value)
+
+
+def _is_sequence(value: Any) -> bool:
+    return isinstance(value, Iterable) and not isinstance(value, str | bytes)
+
+
+def _validation_error_from_value_error(error: Exception) -> PlannerValidationError:
     message = str(error)
     code = PlannerValidationErrorCode.INVALID_PROPOSAL
     if "quantity" in message:
         code = PlannerValidationErrorCode.INVALID_QUANTITY
     if "cannot exceed" in message:
         code = PlannerValidationErrorCode.QUANTITY_EXCEEDS_MAX
-    if "course" in message or "not a valid" in message:
+    if message == "courses must match package template" or "not a valid" in message:
         code = PlannerValidationErrorCode.UNSUPPORTED_COURSE
     return PlannerValidationError(code=code, message=message)

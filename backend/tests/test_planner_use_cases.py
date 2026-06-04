@@ -165,6 +165,52 @@ def test_validate_menu_proposal_reports_invalid_raw_quantities(
     )
 
 
+@pytest.mark.parametrize(
+    "raw_proposal",
+    [
+        None,
+        {"title": None, "explanation": "A compact pasta proposal."},
+        {
+            "title": "Weeknight Pasta",
+            "explanation": "A compact pasta proposal.",
+            "planner_notes": (None,),
+        },
+        {
+            "title": "Weeknight Pasta",
+            "explanation": "A compact pasta proposal.",
+            "planner_notes": ("Catalog identities checked.",),
+            "package_template_id": "primo-only",
+            "courses": None,
+        },
+        {
+            "title": "Weeknight Pasta",
+            "explanation": "A compact pasta proposal.",
+            "planner_notes": ("Catalog identities checked.",),
+            "package_template_id": "primo-only",
+            "courses": (None,),
+        },
+        {
+            "title": "Weeknight Pasta",
+            "explanation": "A compact pasta proposal.",
+            "planner_notes": ("Catalog identities checked.",),
+            "package_template_id": "primo-only",
+            "courses": ({"course": "primo", "lines": (None,)},),
+        },
+    ],
+)
+def test_validate_menu_proposal_reports_malformed_raw_shape(
+    raw_proposal: object,
+) -> None:
+    result = ValidateMenuProposal(StaticCatalogRepository([make_sku()])).validate_raw(
+        raw_proposal  # type: ignore[arg-type]
+    )
+
+    assert result.menu_proposal is None
+    assert (
+        result.validation_errors[0].code == PlannerValidationErrorCode.INVALID_PROPOSAL
+    )
+
+
 def test_validate_menu_proposal_preserves_course_grouping() -> None:
     primi = make_sku()
     dessert = make_sku(
