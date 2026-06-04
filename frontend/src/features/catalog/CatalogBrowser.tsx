@@ -42,7 +42,6 @@ export function CatalogBrowser({
       <div className="catalog-browser__controls">
         <div className="catalog-browser__header">
           <div className="catalog-browser__header-copy">
-            <p className="eyebrow">Fresh from the counter</p>
             <h1 id="catalog-title">Shop</h1>
             <p className="catalog-browser__lede">
               Browse deli products and add your picks to the basket.

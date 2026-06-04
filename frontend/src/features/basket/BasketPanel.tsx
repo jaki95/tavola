@@ -35,7 +35,6 @@ export function BasketPanel({
     >
       <div className="basket-panel__header">
         <div>
-          <p className="eyebrow">Basket</p>
           <h2 id="basket-panel-title">Basket</h2>
         </div>
         <BasketSummary basket={visibleBasket} />

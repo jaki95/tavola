@@ -92,7 +92,6 @@ export function PlannerWorkspace({
             <span className="planner-workspace__codex">powered by Codex</span>
           </div>
         </div>
-        <PlannerStatusPill plannerStatus={planner.plannerStatus} />
       </div>
 
       <form className="planner-composer" onSubmit={submitPrompt}>
@@ -127,11 +126,6 @@ export function PlannerWorkspace({
             {examplePrompt}
           </button>
         ))}
-      </div>
-
-      <div className="planner-trust-strip" aria-label="Planner checks">
-        <span>Checks products against Tavola&apos;s catalog</span>
-        <span>Prices calculated by Tavola</span>
       </div>
 
       {isPlannerUnavailable ? (
@@ -196,45 +190,6 @@ export function PlannerWorkspace({
       ) : null}
     </section>
   );
-}
-
-function PlannerStatusPill({
-  plannerStatus
-}: {
-  plannerStatus: ReturnType<typeof usePlanner>["plannerStatus"];
-}) {
-  const label = plannerStatusLabel(plannerStatus);
-  const className = [
-    "planner-mode-pill",
-    plannerStatus.status === "disabled" || plannerStatus.status === "error"
-      ? "planner-mode-pill--disabled"
-      : ""
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  return (
-    <div className={className} aria-label="Planner mode">
-      <span>{label}</span>
-      {plannerStatus.status === "disabled" || plannerStatus.status === "error" ? null : (
-        <small>{plannerStatus.message}</small>
-      )}
-    </div>
-  );
-}
-
-function plannerStatusLabel(
-  plannerStatus: ReturnType<typeof usePlanner>["plannerStatus"]
-): string {
-  if (plannerStatus.status === "loading") {
-    return "Checking planner";
-  }
-
-  if (plannerStatus.status === "disabled" || plannerStatus.status === "error") {
-    return "Planner unavailable";
-  }
-
-  return "Live planner mode";
 }
 
 function planningProgressMessage(elapsedMs: number | null): string {

@@ -365,39 +365,6 @@ h1 {
   font-weight: 850;
 }
 
-.planner-mode-pill {
-  display: grid;
-  justify-items: end;
-  gap: 2px;
-  max-width: 18rem;
-  padding: 7px 10px;
-  border: 1px solid rgb(45 101 68 / 24%);
-  border-radius: 7px;
-  background: rgb(45 101 68 / 8%);
-  color: var(--color-basil);
-  text-align: right;
-}
-
-.planner-mode-pill span {
-  font-size: 0.76rem;
-  font-weight: 950;
-  line-height: 1.1;
-  text-transform: uppercase;
-}
-
-.planner-mode-pill small {
-  color: var(--color-muted);
-  font-size: 0.76rem;
-  font-weight: 800;
-  line-height: 1.2;
-}
-
-.planner-mode-pill--disabled {
-  border-color: rgb(157 47 34 / 26%);
-  background: rgb(157 47 34 / 7%);
-  color: var(--color-tomato-dark);
-}
-
 .planner-composer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(8.5rem, 9.5rem);
@@ -438,8 +405,7 @@ h1 {
   padding: 10px 16px;
 }
 
-.planner-examples,
-.planner-trust-strip {
+.planner-examples {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -452,7 +418,13 @@ h1 {
   font-weight: 800;
 }
 
-.planner-examples button,
+.planner-workspace .planner-examples button {
+  border-color: var(--color-hairline);
+  background: rgb(255 253 247 / 62%);
+  color: var(--color-muted);
+  box-shadow: inset 0 -2px 0 rgb(74 49 28 / 5%);
+}
+
 .planner-workspace button.planner-action--secondary {
   border-color: var(--color-hairline);
   background: rgb(255 253 247 / 82%);
@@ -460,14 +432,21 @@ h1 {
   box-shadow: inset 0 -2px 0 rgb(74 49 28 / 5%);
 }
 
-.planner-examples button {
+.planner-workspace .planner-examples button {
   min-height: 2rem;
   padding: 5px 12px;
-  color: var(--color-muted);
   font-size: 0.8rem;
 }
 
-.planner-examples button:hover,
+.planner-workspace .planner-examples button:hover {
+  border-color: rgb(74 49 28 / 22%);
+  background: rgb(239 225 200 / 38%);
+  color: var(--color-ink);
+  box-shadow:
+    inset 0 -2px 0 rgb(74 49 28 / 6%),
+    0 6px 14px rgb(54 36 20 / 6%);
+}
+
 .planner-workspace button.planner-action--secondary:hover {
   border-color: rgb(178 32 23 / 34%);
   background: var(--color-paper);
@@ -475,19 +454,6 @@ h1 {
   box-shadow:
     inset 0 -2px 0 rgb(74 49 28 / 6%),
     0 10px 20px rgb(54 36 20 / 8%);
-}
-
-.planner-trust-strip {
-  padding-top: 10px;
-  border-top: 1px solid var(--color-hairline);
-  color: var(--color-muted);
-  font-size: 0.82rem;
-  font-weight: 800;
-}
-
-.planner-trust-strip span + span {
-  padding-left: 14px;
-  border-left: 1px solid var(--color-hairline);
 }
 
 .planner-workspace__status,

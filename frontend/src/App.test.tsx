@@ -307,6 +307,7 @@ describe("App", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Shop" })
     ).toBeInTheDocument();
+    expect(screen.queryByText("Fresh from the counter")).not.toBeInTheDocument();
     expect(
       screen.getByText("Browse deli products and add your picks to the basket.")
     ).toBeInTheDocument();
