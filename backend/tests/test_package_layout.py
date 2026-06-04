@@ -1,3 +1,7 @@
+import subprocess
+import sys
+
+
 def test_backend_layer_packages_are_importable() -> None:
     import tavola.api
     import tavola.api.dependencies
@@ -33,13 +37,39 @@ def test_backend_layer_packages_are_importable() -> None:
 
 
 def test_catalog_domain_import_has_no_api_or_infrastructure_dependency() -> None:
-    from tavola.domain.catalog import CatalogSku, catalog_categories
+    script = """
+import importlib
+import sys
 
-    assert CatalogSku.__module__ == "tavola.domain.catalog"
-    assert [category.category_id for category in catalog_categories()] == [
-        "antipasti",
-        "primi",
-        "desserts",
-        "drinks",
-        "pantry",
-    ]
+catalog = importlib.import_module("tavola.domain.catalog")
+leaked_modules = sorted(
+    name
+    for name in sys.modules
+    if name == "tavola.api"
+    or name.startswith("tavola.api.")
+    or name == "tavola.infrastructure"
+    or name.startswith("tavola.infrastructure.")
+)
+
+if leaked_modules:
+    print("\\n".join(leaked_modules))
+    raise SystemExit(1)
+
+assert catalog.CatalogSku.__module__ == "tavola.domain.catalog"
+assert [category.category_id for category in catalog.catalog_categories()] == [
+    "antipasti",
+    "primi",
+    "desserts",
+    "drinks",
+    "pantry",
+]
+"""
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout or result.stderr
