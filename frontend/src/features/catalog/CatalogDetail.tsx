@@ -7,6 +7,7 @@ import type { CatalogProductDetail } from "../../types/catalog";
 
 type CatalogDetailProps = {
   detail: CatalogDetailState;
+  basketQuantity?: number;
   isAddPending?: boolean;
   onAddProduct?: (skuId: string, quantity: number) => void;
   onClose: () => void;
@@ -14,6 +15,7 @@ type CatalogDetailProps = {
 
 export function CatalogDetail({
   detail,
+  basketQuantity = 0,
   isAddPending = false,
   onAddProduct = () => {},
   onClose
@@ -23,38 +25,48 @@ export function CatalogDetail({
   }
 
   return (
-    <aside
-      aria-label="Product detail"
-      className="catalog-detail"
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          onClose();
-        }
-      }}
+    <div
+      className="catalog-detail-backdrop"
+      data-testid="catalog-detail-backdrop"
+      onClick={onClose}
     >
-      <div className="catalog-detail__header">
-        <button
-          className="catalog-detail__close"
-          onClick={onClose}
-          onKeyDown={(event) => handleCloseButtonKeyDown(event, onClose)}
-          type="button"
-        >
-          Close product detail
-        </button>
-      </div>
+      <section
+        aria-label="Product detail"
+        aria-modal="true"
+        className="catalog-detail"
+        role="dialog"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            onClose();
+          }
+        }}
+      >
+        <div className="catalog-detail__header">
+          <button
+            className="catalog-detail__close"
+            onClick={onClose}
+            onKeyDown={(event) => handleCloseButtonKeyDown(event, onClose)}
+            type="button"
+          >
+            Close product detail
+          </button>
+        </div>
 
-      {detail.status === "loading" ? <LoadingDetail skuId={detail.skuId} /> : null}
-      {detail.status === "error" ? (
-        <ErrorDetail message={detail.message} skuId={detail.skuId} />
-      ) : null}
-      {detail.status === "success" ? (
-        <PopulatedDetail
-          isAddPending={isAddPending}
-          onAddProduct={onAddProduct}
-          product={detail.product}
-        />
-      ) : null}
-    </aside>
+        {detail.status === "loading" ? <LoadingDetail skuId={detail.skuId} /> : null}
+        {detail.status === "error" ? (
+          <ErrorDetail message={detail.message} skuId={detail.skuId} />
+        ) : null}
+        {detail.status === "success" ? (
+          <PopulatedDetail
+            basketQuantity={basketQuantity}
+            isAddPending={isAddPending}
+            onAddProduct={onAddProduct}
+            product={detail.product}
+          />
+        ) : null}
+      </section>
+    </div>
   );
 }
 
@@ -79,10 +91,12 @@ function ErrorDetail({ message, skuId }: { message: string; skuId: string }) {
 
 function PopulatedDetail({
   product,
+  basketQuantity,
   isAddPending,
   onAddProduct
 }: {
   product: CatalogProductDetail;
+  basketQuantity: number;
   isAddPending: boolean;
   onAddProduct: (skuId: string, quantity: number) => void;
 }) {
@@ -91,6 +105,8 @@ function PopulatedDetail({
     amount_minor: product.unit_price_minor,
     currency: product.currency
   });
+  const isInBasket = basketQuantity > 0;
+  const basketQuantityLabel = formatBasketQuantityLabel(basketQuantity);
 
   return (
     <article
@@ -128,18 +144,29 @@ function PopulatedDetail({
           aria-label={
             isAddPending
               ? `Adding ${product.name} to basket`
-              : `Add ${product.name} to basket`
+              : `${isInBasket ? "Add another" : "Add"} ${product.name} to basket${
+                  isInBasket ? `, ${basketQuantityLabel}` : ""
+                }`
           }
-          className="catalog-detail__add"
+          className="catalog-detail__add catalog-add-button"
           disabled={isAddPending}
           onClick={() => onAddProduct(product.sku_id, 1)}
           type="button"
         >
-          {isAddPending ? "Adding" : "Add to basket"}
+          <span>
+            {isAddPending ? "Adding" : isInBasket ? "Add another" : "Add to basket"}
+          </span>
+          {isInBasket && !isAddPending ? (
+            <span className="catalog-add-button__state">{basketQuantityLabel}</span>
+          ) : null}
         </button>
       </div>
     </article>
   );
+}
+
+function formatBasketQuantityLabel(quantity: number): string {
+  return `${quantity} in basket`;
 }
 
 function CatalogProductImage({ product }: { product: CatalogProductDetail }) {

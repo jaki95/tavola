@@ -3,6 +3,7 @@ import type { CatalogProductSummary } from "../../types/catalog";
 
 type CatalogGridProps = {
   products: CatalogProductSummary[];
+  basketQuantities?: Record<string, number>;
   isAddPending?: boolean;
   onAddProduct?: (skuId: string, quantity: number) => void;
   onSelectProduct: (skuId: string) => void;
@@ -11,6 +12,7 @@ type CatalogGridProps = {
 
 export function CatalogGrid({
   products,
+  basketQuantities = {},
   isAddPending = false,
   onAddProduct = () => {},
   onSelectProduct,
@@ -35,6 +37,7 @@ export function CatalogGrid({
       {availableProducts.map((product) => (
         <li key={product.sku_id}>
           <CatalogCard
+            basketQuantity={basketQuantities[product.sku_id] ?? 0}
             isAddPending={isAddPending}
             onAddProduct={onAddProduct}
             onSelectProduct={onSelectProduct}

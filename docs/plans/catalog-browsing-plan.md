@@ -492,6 +492,11 @@ filter controls, card grid, and detail panel live under
 `frontend/src/features/catalog/`, and the home page now presents catalog browsing
 as Tavola's first screen while keeping basket and checkout visibly planned.
 
+**Follow-up note (2026-06-04)**: The basket creation/editing slice later changed
+product detail from an in-page side panel to a modal dialog. That keeps the
+catalog grid wide enough beside the persistent basket panel while preserving the
+same catalog detail data and open/close behavior.
+
 ## Sprint 5: Static Imagery, Polish, And Smoke Checks
 
 **Goal**: Make the catalog feel complete enough to demo and verify the

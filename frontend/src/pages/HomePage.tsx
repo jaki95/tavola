@@ -30,6 +30,7 @@ type HomePageProps = {
 export function HomePage({ backendStatus }: HomePageProps) {
   const basket = useBasket();
   const isBasketMutationPending = basket.mutation.status === "pending";
+  const basketQuantities = getBasketQuantities(basket.basket.basket);
 
   return (
     <div className="site-shell">
@@ -69,6 +70,7 @@ export function HomePage({ backendStatus }: HomePageProps) {
 
         <div className="storefront-workspace__commerce">
           <CatalogBrowser
+            basketQuantities={basketQuantities}
             isAddPending={isBasketMutationPending}
             onAddProduct={basket.addLine}
           />
@@ -82,5 +84,17 @@ export function HomePage({ backendStatus }: HomePageProps) {
         </div>
       </main>
     </div>
+  );
+}
+
+function getBasketQuantities(
+  basket: ReturnType<typeof useBasket>["basket"]["basket"]
+): Record<string, number> {
+  if (!basket) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    basket.lines.map((line) => [line.sku_id, line.quantity])
   );
 }

@@ -365,6 +365,15 @@ basket in a persistent desktop-first surface.
   preserving detail browsing.
 - Lifted basket state into the home page so catalog actions and the basket panel
   share the backend-owned current basket.
+- Polished the persistent desktop layout after browser review:
+  - Basket panel aligns with the catalog browser header at the top of the page.
+  - Product detail opens as a modal dialog instead of reserving a permanent
+    side-panel column, so catalog cards keep enough width beside the basket.
+  - Basket panel is sticky but viewport-bounded with its own internal scroll
+    when many lines overflow the visible page height.
+  - Catalog card and product-detail add buttons show existing basket quantity
+    inside the button itself, for example `Add another` with `1 in basket`,
+    instead of using a separate status pill.
 - Validation run: `cd frontend && npm test`; `cd frontend && npm run build`.
 - Browser approval run through the in-app browser with frontend dev server and
   backend on the Vite proxy target.
@@ -390,6 +399,8 @@ basket in a persistent desktop-first surface.
   - Backend validation messages are displayed near the basket controls.
   - Totals use server-provided values, not frontend recalculation.
   - Controls are semantic, keyboard-friendly, and accessible.
+  - Long baskets remain usable because the persistent basket surface scrolls
+    internally within the desktop viewport.
 - **Validation**: Component tests for empty state, populated state, quantity
   controls, remove action, validation error rendering, and total display.
 
@@ -410,8 +421,11 @@ basket in a persistent desktop-first surface.
   - Product detail has an add action for the selected SKU.
   - Add actions send quantity `1` through the basket hook.
   - Add buttons expose pending state during mutation.
+  - Add buttons expose existing basket quantity in the button text when the SKU
+    is already present, while still allowing duplicate adds to merge quantities.
   - Validation errors from add attempts surface in the persistent basket panel.
-  - Existing detail open/close behavior remains covered.
+  - Existing detail open/close behavior remains covered, with detail shown as a
+    modal dialog for the basket workflow.
 - **Validation**: Catalog component tests for card add action, detail add action,
   and preserving existing detail behavior.
 
@@ -431,6 +445,9 @@ basket in a persistent desktop-first surface.
     the same current basket.
   - The basket panel remains visible while filtering, searching, and opening
     product detail.
+  - Product detail does not consume a permanent catalog column; it opens as a
+    dismissible modal so the catalog grid and persistent basket both stay
+    readable.
   - The layout stays desktop-first and scannable without adding mobile-specific
     breakpoints.
   - Existing backend status and catalog loading states remain visible.
@@ -493,7 +510,8 @@ for mock pickup checkout.
 - Frontend hook tests prove `localStorage` basket ID behavior, backend restart
   recovery, mutation state, and error propagation.
 - Component tests prove persistent basket rendering, add actions, quantity
-  editing, removal, and server-total display.
+  editing, removal, server-total display, product detail modal behavior, and
+  add-button basket quantity indicators.
 - Manual smoke testing proves the full browser workflow across backend and
   frontend.
 
@@ -521,7 +539,12 @@ for mock pickup checkout.
   valid integer mutation, while preserving backend rejection for over-max values.
 - The persistent basket must not make the catalog UI feel cramped. Favor a
   stable desktop two-column layout with restrained density and no mobile-specific
-  redesign.
+  redesign. Product detail should remain modal in this basket workflow instead
+  of taking a permanent middle column between catalog cards and the basket.
+- Sticky basket panels need a viewport-bounded internal scroll area; otherwise
+  long baskets can overflow below the visible page and hide lower line controls.
+- Existing basket quantity belongs in the add action itself. A separate pill can
+  read like a product attribute rather than current basket state.
 
 ## Rollback Plan
 

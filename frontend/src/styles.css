@@ -280,7 +280,6 @@ h1 {
 .catalog-browser {
   display: grid;
   gap: 18px;
-  margin-top: 20px;
 }
 
 .catalog-browser__header {
@@ -550,10 +549,7 @@ h1 {
 }
 
 .catalog-browser__workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
-  align-items: start;
-  gap: 18px;
+  min-width: 0;
 }
 
 .storefront-workspace__commerce {
@@ -561,11 +557,12 @@ h1 {
   grid-template-columns: minmax(0, 1fr) minmax(330px, 390px);
   align-items: start;
   gap: 18px;
+  margin-top: 20px;
 }
 
 .catalog-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 14px;
   margin: 0;
   padding: 0;
@@ -747,6 +744,19 @@ h1 {
   text-transform: uppercase;
 }
 
+.catalog-card button.catalog-add-button,
+.catalog-detail__add.catalog-add-button {
+  display: grid;
+  gap: 2px;
+}
+
+.catalog-add-button__state {
+  color: rgb(255 255 255 / 82%);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .catalog-empty {
   display: grid;
   gap: 10px;
@@ -772,17 +782,35 @@ h1 {
 }
 
 .catalog-detail {
-  position: sticky;
-  top: 18px;
-  overflow: hidden;
+  position: relative;
+  display: grid;
+  width: min(100% - 56px, 920px);
+  max-height: min(760px, calc(100vh - 56px));
+  overflow: auto;
   border: 1px solid var(--color-hairline);
   border-radius: 8px;
   background: var(--color-paper);
   box-shadow: var(--shadow-soft);
 }
 
+.catalog-detail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgb(32 26 22 / 34%);
+  backdrop-filter: blur(3px);
+}
+
 .catalog-detail__add {
   width: 100%;
+}
+
+.catalog-detail__content {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1fr);
 }
 
 .basket-panel {
@@ -790,6 +818,8 @@ h1 {
   top: 18px;
   display: grid;
   gap: 14px;
+  max-height: calc(100vh - 36px);
+  overflow: auto;
   border: 1px solid var(--color-hairline);
   border-radius: 8px;
   background:

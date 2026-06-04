@@ -7,6 +7,7 @@ import type { CatalogProductSummary } from "../../types/catalog";
 
 type CatalogCardProps = {
   product: CatalogProductSummary;
+  basketQuantity?: number;
   isAddPending?: boolean;
   onAddProduct?: (skuId: string, quantity: number) => void;
   onSelectProduct: (skuId: string) => void;
@@ -14,12 +15,15 @@ type CatalogCardProps = {
 
 export function CatalogCard({
   product,
+  basketQuantity = 0,
   isAddPending = false,
   onAddProduct = () => {},
   onSelectProduct
 }: CatalogCardProps) {
   const dietaryBadges = formatDietaryFacetBadges(product);
   const image = getCatalogImageAsset(product.image_id, product.name);
+  const isInBasket = basketQuantity > 0;
+  const basketQuantityLabel = formatBasketQuantityLabel(basketQuantity);
 
   return (
     <article
@@ -68,13 +72,21 @@ export function CatalogCard({
             aria-label={
               isAddPending
                 ? `Adding ${product.name} to basket`
-                : `Add ${product.name} to basket`
+                : `${isInBasket ? "Add another" : "Add"} ${product.name} to basket${
+                    isInBasket ? `, ${basketQuantityLabel}` : ""
+                  }`
             }
+            className="catalog-card__add catalog-add-button"
             disabled={isAddPending}
             type="button"
             onClick={() => onAddProduct(product.sku_id, 1)}
           >
-            {isAddPending ? "Adding" : "Add to basket"}
+            <span>
+              {isAddPending ? "Adding" : isInBasket ? "Add another" : "Add to basket"}
+            </span>
+            {isInBasket && !isAddPending ? (
+              <span className="catalog-add-button__state">{basketQuantityLabel}</span>
+            ) : null}
           </button>
           <button
             aria-label={`View details for ${product.name}`}
@@ -88,4 +100,8 @@ export function CatalogCard({
       </div>
     </article>
   );
+}
+
+function formatBasketQuantityLabel(quantity: number): string {
+  return `${quantity} in basket`;
 }

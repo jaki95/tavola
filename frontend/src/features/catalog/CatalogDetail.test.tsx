@@ -23,15 +23,15 @@ const tagliatelle: CatalogProductDetail = {
 };
 
 describe("CatalogDetail", () => {
-  test("does not render a detail side panel when closed", () => {
+  test("does not render a detail dialog when closed", () => {
     render(<CatalogDetail detail={{ status: "closed" }} onClose={vi.fn()} />);
 
     expect(
-      screen.queryByRole("complementary", { name: "Product detail" })
+      screen.queryByRole("dialog", { name: "Product detail" })
     ).not.toBeInTheDocument();
   });
 
-  test("shows an explicit loading state scoped to the detail side panel", () => {
+  test("shows an explicit loading state scoped to the detail dialog", () => {
     render(
       <CatalogDetail
         detail={{ status: "loading", skuId: "fresh-tagliatelle-250g" }}
@@ -39,7 +39,7 @@ describe("CatalogDetail", () => {
       />
     );
 
-    const panel = screen.getByRole("complementary", { name: "Product detail" });
+    const panel = screen.getByRole("dialog", { name: "Product detail" });
 
     expect(within(panel).getByText("Loading product details")).toBeInTheDocument();
     expect(within(panel).getByRole("status")).toHaveTextContent(
@@ -47,7 +47,7 @@ describe("CatalogDetail", () => {
     );
   });
 
-  test("keeps detail errors inside the panel and lets customers close them", () => {
+  test("keeps detail errors inside the dialog and lets customers close them", () => {
     const onClose = vi.fn();
 
     render(
@@ -61,7 +61,7 @@ describe("CatalogDetail", () => {
       />
     );
 
-    const panel = screen.getByRole("complementary", { name: "Product detail" });
+    const panel = screen.getByRole("dialog", { name: "Product detail" });
 
     expect(
       within(panel).getByRole("heading", { level: 2, name: "Product detail" })
@@ -71,6 +71,21 @@ describe("CatalogDetail", () => {
     );
 
     fireEvent.click(within(panel).getByRole("button", { name: "Close product detail" }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  test("closes the detail dialog from the backdrop", () => {
+    const onClose = vi.fn();
+
+    render(
+      <CatalogDetail
+        detail={{ status: "success", skuId: tagliatelle.sku_id, product: tagliatelle }}
+        onClose={onClose}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("catalog-detail-backdrop"));
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -103,7 +118,7 @@ describe("CatalogDetail", () => {
       />
     );
 
-    const panel = screen.getByRole("complementary", { name: "Product detail" });
+    const panel = screen.getByRole("dialog", { name: "Product detail" });
 
     expect(
       within(panel).getByRole("heading", { level: 2, name: "Fresh Tagliatelle" })
@@ -142,6 +157,26 @@ describe("CatalogDetail", () => {
     expect(onAddProduct).toHaveBeenCalledWith("fresh-tagliatelle-250g", 1);
   });
 
+  test("shows when the detail product is already in the basket", () => {
+    render(
+      <CatalogDetail
+        basketQuantity={1}
+        detail={{ status: "success", skuId: tagliatelle.sku_id, product: tagliatelle }}
+        onAddProduct={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    const panel = screen.getByRole("dialog", { name: "Product detail" });
+
+    const addButton = within(panel).getByRole("button", {
+      name: "Add another Fresh Tagliatelle to basket, 1 in basket"
+    });
+
+    expect(within(addButton).getByText("Add another")).toBeInTheDocument();
+    expect(within(addButton).getByText("1 in basket")).toBeInTheDocument();
+  });
+
   test("shows the detail add action pending state", () => {
     render(
       <CatalogDetail
@@ -165,7 +200,7 @@ describe("CatalogDetail", () => {
       />
     );
 
-    const panel = screen.getByRole("complementary", { name: "Product detail" });
+    const panel = screen.getByRole("dialog", { name: "Product detail" });
     const productImage = within(panel).getByRole("img", {
       name: "Fresh Tagliatelle product image"
     });

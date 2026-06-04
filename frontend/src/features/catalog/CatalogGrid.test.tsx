@@ -172,6 +172,32 @@ describe("CatalogGrid", () => {
     expect(onAddProduct).toHaveBeenCalledWith("fresh-tagliatelle-250g", 1);
   });
 
+  test("shows when a catalog product is already in the basket", () => {
+    render(
+      <CatalogGrid
+        basketQuantities={{ "fresh-tagliatelle-250g": 2 }}
+        products={[tagliatelle]}
+        onAddProduct={vi.fn()}
+        onSelectProduct={vi.fn()}
+        onResetFilters={vi.fn()}
+      />
+    );
+
+    const productCard = screen
+      .getByRole("heading", { level: 3, name: "Fresh Tagliatelle" })
+      .closest("article");
+    if (!productCard) {
+      throw new Error("Expected Fresh Tagliatelle to render inside a product card.");
+    }
+
+    const addButton = within(productCard).getByRole("button", {
+      name: "Add another Fresh Tagliatelle to basket, 2 in basket"
+    });
+
+    expect(within(addButton).getByText("Add another")).toBeInTheDocument();
+    expect(within(addButton).getByText("2 in basket")).toBeInTheDocument();
+  });
+
   test("disables add actions while a basket mutation is pending", () => {
     render(
       <CatalogGrid
