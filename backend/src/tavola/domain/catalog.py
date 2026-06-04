@@ -55,6 +55,16 @@ class CatalogCategory:
             raise ValueError(f"display_order must be {expected_order}")
 
 
+def catalog_categories() -> tuple[CatalogCategory, ...]:
+    return tuple(
+        CatalogCategory(category_id, label, display_order)
+        for category_id, (label, display_order) in sorted(
+            _CATEGORY_DEFINITIONS.items(),
+            key=lambda item: item[1][1],
+        )
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class DietaryFacets:
     is_vegetarian: bool = False

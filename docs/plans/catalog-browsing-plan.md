@@ -289,6 +289,12 @@ keeping filtering and search behavior outside the API transport layer.
   - A simple import smoke test catches accidental layer cycles.
 - **Validation**: `cd backend && uv run pytest tests/test_package_layout.py`
 
+**Implementation note (2026-06-04)**: Sprint 2 is implemented. Catalog browsing
+and detail use cases live in `tavola.application.catalog`, the public catalog
+API uses Pydantic schemas under `tavola.api.schemas.catalog`, and the catalog
+router is wired through `tavola.api.main` with a small overridable static
+repository dependency.
+
 ## Sprint 3: Frontend Catalog Client And Types
 
 **Goal**: Let React request catalog data through a typed client while preserving
