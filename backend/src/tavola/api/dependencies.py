@@ -6,9 +6,10 @@ from tavola.application.checkout import OrderRepository, PickupWindowRepository
 from tavola.application.planner import (
     MenuPlannerAgent,
     PlannerAgentErrorCode,
+    PlannerBackgroundRunner,
     PlannerSessionRepository,
 )
-from tavola.config.settings import Settings
+from tavola.config.settings import PlannerRuntimeStatus, Settings
 from tavola.infrastructure.basket_repository import InMemoryBasketRepository
 from tavola.infrastructure.catalog_repository import StaticCatalogRepository
 from tavola.infrastructure.checkout_repository import (
@@ -20,10 +21,12 @@ from tavola.infrastructure.codex_planner import (
     FakeMenuPlannerAgent,
     PythonCodexSdkClient,
 )
+from tavola.infrastructure.planner_background import InProcessPlannerBackgroundRunner
 from tavola.infrastructure.planner_repository import InMemoryPlannerSessionRepository
 
 _basket_repository = InMemoryBasketRepository()
 _planner_session_repository = InMemoryPlannerSessionRepository()
+_planner_background_runner = InProcessPlannerBackgroundRunner()
 _pickup_window_repository = StaticPickupWindowRepository.from_seed()
 _order_repository = InMemoryOrderRepository()
 
@@ -38,6 +41,14 @@ def get_catalog_repository() -> CatalogRepository:
 
 def get_planner_session_repository() -> PlannerSessionRepository:
     return _planner_session_repository
+
+
+def get_planner_background_runner() -> PlannerBackgroundRunner:
+    return _planner_background_runner
+
+
+def get_planner_runtime_status() -> PlannerRuntimeStatus:
+    return Settings().planner_runtime_status()
 
 
 def get_menu_planner_agent() -> MenuPlannerAgent:

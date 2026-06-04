@@ -33,7 +33,7 @@ export function PlannerWorkspace({
   const [prompt, setPrompt] = useState("");
   const [followUpAnswer, setFollowUpAnswer] = useState("");
   const [isConfirmingReplace, setIsConfirmingReplace] = useState(false);
-  const isPlanning = planner.state.status === "loading";
+  const isPlanning = planner.state.status === "planning";
   const isAcceptPending = planner.state.status === "accept_pending";
   const isAccepted = planner.state.status === "accepted";
   const isPlannerUnavailable =
@@ -99,7 +99,7 @@ export function PlannerWorkspace({
         <label className="planner-composer__field">
           <span>Meal request</span>
           <textarea
-            disabled={isPlanning || isPlannerUnavailable}
+            disabled={isPlannerUnavailable}
             name="meal-request"
             onChange={(event) => setPrompt(event.target.value)}
             placeholder="Vegetarian dinner for 4 around £50"
@@ -108,10 +108,10 @@ export function PlannerWorkspace({
           />
         </label>
         <button
-          disabled={isPlanning || isPlannerUnavailable || !prompt.trim()}
+          disabled={isPlannerUnavailable || !prompt.trim()}
           type="submit"
         >
-          {isPlanning ? "Planning" : "Plan menu"}
+          Plan menu
         </button>
       </form>
 
@@ -119,7 +119,7 @@ export function PlannerWorkspace({
         <span>Try an example</span>
         {examplePrompts.map((examplePrompt) => (
           <button
-            disabled={isPlanning || isPlannerUnavailable}
+            disabled={isPlannerUnavailable}
             key={examplePrompt}
             onClick={() => setPrompt(examplePrompt)}
             type="button"
@@ -140,7 +140,7 @@ export function PlannerWorkspace({
         </p>
       ) : null}
 
-      {planner.state.status === "loading" ? (
+      {planner.state.status === "planning" ? (
         <p className="planner-workspace__status" role="status">
           {planningProgressMessage(planner.planningElapsedMs)}
         </p>

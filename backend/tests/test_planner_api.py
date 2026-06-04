@@ -1,5 +1,7 @@
 from collections.abc import Iterator
 from dataclasses import dataclass
+from threading import Event
+from time import monotonic, sleep
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,19 +10,32 @@ from tavola.api.dependencies import (
     get_basket_repository,
     get_catalog_repository,
     get_menu_planner_agent,
+    get_planner_background_runner,
+    get_planner_runtime_status,
     get_planner_session_repository,
 )
 from tavola.api.main import app
+from tavola.application.planner import MenuPlannerAgentResponse, ValidateMenuProposal
+from tavola.config.settings import PlannerRuntimeStatus
 from tavola.domain.catalog import (
     CatalogCategory,
     CatalogSku,
     DietaryFacets,
     Money,
 )
-from tavola.domain.planner import FollowUpQuestion
+from tavola.domain.planner import (
+    Course,
+    CourseProposal,
+    FollowUpQuestion,
+    MenuProposal,
+    PlannerSessionId,
+    ProposalLine,
+    ProposalStatus,
+)
 from tavola.infrastructure.basket_repository import InMemoryBasketRepository
 from tavola.infrastructure.catalog_repository import StaticCatalogRepository
 from tavola.infrastructure.codex_planner import FakeMenuPlannerAgent
+from tavola.infrastructure.planner_background import InProcessPlannerBackgroundRunner
 from tavola.infrastructure.planner_repository import InMemoryPlannerSessionRepository
 
 
@@ -29,9 +44,48 @@ class PlannerApiHarness:
     client: TestClient
     basket_repository: InMemoryBasketRepository
     planner_repository: InMemoryPlannerSessionRepository
+    background_runner: InProcessPlannerBackgroundRunner
 
     def use_agent(self, agent: FakeMenuPlannerAgent) -> None:
         app.dependency_overrides[get_menu_planner_agent] = lambda: agent
+
+    def save_ready_session(
+        self,
+        *,
+        customer_request: str = "Dinner for two",
+        quantity: int = 2,
+    ) -> None:
+        validation_result = ValidateMenuProposal(
+            StaticCatalogRepository([make_sku(amount_minor=425)])
+        )(
+            MenuProposal(
+                title="Weeknight Pasta",
+                explanation="A compact pasta proposal.",
+                planner_notes=("Catalog identities checked.",),
+                party_size=2,
+                package_template_id="primo-only",
+                courses=(
+                    CourseProposal(
+                        course=Course.PRIMO,
+                        lines=(
+                            ProposalLine(
+                                sku_id="fresh-tagliatelle-250g",
+                                quantity=quantity,
+                                rationale="A flexible pasta course.",
+                            ),
+                        ),
+                    ),
+                ),
+            )
+        )
+        assert validation_result.menu_proposal is not None
+        self.planner_repository.save_session(
+            self.planner_repository.create_session(
+                customer_request=customer_request,
+                status=ProposalStatus.PROPOSAL_READY,
+                menu_proposal=validation_result.menu_proposal,
+            )
+        )
 
 
 def make_sku(
@@ -192,6 +246,12 @@ def install_test_dependencies(
         [make_sku()]
     )
     resolved_agent = agent or FakeMenuPlannerAgent.with_proposal(raw_proposal())
+    background_runner = InProcessPlannerBackgroundRunner()
+    runtime_status = PlannerRuntimeStatus(
+        enabled=True,
+        mode="real_codex",
+        message="Planner is running with live Codex assistance.",
+    )
 
     app.dependency_overrides[get_basket_repository] = lambda: resolved_basket_repository
     app.dependency_overrides[get_catalog_repository] = lambda: (
@@ -201,11 +261,14 @@ def install_test_dependencies(
         resolved_planner_repository
     )
     app.dependency_overrides[get_menu_planner_agent] = lambda: resolved_agent
+    app.dependency_overrides[get_planner_background_runner] = lambda: background_runner
+    app.dependency_overrides[get_planner_runtime_status] = lambda: runtime_status
 
     return PlannerApiHarness(
         client=TestClient(app),
         basket_repository=resolved_basket_repository,
         planner_repository=resolved_planner_repository,
+        background_runner=background_runner,
     )
 
 
@@ -215,10 +278,44 @@ def client() -> Iterator[PlannerApiHarness]:
     try:
         yield harness
     finally:
+        harness.background_runner.shutdown()
         app.dependency_overrides.clear()
 
 
-def test_start_planner_session_returns_proposal_response_shape(
+def wait_for_session_status(
+    harness: PlannerApiHarness,
+    planner_session_id: str,
+    status: str,
+    *,
+    timeout_seconds: float = 1.0,
+) -> dict[str, object]:
+    deadline = monotonic() + timeout_seconds
+    while monotonic() < deadline:
+        response = harness.client.get(f"/api/planner/sessions/{planner_session_id}")
+        body = response.json()
+        if body["status"] == status:
+            return body
+        sleep(0.01)
+    pytest.fail(f"planner session did not reach {status}")
+
+
+class BlockingProposalAgent:
+    def __init__(self) -> None:
+        self.started = Event()
+        self.release = Event()
+
+    def plan_menu(
+        self,
+        *,
+        customer_request: str,
+        follow_up_answers: tuple[str, ...] = (),
+    ) -> MenuPlannerAgentResponse:
+        self.started.set()
+        self.release.wait(timeout=2)
+        return MenuPlannerAgentResponse(raw_proposal=raw_proposal())
+
+
+def test_start_planner_session_returns_planning_then_polling_observes_proposal(
     client: PlannerApiHarness,
 ) -> None:
     response = client.client.post(
@@ -227,7 +324,50 @@ def test_start_planner_session_returns_proposal_response_shape(
     )
 
     assert response.status_code == 201
-    assert response.json() == expected_session_response()
+    body = response.json()
+    assert body == {
+        "planner_session_id": "planner-1",
+        "status": "planning",
+        "customer_request": "Dinner for two",
+        "follow_up_answers": [],
+        "follow_up_question": None,
+        "menu_proposal": None,
+        "validation_errors": [],
+    }
+
+    assert (
+        wait_for_session_status(client, body["planner_session_id"], "proposal_ready")
+        == expected_session_response()
+    )
+
+
+def test_start_planner_session_returns_quickly_while_agent_keeps_running(
+    client: PlannerApiHarness,
+) -> None:
+    agent = BlockingProposalAgent()
+    app.dependency_overrides[get_menu_planner_agent] = lambda: agent
+
+    started_at = monotonic()
+    response = client.client.post(
+        "/api/planner/sessions",
+        json={"message": "Dinner for two"},
+    )
+    elapsed = monotonic() - started_at
+
+    assert response.status_code == 201
+    assert response.json()["status"] == "planning"
+    assert elapsed < 1
+    assert agent.started.wait(timeout=1)
+
+    busy_response = client.client.post(
+        "/api/planner/sessions",
+        json={"message": "Dinner for four"},
+    )
+
+    assert busy_response.status_code == 503
+    assert "already planning" in busy_response.json()["detail"]
+    agent.release.set()
+    wait_for_session_status(client, "planner-1", "proposal_ready")
 
 
 def test_planner_status_reports_demo_mode(client: PlannerApiHarness) -> None:
@@ -241,6 +381,25 @@ def test_planner_status_reports_demo_mode(client: PlannerApiHarness) -> None:
     }
 
 
+def test_start_planner_session_returns_unavailable_when_planner_is_disabled(
+    client: PlannerApiHarness,
+) -> None:
+    app.dependency_overrides[get_planner_runtime_status] = lambda: PlannerRuntimeStatus(
+        enabled=False,
+        mode="disabled",
+        message="Planner is not enabled for this environment.",
+    )
+
+    response = client.client.post(
+        "/api/planner/sessions",
+        json={"message": "Dinner for two"},
+    )
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Planner is not enabled for this environment."}
+    assert client.planner_repository.get_session(PlannerSessionId("planner-1")) is None
+
+
 def test_follow_up_answer_completes_session(client: PlannerApiHarness) -> None:
     client.use_agent(
         FakeMenuPlannerAgent.with_follow_up(
@@ -252,6 +411,12 @@ def test_follow_up_answer_completes_session(client: PlannerApiHarness) -> None:
         json={"message": "Help me plan Sunday lunch"},
     )
     planner_session_id = start_response.json()["planner_session_id"]
+    assert (
+        wait_for_session_status(client, planner_session_id, "needs_input")[
+            "follow_up_question"
+        ]
+        == "How many people should this serve?"
+    )
     client.use_agent(FakeMenuPlannerAgent.with_proposal(raw_proposal(quantity=4)))
 
     response = client.client.post(
@@ -261,20 +426,18 @@ def test_follow_up_answer_completes_session(client: PlannerApiHarness) -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "proposal_ready"
+    assert body["status"] == "planning"
     assert body["customer_request"] == "Help me plan Sunday lunch"
     assert body["follow_up_answers"] == ["Four people"]
-    assert body["menu_proposal"]["total_minor"] == 1700
+    final_body = wait_for_session_status(client, planner_session_id, "proposal_ready")
+    assert final_body["menu_proposal"]["total_minor"] == 1700
 
 
 def test_validate_edited_quantity_recalculates_proposal(
     client: PlannerApiHarness,
 ) -> None:
-    start_response = client.client.post(
-        "/api/planner/sessions",
-        json={"message": "Dinner for two"},
-    )
-    planner_session_id = start_response.json()["planner_session_id"]
+    client.save_ready_session()
+    planner_session_id = "planner-1"
 
     response = client.client.post(
         f"/api/planner/sessions/{planner_session_id}/proposal/validate",
@@ -298,11 +461,8 @@ def test_accept_append_returns_basket_and_meal_plan_grouping(
     client: PlannerApiHarness,
 ) -> None:
     client.basket_repository.create_basket()
-    start_response = client.client.post(
-        "/api/planner/sessions",
-        json={"message": "Dinner for two"},
-    )
-    planner_session_id = start_response.json()["planner_session_id"]
+    client.save_ready_session()
+    planner_session_id = "planner-1"
 
     response = client.client.post(
         f"/api/planner/sessions/{planner_session_id}/accept",
@@ -361,11 +521,8 @@ def test_get_planner_session_returns_404_for_missing_session(
 
 
 def test_accept_returns_404_for_missing_basket(client: PlannerApiHarness) -> None:
-    start_response = client.client.post(
-        "/api/planner/sessions",
-        json={"message": "Dinner for two"},
-    )
-    planner_session_id = start_response.json()["planner_session_id"]
+    client.save_ready_session()
+    planner_session_id = "planner-1"
 
     response = client.client.post(
         f"/api/planner/sessions/{planner_session_id}/accept",
@@ -383,11 +540,8 @@ def test_accept_returns_404_for_missing_basket(client: PlannerApiHarness) -> Non
 def test_validate_proposal_returns_422_for_validation_errors(
     client: PlannerApiHarness,
 ) -> None:
-    start_response = client.client.post(
-        "/api/planner/sessions",
-        json={"message": "Dinner for two"},
-    )
-    planner_session_id = start_response.json()["planner_session_id"]
+    client.save_ready_session()
+    planner_session_id = "planner-1"
 
     response = client.client.post(
         f"/api/planner/sessions/{planner_session_id}/proposal/validate",

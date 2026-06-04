@@ -1,4 +1,11 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { App } from "./App";
@@ -8,6 +15,7 @@ import { createCheckout, listPickupWindows } from "./api/checkout";
 import {
   acceptProposal,
   createPlannerSession,
+  fetchPlannerSession,
   getPlannerStatus
 } from "./api/planner";
 import type { Basket } from "./types/basket";
@@ -50,6 +58,7 @@ const listPickupWindowsMock = vi.mocked(listPickupWindows);
 const createCheckoutMock = vi.mocked(createCheckout);
 const getPlannerStatusMock = vi.mocked(getPlannerStatus);
 const createPlannerSessionMock = vi.mocked(createPlannerSession);
+const fetchPlannerSessionMock = vi.mocked(fetchPlannerSession);
 const acceptProposalMock = vi.mocked(acceptProposal);
 
 const tagliatelle: CatalogProductSummary = {
@@ -189,9 +198,20 @@ const plannerReadySession: PlannerSessionResponse = {
   validation_errors: []
 };
 
+const plannerPlanningSession: PlannerSessionResponse = {
+  planner_session_id: "planner-1",
+  status: "planning",
+  customer_request: "Plan pasta for 2",
+  follow_up_answers: [],
+  follow_up_question: null,
+  menu_proposal: null,
+  validation_errors: []
+};
+
 describe("App", () => {
   afterEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   beforeEach(() => {
@@ -233,6 +253,10 @@ describe("App", () => {
       }
     });
     createPlannerSessionMock.mockResolvedValue({
+      ok: true,
+      data: plannerReadySession
+    });
+    fetchPlannerSessionMock.mockResolvedValue({
       ok: true,
       data: plannerReadySession
     });
@@ -428,12 +452,15 @@ describe("App", () => {
   });
 
   test("badges Plan when a proposal becomes ready while Shop is active", async () => {
-    const deferredPlannerSession = createDeferred<{
-      ok: true;
-      data: PlannerSessionResponse;
-    }>();
-    createPlannerSessionMock.mockReturnValue(deferredPlannerSession.promise);
-
+    vi.useFakeTimers();
+    createPlannerSessionMock.mockResolvedValueOnce({
+      ok: true,
+      data: plannerPlanningSession
+    });
+    fetchPlannerSessionMock.mockResolvedValueOnce({
+      ok: true,
+      data: plannerReadySession
+    });
     render(<App />);
 
     const storefrontHeader = screen.getByRole("banner", {
@@ -446,22 +473,23 @@ describe("App", () => {
       target: { value: "Plan pasta for 2" }
     });
     fireEvent.click(within(planner).getByRole("button", { name: "Plan menu" }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
     fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Shop" }));
 
     expect(
       within(storefrontHeader).getByRole("tab", { name: "Plan" })
     ).not.toHaveAccessibleDescription("Proposal ready");
 
-    deferredPlannerSession.resolve({
-      ok: true,
-      data: plannerReadySession
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+      await Promise.resolve();
     });
-
-    await waitFor(() => {
-      const planTab = within(storefrontHeader).getByRole("tab", { name: "Plan" });
-      expect(planTab).toHaveAccessibleDescription("Proposal ready");
-      expect(within(planTab).getByText("Proposal ready")).toBeInTheDocument();
-    });
+    const readyPlanTab = within(storefrontHeader).getByRole("tab", { name: "Plan" });
+    expect(readyPlanTab).toHaveAccessibleDescription("Proposal ready");
+    expect(within(readyPlanTab).getByText("Proposal ready")).toBeInTheDocument();
 
     fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Plan" }));
 
@@ -660,13 +688,4 @@ function installLocalStorage() {
       }
     }
   });
-}
-
-function createDeferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((promiseResolve) => {
-    resolve = promiseResolve;
-  });
-
-  return { promise, resolve };
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   acceptProposal,
@@ -49,7 +49,7 @@ export type PlannerUiState =
       message: null;
     }
   | {
-      status: "loading";
+      status: "planning";
       session: PlannerSessionResponse | null;
       message: null;
     }
@@ -110,6 +110,8 @@ const defaultPlannerClient: PlannerClient = {
   acceptProposal
 };
 
+const PLANNER_POLL_INTERVAL_MS = 2_000;
+
 export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions = {}) {
   const [state, setState] = useState<PlannerUiState>({
     status: "empty",
@@ -124,6 +126,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
   const [draftProposal, setDraftProposal] = useState<MenuProposal | null>(null);
   const [planningStartedAtMs, setPlanningStartedAtMs] = useState<number | null>(null);
   const [planningElapsedMs, setPlanningElapsedMs] = useState<number | null>(null);
+  const requestGenerationRef = useRef(0);
 
   const currentSession = state.session;
 
@@ -157,7 +160,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
   }, [client]);
 
   useEffect(() => {
-    if (state.status !== "loading" || planningStartedAtMs === null) {
+    if (state.status !== "planning" || planningStartedAtMs === null) {
       setPlanningElapsedMs(null);
       return;
     }
@@ -179,7 +182,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
   const startPlanning = useCallback((session: PlannerSessionResponse | null) => {
     setPlanningStartedAtMs(Date.now());
     setPlanningElapsedMs(0);
-    setState({ status: "loading", session, message: null });
+    setState({ status: "planning", session, message: null });
   }, []);
 
   const stopPlanningTimer = useCallback(() => {
@@ -189,6 +192,12 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
 
   const applySession = useCallback(
     (session: PlannerSessionResponse) => {
+      if (session.status === "planning") {
+        setDraftProposal(null);
+        setState({ status: "planning", session, message: null });
+        return;
+      }
+
       stopPlanningTimer();
       setDraftProposal(session.menu_proposal);
 
@@ -216,6 +225,49 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
     [stopPlanningTimer]
   );
 
+  useEffect(() => {
+    if (
+      state.status !== "planning" ||
+      !state.session ||
+      state.session.status !== "planning"
+    ) {
+      return;
+    }
+
+    const plannerSessionId = state.session.planner_session_id;
+    const generation = requestGenerationRef.current;
+    let isCurrent = true;
+
+    async function pollPlannerSession() {
+      const result = await client.fetchSession(plannerSessionId);
+
+      if (!isCurrent || generation !== requestGenerationRef.current) {
+        return;
+      }
+
+      if (result.ok) {
+        applySession(result.data);
+        return;
+      }
+
+      stopPlanningTimer();
+      setState({
+        status: "failed",
+        session: state.session,
+        message: result.error.message
+      });
+    }
+
+    const intervalId = window.setInterval(() => {
+      void pollPlannerSession();
+    }, PLANNER_POLL_INTERVAL_MS);
+
+    return () => {
+      isCurrent = false;
+      window.clearInterval(intervalId);
+    };
+  }, [applySession, client, state, stopPlanningTimer]);
+
   const submitPrompt = useCallback(
     async (message: string) => {
       const trimmedMessage = message.trim();
@@ -241,12 +293,27 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
         return;
       }
 
+      const currentPlanningSession =
+        currentSession?.status === "planning" ? currentSession : null;
       setDraftProposal(null);
-      startPlanning(null);
+      const generation = requestGenerationRef.current + 1;
+      requestGenerationRef.current = generation;
+      if (!currentPlanningSession) {
+        startPlanning(null);
+      }
       const result = await client.createSession({ message: trimmedMessage });
+
+      if (generation !== requestGenerationRef.current) {
+        return;
+      }
 
       if (result.ok) {
         applySession(result.data);
+        return;
+      }
+
+      if (currentPlanningSession) {
+        setState({ status: "planning", session: currentPlanningSession, message: null });
         return;
       }
 
@@ -282,10 +349,16 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
         return;
       }
 
+      const generation = requestGenerationRef.current + 1;
+      requestGenerationRef.current = generation;
       startPlanning(currentSession);
       const result = await client.answerFollowUp(currentSession.planner_session_id, {
         message: trimmedMessage
       });
+
+      if (generation !== requestGenerationRef.current) {
+        return;
+      }
 
       if (result.ok) {
         applySession(result.data);

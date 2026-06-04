@@ -28,6 +28,7 @@ class Course(StrEnum):
 
 
 class ProposalStatus(StrEnum):
+    PLANNING = "planning"
     NEEDS_INPUT = "needs_input"
     PROPOSAL_READY = "proposal_ready"
     ACCEPTED = "accepted"
@@ -197,6 +198,15 @@ class PlannerSession:
         _require_text(self.customer_request, "customer_request")
         for answer in self.follow_up_answers:
             _require_text(answer, "follow_up_answer")
+        if self.status == ProposalStatus.PLANNING:
+            if self.follow_up_question is not None:
+                raise ValueError(
+                    "planning sessions cannot include a follow-up question"
+                )
+            if self.menu_proposal is not None:
+                raise ValueError("planning sessions cannot include a menu proposal")
+            if self.validation_errors:
+                raise ValueError("planning sessions cannot include validation errors")
         if self.status == ProposalStatus.NEEDS_INPUT:
             if self.follow_up_question is None:
                 raise ValueError("follow_up_question is required")

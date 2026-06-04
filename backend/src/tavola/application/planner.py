@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Protocol
@@ -48,6 +48,17 @@ class PlannerSessionRepository(Protocol):
 
     def save_session(self, session: PlannerSession) -> None:
         """Persist the latest planner session state."""
+
+
+class PlannerBackgroundRunner(Protocol):
+    def try_acquire(self) -> bool:
+        """Reserve the one process-local planning slot if it is free."""
+
+    def submit(self, task: Callable[[], None]) -> None:
+        """Run a reserved planning task in the background."""
+
+    def release(self) -> None:
+        """Release a reserved planning slot when dispatch cannot continue."""
 
 
 class PlannerAgentErrorCode(StrEnum):
@@ -126,6 +137,19 @@ class PlannerSessionStateInvalid(PlannerApplicationError):
 
     def __init__(self, message: str) -> None:
         super().__init__(message)
+
+
+class PlannerUnavailable(PlannerApplicationError):
+    code = "planner_unavailable"
+
+
+class PlannerBusy(PlannerApplicationError):
+    code = "planner_busy"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Tavola is already planning a menu. Please wait for it to finish."
+        )
 
 
 class PlannerProposalInvalid(PlannerApplicationError):
@@ -295,6 +319,96 @@ class StartPlannerSession:
             menu_proposal=result.menu_proposal,
             validation_errors=result.validation_errors,
         )
+
+
+class CreatePlanningSession:
+    def __init__(self, *, planner_repository: PlannerSessionRepository) -> None:
+        self._planner_repository = planner_repository
+
+    def __call__(self, *, message: str) -> PlannerSession:
+        customer_request = _require_message(message)
+        return self._planner_repository.create_session(
+            customer_request=customer_request,
+            status=ProposalStatus.PLANNING,
+        )
+
+
+class SubmitPlannerFollowUp:
+    def __init__(self, *, planner_repository: PlannerSessionRepository) -> None:
+        self._planner_repository = planner_repository
+
+    def __call__(self, *, planner_session_id: str, message: str) -> PlannerSession:
+        answer = _require_message(message)
+        session = _get_session_or_raise(
+            self._planner_repository,
+            planner_session_id,
+        )
+        if session.status != ProposalStatus.NEEDS_INPUT:
+            raise PlannerSessionStateInvalid(
+                "follow-up answers are accepted only while input is needed"
+            )
+
+        updated = PlannerSession(
+            planner_session_id=session.planner_session_id,
+            customer_request=session.customer_request,
+            follow_up_answers=(*session.follow_up_answers, answer),
+            status=ProposalStatus.PLANNING,
+        )
+        self._planner_repository.save_session(updated)
+        return updated
+
+
+class CompletePlanningSession:
+    def __init__(
+        self,
+        *,
+        planner_repository: PlannerSessionRepository,
+        agent: MenuPlannerAgent,
+        catalog_repository: CatalogRepository,
+    ) -> None:
+        self._planner_repository = planner_repository
+        self._plan_menu = PlanMenuFromRequest(
+            agent=agent,
+            catalog_repository=catalog_repository,
+        )
+
+    def __call__(self, *, planner_session_id: str) -> PlannerSession:
+        session = _get_session_or_raise(
+            self._planner_repository,
+            planner_session_id,
+        )
+        if session.status != ProposalStatus.PLANNING:
+            raise PlannerSessionStateInvalid(
+                "planner completion is accepted only while planning"
+            )
+
+        try:
+            result = self._plan_menu(
+                customer_request=session.customer_request,
+                follow_up_answers=session.follow_up_answers,
+            )
+        except Exception:
+            result = MenuPlannerRunResult(
+                status=ProposalStatus.FAILED,
+                validation_errors=(
+                    PlannerValidationError(
+                        code=PlannerValidationErrorCode.INVALID_PROPOSAL,
+                        message="Planner could not complete this request.",
+                    ),
+                ),
+            )
+
+        updated = PlannerSession(
+            planner_session_id=session.planner_session_id,
+            customer_request=session.customer_request,
+            follow_up_answers=session.follow_up_answers,
+            status=result.status,
+            follow_up_question=result.follow_up_question,
+            menu_proposal=result.menu_proposal,
+            validation_errors=result.validation_errors,
+        )
+        self._planner_repository.save_session(updated)
+        return updated
 
 
 class AnswerPlannerFollowUp:

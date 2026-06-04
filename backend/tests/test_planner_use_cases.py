@@ -4,6 +4,8 @@ from tavola.application.planner import (
     AcceptanceMode,
     AcceptMenuProposal,
     AnswerPlannerFollowUp,
+    CompletePlanningSession,
+    CreatePlanningSession,
     PlanMenuFromRequest,
     PlannerInputInvalid,
     PlannerProposalInvalid,
@@ -11,6 +13,7 @@ from tavola.application.planner import (
     PlannerSessionStateInvalid,
     RevalidateMenuProposal,
     StartPlannerSession,
+    SubmitPlannerFollowUp,
     ValidateMenuProposal,
 )
 from tavola.domain.catalog import (
@@ -417,6 +420,69 @@ def test_start_planner_session_saves_follow_up_state() -> None:
     assert session.follow_up_answers == ()
 
 
+def test_create_planning_session_saves_in_progress_state() -> None:
+    repository = InMemoryPlannerSessionRepository(id_generator=lambda: "planner-1")
+
+    session = CreatePlanningSession(planner_repository=repository)(
+        message="Dinner for two"
+    )
+
+    assert session.planner_session_id.value == "planner-1"
+    assert session.status == ProposalStatus.PLANNING
+    assert session.customer_request == "Dinner for two"
+    assert session.menu_proposal is None
+    assert repository.get_session(session.planner_session_id) == session
+
+
+def test_complete_planning_session_updates_same_session_to_ready_proposal() -> None:
+    repository = InMemoryPlannerSessionRepository(id_generator=lambda: "planner-1")
+    session = CreatePlanningSession(planner_repository=repository)(
+        message="Dinner for two"
+    )
+
+    updated = CompletePlanningSession(
+        planner_repository=repository,
+        agent=FakeMenuPlannerAgent.with_proposal(raw_proposal(quantity=2)),
+        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+    )(planner_session_id=session.planner_session_id.value)
+
+    assert updated.planner_session_id == session.planner_session_id
+    assert updated.status == ProposalStatus.PROPOSAL_READY
+    assert updated.menu_proposal is not None
+    assert updated.menu_proposal.total.amount_minor == 850
+    assert repository.get_session(session.planner_session_id) == updated
+
+
+def test_complete_planning_session_maps_worker_exception_to_failed_session() -> None:
+    class RaisingAgent:
+        def plan_menu(
+            self,
+            *,
+            customer_request: str,
+            follow_up_answers: tuple[str, ...] = (),
+        ):
+            raise RuntimeError("raw worker detail")
+
+    repository = InMemoryPlannerSessionRepository(id_generator=lambda: "planner-1")
+    session = CreatePlanningSession(planner_repository=repository)(
+        message="Dinner for two"
+    )
+
+    updated = CompletePlanningSession(
+        planner_repository=repository,
+        agent=RaisingAgent(),
+        catalog_repository=StaticCatalogRepository([make_sku()]),
+    )(planner_session_id=session.planner_session_id.value)
+
+    assert updated.status == ProposalStatus.FAILED
+    assert updated.validation_errors[0].code == (
+        PlannerValidationErrorCode.INVALID_PROPOSAL
+    )
+    assert updated.validation_errors[0].message == (
+        "Planner could not complete this request."
+    )
+
+
 def test_answer_follow_up_saves_answer_and_ready_proposal() -> None:
     repository = InMemoryPlannerSessionRepository(id_generator=lambda: "planner-1")
     start = StartPlannerSession(
@@ -443,6 +509,28 @@ def test_answer_follow_up_saves_answer_and_ready_proposal() -> None:
     assert updated.follow_up_answers == ("Four people",)
     assert updated.menu_proposal is not None
     assert updated.menu_proposal.total.amount_minor == 1700
+
+
+def test_submit_follow_up_saves_answer_and_returns_to_planning() -> None:
+    repository = InMemoryPlannerSessionRepository(id_generator=lambda: "planner-1")
+    session = StartPlannerSession(
+        planner_repository=repository,
+        agent=FakeMenuPlannerAgent.with_follow_up(
+            FollowUpQuestion(message="How many people should this serve?")
+        ),
+        catalog_repository=StaticCatalogRepository([make_sku()]),
+    )(message="Help me plan Sunday lunch")
+
+    updated = SubmitPlannerFollowUp(planner_repository=repository)(
+        planner_session_id=session.planner_session_id.value,
+        message="Four people",
+    )
+
+    assert updated.status == ProposalStatus.PLANNING
+    assert updated.customer_request == "Help me plan Sunday lunch"
+    assert updated.follow_up_answers == ("Four people",)
+    assert updated.follow_up_question is None
+    assert updated.menu_proposal is None
 
 
 def test_answer_follow_up_rejects_missing_or_ready_session() -> None:

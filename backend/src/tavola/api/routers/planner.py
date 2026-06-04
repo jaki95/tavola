@@ -6,6 +6,8 @@ from tavola.api.dependencies import (
     get_basket_repository,
     get_catalog_repository,
     get_menu_planner_agent,
+    get_planner_background_runner,
+    get_planner_runtime_status,
     get_planner_session_repository,
 )
 from tavola.api.schemas.basket import BasketResponse
@@ -27,18 +29,22 @@ from tavola.application.catalog import CatalogRepository
 from tavola.application.planner import (
     AcceptanceMode,
     AcceptMenuProposal,
-    AnswerPlannerFollowUp,
+    CompletePlanningSession,
+    CreatePlanningSession,
     MenuPlannerAgent,
     PlannerApplicationError,
+    PlannerBackgroundRunner,
+    PlannerBusy,
     PlannerInputInvalid,
     PlannerProposalInvalid,
     PlannerSessionNotFound,
     PlannerSessionRepository,
     PlannerSessionStateInvalid,
+    PlannerUnavailable,
     RevalidateMenuProposal,
-    StartPlannerSession,
+    SubmitPlannerFollowUp,
 )
-from tavola.config.settings import Settings
+from tavola.config.settings import PlannerRuntimeStatus, Settings
 from tavola.domain.planner import (
     PlannerSession,
     PlannerSessionId,
@@ -67,15 +73,36 @@ def start_planner_session(
     ],
     agent: Annotated[MenuPlannerAgent, Depends(get_menu_planner_agent)],
     catalog_repository: Annotated[CatalogRepository, Depends(get_catalog_repository)],
+    background_runner: Annotated[
+        PlannerBackgroundRunner, Depends(get_planner_background_runner)
+    ],
+    runtime_status: Annotated[
+        PlannerRuntimeStatus, Depends(get_planner_runtime_status)
+    ],
 ) -> PlannerSessionResponse:
+    _ensure_planner_available(runtime_status)
+    if not background_runner.try_acquire():
+        raise _planner_http_exception(PlannerBusy())
+
     try:
-        session = StartPlannerSession(
+        session = CreatePlanningSession(
             planner_repository=planner_repository,
-            agent=agent,
-            catalog_repository=catalog_repository,
         )(message=request.message)
+        background_runner.submit(
+            lambda: CompletePlanningSession(
+                planner_repository=planner_repository,
+                agent=agent,
+                catalog_repository=catalog_repository,
+            )(planner_session_id=session.planner_session_id.value)
+        )
     except PlannerApplicationError as error:
+        background_runner.release()
         raise _planner_http_exception(error) from error
+    except Exception as error:
+        background_runner.release()
+        raise _planner_http_exception(
+            PlannerUnavailable("Planner could not start this request.")
+        ) from error
 
     return PlannerSessionResponse.from_domain(session)
 
@@ -106,15 +133,36 @@ def answer_follow_up(
     ],
     agent: Annotated[MenuPlannerAgent, Depends(get_menu_planner_agent)],
     catalog_repository: Annotated[CatalogRepository, Depends(get_catalog_repository)],
+    background_runner: Annotated[
+        PlannerBackgroundRunner, Depends(get_planner_background_runner)
+    ],
+    runtime_status: Annotated[
+        PlannerRuntimeStatus, Depends(get_planner_runtime_status)
+    ],
 ) -> PlannerSessionResponse:
+    _ensure_planner_available(runtime_status)
+    if not background_runner.try_acquire():
+        raise _planner_http_exception(PlannerBusy())
+
     try:
-        session = AnswerPlannerFollowUp(
+        session = SubmitPlannerFollowUp(
             planner_repository=planner_repository,
-            agent=agent,
-            catalog_repository=catalog_repository,
         )(planner_session_id=planner_session_id, message=request.message)
+        background_runner.submit(
+            lambda: CompletePlanningSession(
+                planner_repository=planner_repository,
+                agent=agent,
+                catalog_repository=catalog_repository,
+            )(planner_session_id=session.planner_session_id.value)
+        )
     except PlannerApplicationError as error:
+        background_runner.release()
         raise _planner_http_exception(error) from error
+    except Exception as error:
+        background_runner.release()
+        raise _planner_http_exception(
+            PlannerUnavailable("Planner could not continue this request.")
+        ) from error
 
     return PlannerSessionResponse.from_domain(session)
 
@@ -196,9 +244,19 @@ def _get_session_or_404(
     return session
 
 
+def _ensure_planner_available(runtime_status: PlannerRuntimeStatus) -> None:
+    if not runtime_status.enabled:
+        raise _planner_http_exception(PlannerUnavailable(runtime_status.message))
+
+
 def _planner_http_exception(
     error: PlannerApplicationError | BasketApplicationError,
 ) -> HTTPException:
+    if isinstance(error, (PlannerUnavailable, PlannerBusy)):
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=error.message,
+        )
     if isinstance(error, (PlannerSessionNotFound, BasketNotFound)):
         return HTTPException(status_code=404, detail=error.message)
     if isinstance(error, PlannerProposalInvalid):
