@@ -390,6 +390,10 @@ The first customer-facing catalog API exposes products with `sku_id`, `name`,
 `short_description`, dietary facet booleans, and `image_id`. Product detail adds
 `detail_description`.
 
+Customer-facing catalog UI should use ordinary shopping language such as
+"products", "items", or "picks" rather than exposing "SKU" terminology in normal
+browsing copy.
+
 ## Architectural Implications
 
 Tavola should be shaped around domain-driven boundaries:
@@ -425,3 +429,37 @@ enhancements.
 - Optimize for demonstration clarity over platform completeness.
 - Keep package context visible after planner acceptance where it helps the
   customer understand the basket, without making packages the pricing authority.
+- Keep the **Basket** visible as supporting context during desktop **Catalog
+  browsing** so the customer can see the browse-to-basket loop without changing
+  screens. Future planner entry points should sit near this basket decision
+  surface rather than displacing the catalog.
+- Keep future **Menu proposal** review visually distinct from actual **Basket
+  lines** until the customer accepts the proposal into the basket.
+- On the desktop opening screen, avoid a separate masthead between the top bar
+  and the commerce flow. Let **Catalog browsing** be the first meaningful content.
+- The opening catalog header should be compact and action-oriented; prefer copy
+  like "Catalog", "Fresh from the counter", and "Browse real deli products, then
+  add your picks to the basket."
+- Catalog product counts are useful metadata, not primary content. Present counts
+  inline or compactly rather than as a large summary card on the opening screen.
+- At a `1366x768` desktop viewport, the opening screen should show the catalog
+  heading, browsing controls, and at least the top half of the first row of
+  product cards without scrolling.
+- Customer-facing **Category** filters should remain visible on the desktop
+  catalog surface rather than being hidden behind a menu. They may be made denser
+  to preserve first-viewport product visibility.
+- Catalog search should remain visible in the opening desktop catalog controls,
+  but it should be compact enough that it does not push product cards out of the
+  first viewport.
+- Basket empty-state copy should use customer-facing shopping language rather
+  than implementation language such as "backend-owned basket."
+
+## Flagged Ambiguities
+
+- "Storefront workspace" was used in early UI copy for the opening screen, but it
+  is not canonical customer-facing language. The opening screen should be framed
+  around **Catalog browsing**, with the **Basket** visible as supporting context.
+- "Backend connected" describes implementation health, not customer-facing
+  commerce language. When the UI exposes this demonstrator affordance, prefer
+  quiet **service status** language such as "Service ready" or "Service
+  unavailable."
