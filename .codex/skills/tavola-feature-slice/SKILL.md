@@ -73,4 +73,10 @@ constraint in your plan or final summary instead of copying the full context.
 
 ## Finish
 
-Report the concrete behavior changed, layers touched, API contract changes, infrastructure changes, tests run, and any gaps. Keep the summary in Tavola terms.
+For any frontend change, complete the frontend browser approval check from
+`docs/frontend-browser-approval-check.md` before final handoff, or report exactly
+why it could not be completed.
+
+Report the concrete behavior changed, layers touched, API contract changes,
+infrastructure changes, tests run, browser checks run, and any gaps. Keep the
+summary in Tavola terms.

@@ -170,6 +170,14 @@ For meaningful changes, add or update focused tests.
 - Frontend: component or user-flow tests for interactive behavior in the current
   feature slice.
 
+For any change under `frontend/` or any user-facing browser workflow, run the
+frontend browser approval check in `docs/frontend-browser-approval-check.md`
+before handoff. Use the Codex in-app Browser when available. Verify the changed
+flow at the supported desktop viewport, including the loading, empty, error, and
+success states touched by the change. If the change depends on backend APIs, run
+the backend and frontend together and verify the flow through the Vite proxy.
+Report the browser checks run and any unchecked items.
+
 If tests cannot be run, explain exactly what was not run and why.
 
 After scaffold or cross-service workflow changes, run the checklist in

@@ -35,6 +35,7 @@ Review code as a senior engineer looking for concrete defects and avoidable risk
    - Check architecture fit against `AGENTS.md` and `CONTEXT.md`: layering violations, misplaced domain rules, transport concerns leaking into domain code, inappropriate infrastructure coupling, or scope beyond the product direction.
    - Check complexity: duplicated logic, over-broad abstractions, hard-to-test control flow, confusing ownership, hidden state, or changes that are larger than the behavior requires.
    - Treat missing tests as a finding only when a specific uncovered behavior creates meaningful regression risk.
+   - For frontend changes, check for evidence that the browser approval check in `docs/frontend-browser-approval-check.md` was completed. Treat missing evidence as a finding or residual risk when the changed flow has meaningful user-facing behavior.
 
 5. Verify when useful.
    - Run narrow tests, linters, type checks, or static analysis only when they materially improve confidence and are reasonable for the scope.
