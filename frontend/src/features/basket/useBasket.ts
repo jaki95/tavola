@@ -90,13 +90,8 @@ export function useBasket({
   );
 
   const createFreshBasket = useCallback(async (): Promise<ApiResult<Basket>> => {
-    const result = await client.createBasket();
-    if (result.ok) {
-      applyBasket(result.data);
-    }
-
-    return result;
-  }, [applyBasket, client]);
+    return await client.createBasket();
+  }, [client]);
 
   const loadCurrentBasket = useCallback(async () => {
     const requestId = loadRequestId.current + 1;
@@ -134,7 +129,10 @@ export function useBasket({
           basket: basketRef.current,
           message: freshResult.error.message
         });
+        return;
       }
+
+      applyBasket(freshResult.data);
       return;
     }
 

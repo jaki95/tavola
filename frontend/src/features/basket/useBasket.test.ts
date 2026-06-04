@@ -14,6 +14,11 @@ const emptyBasket: Basket = {
   line_count: 0
 };
 
+const replacementEmptyBasket: Basket = {
+  ...emptyBasket,
+  basket_id: "basket-2"
+};
+
 const tagliatelleBasket: Basket = {
   basket_id: "basket-1",
   lines: [
@@ -234,6 +239,45 @@ describe("useBasket", () => {
 
     expect(client.getBasket).toHaveBeenCalledTimes(2);
     expect(result.current.basket.basket).toEqual(tagliatelleBasket);
+  });
+
+  test("ignores stale create responses when a newer basket load wins", async () => {
+    const staleCreate = createDeferred<ApiResult<Basket>>();
+    const currentCreate = createDeferred<ApiResult<Basket>>();
+    const client = createBasketClient({
+      createResults: [staleCreate.promise, currentCreate.promise]
+    });
+
+    const { result } = renderHook(() => useBasket({ client, storage }));
+
+    await waitFor(() => {
+      expect(client.createBasket).toHaveBeenCalledTimes(1);
+    });
+
+    void act(() => {
+      void result.current.reload();
+    });
+
+    await waitFor(() => {
+      expect(client.createBasket).toHaveBeenCalledTimes(2);
+    });
+
+    await act(async () => {
+      currentCreate.resolve(success(replacementEmptyBasket));
+    });
+
+    await waitFor(() => {
+      expect(result.current.basket.status).toBe("success");
+    });
+    expect(result.current.basket.basket).toEqual(replacementEmptyBasket);
+    expect(storage.getItem("tavola:basket_id")).toBe("basket-2");
+
+    await act(async () => {
+      staleCreate.resolve(success(emptyBasket));
+    });
+
+    expect(result.current.basket.basket).toEqual(replacementEmptyBasket);
+    expect(storage.getItem("tavola:basket_id")).toBe("basket-2");
   });
 });
 
