@@ -1,0 +1,4 @@
+interface:
+  display_name: "Log Tech Debt Issues"
+  short_description: "Turn documented deferred work into GitHub issues"
+  default_prompt: "Use $log-tech-debt-issues to reconcile project docs and open GitHub issues for actionable tech debt."
