@@ -73,9 +73,6 @@ export function BasketPanel({
         <button disabled={!canCheckout} onClick={onCheckout} type="button">
           Review and checkout
         </button>
-        <p>
-          Opens a pickup checkout review before creating the order.
-        </p>
       </div>
     </section>
   );

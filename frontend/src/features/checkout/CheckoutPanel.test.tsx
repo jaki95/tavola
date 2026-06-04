@@ -243,6 +243,9 @@ describe("CheckoutPanel", () => {
     expect(within(panel).getByText("ada@example.com")).toBeInTheDocument();
     expect(within(panel).getByText("Today afternoon pickup")).toBeInTheDocument();
     expect(within(panel).getByText("Fresh Tagliatelle x 2")).toBeInTheDocument();
+    expect(
+      within(panel).getByText("Thank you for shopping with us.")
+    ).toBeInTheDocument();
     const confirmation = within(panel).getByRole("status");
     expect(within(confirmation).getByText("2 items")).toBeInTheDocument();
     expect(onCheckoutSuccess).toHaveBeenCalledWith(emptyBasket);

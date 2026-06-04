@@ -107,7 +107,10 @@ export function CheckoutPanel({
         </div>
 
         <div className="checkout-panel__body">
-          <CheckoutReview basket={visibleBasket} />
+          <CheckoutReview
+            basket={visibleBasket}
+            isComplete={submission.status === "success"}
+          />
 
           {submission.status === "success" ? (
             <CheckoutConfirmation
@@ -239,7 +242,22 @@ function CheckoutSummary({ basket }: { basket: Basket | null }) {
   );
 }
 
-function CheckoutReview({ basket }: { basket: Basket | null }) {
+function CheckoutReview({
+  basket,
+  isComplete
+}: {
+  basket: Basket | null;
+  isComplete: boolean;
+}) {
+  if (isComplete) {
+    return (
+      <div className="checkout-review checkout-review--empty">
+        <h3>Basket review</h3>
+        <p>Thank you for shopping with us.</p>
+      </div>
+    );
+  }
+
   if (!basket || basket.lines.length === 0) {
     return (
       <div className="checkout-review checkout-review--empty">

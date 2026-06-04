@@ -897,13 +897,6 @@ h1 {
   letter-spacing: 0;
 }
 
-.basket-panel__checkout p {
-  margin: 0;
-  color: var(--color-muted);
-  font-size: 0.82rem;
-  font-weight: 750;
-}
-
 .basket-line {
   display: grid;
   gap: 12px;
