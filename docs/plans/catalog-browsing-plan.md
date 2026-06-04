@@ -486,6 +486,12 @@ browser that is practical, local, trustworthy, and ready for later basket work.
     placeholder behavior.
 - **Validation**: App tests for catalog first screen and backend status behavior.
 
+**Implementation note (2026-06-04)**: Sprint 4 is implemented. The catalog
+browser state hook lives in `frontend/src/features/catalog/useCatalogBrowser.ts`,
+filter controls, card grid, and detail panel live under
+`frontend/src/features/catalog/`, and the home page now presents catalog browsing
+as Tavola's first screen while keeping basket and checkout visibly planned.
+
 ## Sprint 5: Static Imagery, Polish, And Smoke Checks
 
 **Goal**: Make the catalog feel complete enough to demo and verify the
