@@ -274,7 +274,19 @@ the basket ID while treating the backend as the source of basket contents.
 - In tests, the hook creates a basket when no stored ID exists, recovers from a
   missing stored basket, and updates state after add, edit, and remove calls.
 
+**Progress**: Completed on 2026-06-04.
+
+- Added a shared JSON mutation helper with FastAPI detail-message extraction for
+  user-visible basket validation errors.
+- Added basket response types, runtime guards, and API functions for create,
+  fetch, add, edit, and remove line operations.
+- Added `useBasket` with basket ID storage, restart recovery, reload, mutation
+  state, and backend-owned basket content updates.
+- Validation run: `cd frontend && npm test -- --run src/api/basket.test.ts src/features/basket/useBasket.test.ts`.
+
 ### Task 3.1: Extend The API Client For JSON Mutations
+
+**Status**: Completed on 2026-06-04.
 
 - **Location**: `frontend/src/api/client.ts`,
   `frontend/src/api/client.test.ts`
@@ -293,6 +305,8 @@ the basket ID while treating the backend as the source of basket contents.
 
 ### Task 3.2: Add Basket Types And API Mapper
 
+**Status**: Completed on 2026-06-04.
+
 - **Location**: `frontend/src/types/basket.ts`,
   `frontend/src/api/basket.ts`,
   `frontend/src/api/basket.test.ts`
@@ -309,6 +323,8 @@ the basket ID while treating the backend as the source of basket contents.
   responses.
 
 ### Task 3.3: Add Basket State Hook With LocalStorage ID Persistence
+
+**Status**: Completed on 2026-06-04.
 
 - **Location**: `frontend/src/features/basket/useBasket.ts`,
   `frontend/src/features/basket/useBasket.test.ts`

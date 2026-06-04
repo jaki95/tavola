@@ -23,6 +23,11 @@ export type ApiResult<T> =
       error: ApiError;
     };
 
+type ApiSendJsonOptions = {
+  method: "POST" | "PATCH" | "DELETE";
+  body?: unknown;
+};
+
 const DEFAULT_API_BASE_URL = "/api";
 
 type TavolaEnv = {
@@ -34,12 +39,39 @@ type TavolaImportMeta = ImportMeta & {
 };
 
 export async function apiGetJson<T>(path: string): Promise<ApiResult<T>> {
+  return await requestJson(path, {
+    headers: { Accept: "application/json" }
+  });
+}
+
+export async function apiSendJson<T>(
+  path: string,
+  options: ApiSendJsonOptions
+): Promise<ApiResult<T>> {
+  const requestOptions: RequestInit = {
+    method: options.method,
+    headers: { Accept: "application/json" }
+  };
+
+  if (options.body !== undefined) {
+    requestOptions.headers = {
+      ...requestOptions.headers,
+      "Content-Type": "application/json"
+    };
+    requestOptions.body = JSON.stringify(options.body);
+  }
+
+  return await requestJson(path, requestOptions);
+}
+
+async function requestJson<T>(
+  path: string,
+  options: RequestInit
+): Promise<ApiResult<T>> {
   let response: Response;
 
   try {
-    response = await fetch(buildApiUrl(path), {
-      headers: { Accept: "application/json" }
-    });
+    response = await fetch(buildApiUrl(path), options);
   } catch {
     return {
       ok: false,
@@ -51,11 +83,12 @@ export async function apiGetJson<T>(path: string): Promise<ApiResult<T>> {
   }
 
   if (!response.ok) {
+    const message = await readHttpErrorMessage(response);
     return {
       ok: false,
       error: {
         kind: "http",
-        message: `Request failed with status ${response.status}.`,
+        message,
         status: response.status
       }
     };
@@ -75,6 +108,49 @@ export async function apiGetJson<T>(path: string): Promise<ApiResult<T>> {
       }
     };
   }
+}
+
+async function readHttpErrorMessage(response: Response): Promise<string> {
+  const fallbackMessage = `Request failed with status ${response.status}.`;
+
+  try {
+    return extractFastApiErrorMessage(await response.json()) ?? fallbackMessage;
+  } catch {
+    return fallbackMessage;
+  }
+}
+
+function extractFastApiErrorMessage(value: unknown): string | null {
+  if (!isRecord(value) || !("detail" in value)) {
+    return null;
+  }
+
+  const detail = value["detail"];
+  if (typeof detail === "string" && detail.trim()) {
+    return detail;
+  }
+
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => {
+        if (!isRecord(item)) {
+          return null;
+        }
+        const message = item["msg"];
+        return typeof message === "string" && message.trim() ? message : null;
+      })
+      .filter((message): message is string => message !== null);
+
+    if (messages.length > 0) {
+      return messages.join(" ");
+    }
+  }
+
+  return null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function buildApiUrl(path: string): string {
