@@ -214,6 +214,18 @@ describe("PlannerWorkspace", () => {
     vi.useRealTimers();
   });
 
+  test("renders the planner heading without the old decorative logo", () => {
+    const client = createPlannerClient({});
+
+    const { container } = renderPlannerWorkspace({ client });
+
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Plan a menu" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("powered by Codex")).toBeInTheDocument();
+    expect(container.querySelector(".planner-workspace__icon")).toBeNull();
+  });
+
   test("submits a meal prompt and renders a reviewable proposal", async () => {
     const client = createPlannerClient({
       createResults: [success(readySession)]
@@ -500,7 +512,7 @@ function renderPlannerWorkspace({
   client: PlannerClient;
   onBasketAccepted?: (basket: Basket) => void;
 }) {
-  render(
+  return render(
     <PlannerWorkspace
       basket={basket}
       client={client}
