@@ -37,3 +37,49 @@ Run commands from the repository root unless a checklist item changes directory.
   through the Vite proxy.
 - [ ] If the scaffold change also changed a frontend workflow, complete
   `docs/frontend-browser-approval-check.md` and report any unchecked items.
+
+## Basket Creation And Editing Browser Smoke Check
+
+Use this script for the basket creation and editing workflow after the basket
+slice changes or when validating the full backend/frontend scaffold. The basket
+contents are backend-owned; the frontend must store only the opaque
+`basket_id` in `localStorage`, under `tavola:basket_id`, and must not cache
+basket lines, quantities, prices, or totals there.
+
+- [ ] Start the backend:
+  `cd backend && uv run uvicorn tavola.api.main:app --reload`.
+- [ ] Start the frontend in another shell: `cd frontend && npm run dev`.
+- [ ] Open the Vite URL, normally `http://localhost:5173`, in the Codex in-app
+  Browser when available.
+- [ ] Confirm the backend status is connected and the persistent `Current
+  basket` panel renders.
+- [ ] Clear existing browser state for this origin, reload the page, and confirm
+  a fresh empty basket is created automatically before any product is added.
+- [ ] Inspect `localStorage` for the Vite origin and confirm it contains
+  `tavola:basket_id` with one basket ID value. Confirm no basket contents,
+  line data, quantities, prices, or totals are stored in `localStorage`.
+- [ ] From a catalog card, click `Add to basket` for `Fresh Tagliatelle` and
+  confirm the `Current basket` panel shows one line with quantity `1`,
+  backend-calculated line total, basket total, and item count.
+- [ ] On the same catalog card, confirm the add button changes to show the SKU
+  is already in the basket, such as `Add another` with `1 in basket`.
+- [ ] Open `View details` for `Fresh Tagliatelle`, click the detail modal's add
+  action, and confirm the existing basket line is merged to quantity `2`
+  rather than duplicated.
+- [ ] From the basket panel, edit `Fresh Tagliatelle` quantity to `4` using the
+  quantity input or increment control, and confirm the line total, basket total,
+  and item count update from the backend response.
+- [ ] Attempt to set `Fresh Tagliatelle` quantity to `11` and confirm the
+  basket rejects the change with the backend validation message
+  `Quantity cannot exceed 10.` The basket item count and totals should remain at
+  the last accepted quantity.
+- [ ] Remove `Fresh Tagliatelle` from the basket and confirm removing the final
+  line leaves the same basket visible as an empty backend-owned basket.
+- [ ] Add a product again, copy the current `tavola:basket_id` value, refresh
+  the browser, and confirm the basket reloads with the stored basket ID and the
+  same backend-owned contents.
+- [ ] Stop and restart the backend process. With the same browser
+  `localStorage` still present, reload the frontend page and confirm the
+  disappeared in-memory basket is recovered by creating a fresh empty basket.
+- [ ] Inspect `localStorage` again and confirm `tavola:basket_id` was replaced
+  with the new basket ID, with no basket contents stored client-side.
