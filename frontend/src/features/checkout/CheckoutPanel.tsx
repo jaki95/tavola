@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { formatBasketCount, formatBasketMoney } from "../basket/basketFormat";
 import type { BasketLoadState } from "../basket/useBasket";
@@ -25,6 +25,7 @@ export function CheckoutPanel({
   onClose,
   onCheckoutSuccess
 }: CheckoutPanelProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
   const {
     pickupWindows,
     submission,
@@ -47,14 +48,34 @@ export function CheckoutPanel({
     !isPending;
 
   useEffect(() => {
-    function closeOnEscape(event: KeyboardEvent) {
+    const previouslyFocusedElement =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+
+    focusFirstModalControl(dialogRef.current);
+
+    function handleDialogKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         onClose();
+        return;
+      }
+
+      if (event.key === "Tab") {
+        trapModalFocus(event, dialogRef.current);
       }
     }
 
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    window.addEventListener("keydown", handleDialogKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleDialogKeyDown);
+      if (
+        previouslyFocusedElement &&
+        document.body.contains(previouslyFocusedElement)
+      ) {
+        previouslyFocusedElement.focus();
+      }
+    };
   }, [onClose]);
 
   useEffect(() => {
@@ -95,7 +116,9 @@ export function CheckoutPanel({
       aria-labelledby="checkout-panel-title"
       aria-modal="true"
       className="checkout-modal"
+      ref={dialogRef}
       role="dialog"
+      tabIndex={-1}
     >
       <section className="checkout-panel" id="checkout-panel">
         <div className="checkout-panel__header">
@@ -225,6 +248,74 @@ export function CheckoutPanel({
         </div>
       </section>
     </div>
+  );
+}
+
+function focusFirstModalControl(dialog: HTMLDivElement | null) {
+  const firstFocusableElement = getFocusableModalElements(dialog)[0];
+  if (firstFocusableElement) {
+    firstFocusableElement.focus();
+    return;
+  }
+
+  dialog?.focus();
+}
+
+function trapModalFocus(event: KeyboardEvent, dialog: HTMLDivElement | null) {
+  if (!dialog) {
+    return;
+  }
+
+  const focusableElements = getFocusableModalElements(dialog);
+  if (focusableElements.length === 0) {
+    event.preventDefault();
+    dialog.focus();
+    return;
+  }
+
+  const firstFocusableElement = focusableElements[0]!;
+  const lastFocusableElement = focusableElements[focusableElements.length - 1]!;
+  const activeElement = document.activeElement;
+
+  if (event.shiftKey) {
+    if (
+      activeElement === firstFocusableElement ||
+      !dialog.contains(activeElement)
+    ) {
+      event.preventDefault();
+      lastFocusableElement.focus();
+    }
+    return;
+  }
+
+  if (activeElement === lastFocusableElement || !dialog.contains(activeElement)) {
+    event.preventDefault();
+    firstFocusableElement.focus();
+  }
+}
+
+function getFocusableModalElements(
+  dialog: HTMLDivElement | null
+): HTMLElement[] {
+  if (!dialog) {
+    return [];
+  }
+
+  return Array.from(
+    dialog.querySelectorAll<HTMLElement>(
+      [
+        "a[href]",
+        "button:not([disabled])",
+        "input:not([disabled])",
+        "select:not([disabled])",
+        "textarea:not([disabled])",
+        "[tabindex]:not([tabindex='-1'])"
+      ].join(",")
+    )
+  ).filter(
+    (element) =>
+      !element.hasAttribute("disabled") &&
+      element.getAttribute("aria-hidden") !== "true"
   );
 }
 

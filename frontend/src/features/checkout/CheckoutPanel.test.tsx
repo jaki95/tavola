@@ -90,6 +90,35 @@ describe("CheckoutPanel", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  test("moves focus into the dialog when checkout opens", async () => {
+    renderCheckoutPanel();
+
+    const dialog = screen.getByRole("dialog", { name: "Pickup checkout" });
+    await within(dialog).findByLabelText("Contact name");
+
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+  });
+
+  test("keeps tab focus inside the checkout dialog", async () => {
+    renderCheckoutPanel();
+
+    const dialog = screen.getByRole("dialog", { name: "Pickup checkout" });
+    const contactName = await within(dialog).findByLabelText("Contact name");
+    const backButton = within(dialog).getByRole("button", {
+      name: "Back to basket"
+    });
+
+    backButton.focus();
+    fireEvent.keyDown(window, { key: "Tab" });
+
+    expect(contactName).toHaveFocus();
+
+    contactName.focus();
+    fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
+
+    expect(backButton).toHaveFocus();
+  });
+
   test("blocks checkout while keeping the empty basket state visible", async () => {
     renderCheckoutPanel({
       basket: { status: "success", basket: emptyBasket }
