@@ -42,6 +42,11 @@ When the user points at a plan created by `$planner` and asks to implement a spr
 
 5. Keep the plan current.
    - If useful, mark completed tasks or add a concise implementation note in the plan.
+   - When the implemented work completes the plan's final sprint, and required
+     validation has passed or any remaining validation gaps are explicitly
+     reported, move the plan file to `docs/plans/completed/`. Create that
+     directory if needed. Preserve the filename unless the user asks for a
+     rename.
    - Do not rewrite the plan into a new plan unless the user asks.
 
 ## Slice Workflow
@@ -79,4 +84,5 @@ why it could not be completed.
 
 Report the concrete behavior changed, layers touched, API contract changes,
 infrastructure changes, tests run, browser checks run, and any gaps. Keep the
-summary in Tavola terms.
+summary in Tavola terms. If a planner plan was completed, mention the completed
+plan path under `docs/plans/completed/`.
