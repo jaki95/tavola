@@ -59,6 +59,7 @@ export type CatalogDetailState =
 
 type UseCatalogBrowserOptions = {
   client?: CatalogClient;
+  isActive?: boolean;
 };
 
 const defaultCatalogClient: CatalogClient = {
@@ -73,7 +74,8 @@ const emptyCatalogState: CatalogListState = {
 };
 
 export function useCatalogBrowser({
-  client = defaultCatalogClient
+  client = defaultCatalogClient,
+  isActive = true
 }: UseCatalogBrowserOptions = {}) {
   const [catalog, setCatalog] = useState<CatalogListState>(emptyCatalogState);
   const [detail, setDetail] = useState<CatalogDetailState>({ status: "closed" });
@@ -83,6 +85,7 @@ export function useCatalogBrowser({
   const [committedSearch, setCommittedSearch] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
   const detailRequestId = useRef(0);
+  const wasActive = useRef(isActive);
 
   useEffect(() => {
     let isCurrent = true;
@@ -117,6 +120,14 @@ export function useCatalogBrowser({
     detailRequestId.current += 1;
     setDetail({ status: "closed" });
   }, []);
+
+  useEffect(() => {
+    if (wasActive.current && !isActive) {
+      closeDetail();
+    }
+
+    wasActive.current = isActive;
+  }, [closeDetail, isActive]);
 
   const selectCategory = useCallback((categoryId: CatalogCategoryId | null) => {
     detailRequestId.current += 1;

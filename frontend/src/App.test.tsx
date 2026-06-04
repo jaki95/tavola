@@ -5,7 +5,6 @@ import { App } from "./App";
 import { createBasket } from "./api/basket";
 import { getCatalog, getCatalogProduct } from "./api/catalog";
 import { createCheckout, listPickupWindows } from "./api/checkout";
-import { getHealth } from "./api/health";
 import {
   acceptProposal,
   createPlannerSession,
@@ -15,10 +14,6 @@ import type { Basket } from "./types/basket";
 import type { CatalogListResponse, CatalogProductSummary } from "./types/catalog";
 import type { CheckoutResponse, PickupWindow } from "./types/checkout";
 import type { MenuProposal, PlannerSessionResponse } from "./types/planner";
-
-vi.mock("./api/health", () => ({
-  getHealth: vi.fn()
-}));
 
 vi.mock("./api/catalog", () => ({
   getCatalog: vi.fn(),
@@ -48,7 +43,6 @@ vi.mock("./api/planner", () => ({
 }));
 
 const createBasketMock = vi.mocked(createBasket);
-const getHealthMock = vi.mocked(getHealth);
 const getCatalogMock = vi.mocked(getCatalog);
 const getCatalogProductMock = vi.mocked(getCatalogProduct);
 const listPickupWindowsMock = vi.mocked(listPickupWindows);
@@ -244,23 +238,24 @@ describe("App", () => {
     });
   });
 
-  test("renders the Tavola catalog as the first storefront screen", async () => {
-    getHealthMock.mockResolvedValue({
-      ok: true,
-      data: { service: "Tavola API", status: "ok" }
-    });
-
+  test("renders Shop as the default storefront workflow", async () => {
     render(<App />);
 
     const storefrontHeader = screen.getByRole("banner", {
       name: "Tavola storefront"
     });
     expect(
-      within(storefrontHeader).getByRole("link", { name: "Tavola Italian deli" })
-    ).toHaveAttribute("href", "#catalog-title");
-    expect(
-      within(storefrontHeader).getByLabelText("Service status")
+      within(storefrontHeader).getByRole("button", {
+        name: "Tavola Italian deli"
+      })
     ).toBeInTheDocument();
+    const shopTab = within(storefrontHeader).getByRole("tab", { name: "Shop" });
+    const planTab = within(storefrontHeader).getByRole("tab", { name: "Plan" });
+    expect(shopTab).toHaveAttribute("aria-selected", "true");
+    expect(planTab).toHaveAttribute("aria-selected", "false");
+    expect(
+      within(storefrontHeader).queryByText(/service/i)
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("navigation", { name: "Primary" })
     ).not.toBeInTheDocument();
@@ -268,7 +263,7 @@ describe("App", () => {
       screen.queryByRole("button", { name: /checkout planned/i })
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 1, name: "Catalog" })
+      screen.getByRole("heading", { level: 1, name: "Shop" })
     ).toBeInTheDocument();
     expect(
       screen.getByText("Browse deli products and add your picks to the basket.")
@@ -282,10 +277,11 @@ describe("App", () => {
     expect(
       await screen.findByRole("region", { name: "Current basket" })
     ).toBeInTheDocument();
-    const planner = screen.getByRole("region", { name: "Plan a menu" });
     const basketPanel = screen.getByRole("region", { name: "Current basket" });
-    expect(planner.closest(".storefront-main__primary")).not.toBeNull();
     expect(basketPanel.closest(".storefront-main__side-panel")).not.toBeNull();
+    expect(
+      screen.queryByRole("heading", { level: 2, name: "Plan a menu" })
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("dialog", { name: "Pickup checkout" })
     ).not.toBeInTheDocument();
@@ -294,11 +290,159 @@ describe("App", () => {
     ).toBeDisabled();
   });
 
-  test("synchronizes the visible basket after checkout succeeds", async () => {
-    getHealthMock.mockResolvedValue({
+  test("switches workflows while keeping the basket visible in the side panel", async () => {
+    createBasketMock.mockResolvedValue({
       ok: true,
-      data: { service: "Tavola API", status: "ok" }
+      data: tagliatelleBasket
     });
+
+    render(<App />);
+
+    await screen.findByRole("button", {
+      name: "View details for Fresh Tagliatelle"
+    });
+
+    const storefrontHeader = screen.getByRole("banner", {
+      name: "Tavola storefront"
+    });
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Plan" }));
+
+    expect(
+      within(storefrontHeader).getByRole("tab", { name: "Plan" })
+    ).toHaveAttribute("aria-selected", "true");
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Plan a menu" })
+    ).toBeInTheDocument();
+
+    const basketPanel = screen.getByRole("region", {
+      name: "Current basket"
+    });
+    expect(basketPanel.closest(".storefront-main__side-panel")).not.toBeNull();
+    expect(within(basketPanel).getByText("Fresh Tagliatelle")).toBeInTheDocument();
+
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Shop" }));
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Shop" })
+    ).toBeInTheDocument();
+    expect(within(basketPanel).getByText("Fresh Tagliatelle")).toBeInTheDocument();
+  });
+
+  test("selecting the Tavola brand returns to Shop without clearing planner state", async () => {
+    render(<App />);
+
+    const storefrontHeader = screen.getByRole("banner", {
+      name: "Tavola storefront"
+    });
+
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Plan" }));
+    const planner = screen.getByRole("region", { name: "Plan a menu" });
+    fireEvent.change(within(planner).getByLabelText("Meal request"), {
+      target: { value: "Picnic lunch for 4" }
+    });
+
+    fireEvent.click(
+      within(storefrontHeader).getByRole("button", {
+        name: "Tavola Italian deli"
+      })
+    );
+
+    expect(
+      within(storefrontHeader).getByRole("tab", { name: "Shop" })
+    ).toHaveAttribute("aria-selected", "true");
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Shop" })
+    ).toBeInTheDocument();
+
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Plan" }));
+
+    expect(within(planner).getByLabelText("Meal request")).toHaveValue(
+      "Picnic lunch for 4"
+    );
+  });
+
+  test("keeps a returned planner proposal after switching workflows", async () => {
+    render(<App />);
+
+    const storefrontHeader = screen.getByRole("banner", {
+      name: "Tavola storefront"
+    });
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Plan" }));
+
+    const planner = screen.getByRole("region", { name: "Plan a menu" });
+    fireEvent.change(within(planner).getByLabelText("Meal request"), {
+      target: { value: "Plan pasta for 2" }
+    });
+    fireEvent.click(within(planner).getByRole("button", { name: "Plan menu" }));
+
+    expect(
+      await within(planner).findByRole("heading", {
+        level: 3,
+        name: "Fresh pasta supper"
+      })
+    ).toBeInTheDocument();
+
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Shop" }));
+    expect(
+      screen.queryByRole("heading", {
+        level: 3,
+        name: "Fresh pasta supper"
+      })
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Plan" }));
+    expect(
+      within(planner).getByRole("heading", {
+        level: 3,
+        name: "Fresh pasta supper"
+      })
+    ).toBeInTheDocument();
+  });
+
+  test("preserves catalog filters but closes detail after leaving Shop", async () => {
+    render(<App />);
+
+    await screen.findByRole("heading", {
+      level: 3,
+      name: "Fresh Tagliatelle"
+    });
+    fireEvent.click(screen.getByLabelText("Primi"));
+    fireEvent.change(screen.getByLabelText("Search catalog"), {
+      target: { value: "pasta" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+
+    await waitFor(() => {
+      expect(getCatalogMock).toHaveBeenLastCalledWith({
+        category_id: "primi",
+        query: "pasta"
+      });
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "View details for Fresh Tagliatelle" })
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "Product detail" })
+    ).toBeInTheDocument();
+
+    const storefrontHeader = screen.getByRole("banner", {
+      name: "Tavola storefront"
+    });
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Plan" }));
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Shop" }));
+
+    expect(screen.getByLabelText("Primi")).toBeChecked();
+    expect(screen.getByLabelText("Search catalog")).toHaveValue("pasta");
+    expect(
+      screen.getByText("Showing matches for", { exact: false })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Product detail" })
+    ).not.toBeInTheDocument();
+  });
+
+  test("synchronizes the visible basket after checkout succeeds", async () => {
     createBasketMock.mockResolvedValue({
       ok: true,
       data: tagliatelleBasket
@@ -346,12 +490,12 @@ describe("App", () => {
   });
 
   test("adds an accepted planner proposal to the visible basket", async () => {
-    getHealthMock.mockResolvedValue({
-      ok: true,
-      data: { service: "Tavola API", status: "ok" }
-    });
-
     render(<App />);
+
+    const storefrontHeader = screen.getByRole("banner", {
+      name: "Tavola storefront"
+    });
+    fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Plan" }));
 
     const planner = await screen.findByRole("region", { name: "Plan a menu" });
     fireEvent.change(within(planner).getByLabelText("Meal request"), {
@@ -379,68 +523,6 @@ describe("App", () => {
       mode: "append",
       menu_proposal: plannerProposal
     });
-  });
-
-  test("shows the backend status loading state by default", () => {
-    getHealthMock.mockResolvedValue({
-      ok: true,
-      data: { service: "Tavola API", status: "ok" }
-    });
-
-    render(<App />);
-
-    const storefrontHeader = screen.getByRole("banner", {
-      name: "Tavola storefront"
-    });
-
-    expect(within(storefrontHeader).getByLabelText("Service status")).toHaveAttribute(
-      "role",
-      "status"
-    );
-    expect(screen.getByText("Checking service")).toBeInTheDocument();
-    expect(screen.getByText("Waiting for the health check.")).toBeInTheDocument();
-  });
-
-  test("shows the backend status success state from the health client", async () => {
-    getHealthMock.mockResolvedValue({
-      ok: true,
-      data: { service: "Tavola API", status: "ok" }
-    });
-
-    render(<App />);
-
-    const storefrontHeader = screen.getByRole("banner", {
-      name: "Tavola storefront"
-    });
-
-    expect(
-      within(storefrontHeader).getByLabelText("Service status")
-    ).toBeInTheDocument();
-    expect(await screen.findByText("Service ready")).toBeInTheDocument();
-    expect(screen.getByText("Tavola API ready.")).toBeInTheDocument();
-  });
-
-  test("shows the backend status error state from the health client", async () => {
-    getHealthMock.mockResolvedValue({
-      ok: false,
-      error: {
-        kind: "network",
-        message: "Could not reach the Tavola API."
-      }
-    });
-
-    render(<App />);
-
-    const storefrontHeader = screen.getByRole("banner", {
-      name: "Tavola storefront"
-    });
-    const alert = await within(storefrontHeader).findByRole("alert", {
-      name: "Service status"
-    });
-
-    expect(alert).toHaveAttribute("role", "alert");
-    expect(screen.getByText("Service unavailable")).toBeInTheDocument();
-    expect(screen.getByText("Could not reach the Tavola API.")).toBeInTheDocument();
   });
 });
 
