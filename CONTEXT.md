@@ -47,6 +47,12 @@ proposals rather than Codex-specific operations. The attribution belongs in the
 Planner surface only; accepted basket and order summaries should return to
 Tavola meal-plan language without repeating Codex branding.
 
+In its empty or input state, the Planner should appear as a compact first-
+viewport band rather than a large hero panel. The supported desktop viewport
+should still show the beginning of catalog browsing, including at least part of
+the first product row. The Planner may expand after a menu proposal is ready
+because the customer is then actively reviewing the AI-assisted output.
+
 A customer describes an occasion or meal need, such as a small dinner party,
 picnic, antipasti board, or family lunch. Codex works inside a bounded planning
 session using catalog search and validation tools. It proposes a menu, maps that

@@ -508,6 +508,10 @@ before basket mutation.
 - **Acceptance Criteria**:
   - Planner appears as a first-class workspace above or beside catalog browsing
     in the desktop storefront.
+  - Planner empty/input state is a compact first-viewport band that still leaves
+    at least part of the first catalog product row visible on the supported
+    desktop viewport.
+  - Planner may expand after a menu proposal is ready for review.
   - Basket updates after accepted proposals without a full page reload.
   - Existing catalog add-to-basket and checkout flows still work.
   - Visual design stays consistent with Tavola's current restrained deli
