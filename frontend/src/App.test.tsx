@@ -157,9 +157,15 @@ describe("App", () => {
 
     render(<App />);
 
+    const storefrontHeader = screen.getByRole("banner", {
+      name: "Tavola storefront"
+    });
     expect(
-      screen.getByRole("link", { name: /independent italian deli tavola/i })
+      within(storefrontHeader).getByRole("link", { name: "Tavola Italian deli" })
     ).toHaveAttribute("href", "#catalog-title");
+    expect(
+      within(storefrontHeader).getByLabelText("Service status")
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("navigation", { name: "Primary" })
     ).not.toBeInTheDocument();
@@ -248,7 +254,11 @@ describe("App", () => {
 
     render(<App />);
 
-    expect(screen.getByLabelText("Service status")).toHaveAttribute(
+    const storefrontHeader = screen.getByRole("banner", {
+      name: "Tavola storefront"
+    });
+
+    expect(within(storefrontHeader).getByLabelText("Service status")).toHaveAttribute(
       "role",
       "status"
     );
@@ -264,6 +274,13 @@ describe("App", () => {
 
     render(<App />);
 
+    const storefrontHeader = screen.getByRole("banner", {
+      name: "Tavola storefront"
+    });
+
+    expect(
+      within(storefrontHeader).getByLabelText("Service status")
+    ).toBeInTheDocument();
     expect(await screen.findByText("Service ready")).toBeInTheDocument();
     expect(screen.getByText("Tavola API ready.")).toBeInTheDocument();
   });
@@ -279,7 +296,12 @@ describe("App", () => {
 
     render(<App />);
 
-    const alert = await screen.findByLabelText("Service status");
+    const storefrontHeader = screen.getByRole("banner", {
+      name: "Tavola storefront"
+    });
+    const alert = await within(storefrontHeader).findByRole("alert", {
+      name: "Service status"
+    });
 
     expect(alert).toHaveAttribute("role", "alert");
     expect(screen.getByText("Service unavailable")).toBeInTheDocument();
