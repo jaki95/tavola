@@ -99,6 +99,7 @@ def main(argv: list[str] | None = None) -> int:
             client=PythonCodexSdkClient(cwd=Path.cwd()),
             model=settings.planner_codex_model,
             sandbox_mode=settings.planner_codex_sandbox_mode,
+            reasoning_effort=settings.codex_sdk_reasoning_effort(),
             timeout_seconds=settings.planner_codex_timeout_seconds,
             max_retries=settings.planner_codex_max_retries,
         ),
@@ -134,6 +135,7 @@ def _run_benchmark_iteration(
             client=PythonCodexSdkClient(cwd=Path.cwd()),
             model=settings.planner_codex_model,
             sandbox_mode=settings.planner_codex_sandbox_mode,
+            reasoning_effort=settings.codex_sdk_reasoning_effort(),
             timeout_seconds=settings.planner_codex_timeout_seconds,
             max_retries=settings.planner_codex_max_retries,
             timing_sink=events.append,
@@ -175,6 +177,7 @@ def _benchmark_payload(
     return {
         "mode": "benchmark",
         "model": settings.planner_codex_model,
+        "reasoning_effort": settings.planner_codex_reasoning_effort,
         "timeout_seconds": settings.planner_codex_timeout_seconds,
         "max_retries": settings.planner_codex_max_retries,
         "repeat": len(runs),

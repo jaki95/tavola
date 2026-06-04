@@ -54,6 +54,7 @@ class CodexSdkClient(Protocol):
         prompt: str,
         model: str,
         sandbox_mode: str,
+        reasoning_effort: str | None,
         mcp_servers: tuple[CodexMcpServerConfig, ...],
         timeout_seconds: float,
         timing_sink: PlannerTimingSink | None = None,
@@ -81,6 +82,7 @@ class PythonCodexSdkClient:
         prompt: str,
         model: str,
         sandbox_mode: str,
+        reasoning_effort: str | None,
         mcp_servers: tuple[CodexMcpServerConfig, ...],
         timeout_seconds: float,
         timing_sink: PlannerTimingSink | None = None,
@@ -91,6 +93,7 @@ class PythonCodexSdkClient:
             prompt=prompt,
             model=model,
             sandbox_mode=sandbox_mode,
+            reasoning_effort=reasoning_effort,
             mcp_servers=mcp_servers,
             timing_sink=timing_sink,
         )
@@ -108,13 +111,16 @@ class PythonCodexSdkClient:
         prompt: str,
         model: str,
         sandbox_mode: str,
+        reasoning_effort: str | None,
         mcp_servers: tuple[CodexMcpServerConfig, ...],
         timing_sink: PlannerTimingSink | None,
     ) -> CodexSdkRunResult:
         if self._codex_factory is None:
             from openai_codex import ApprovalMode, Codex, CodexConfig, Sandbox
+            from openai_codex.generated.v2_all import ReasoningEffort
         else:
             from openai_codex import ApprovalMode, CodexConfig, Sandbox
+            from openai_codex.generated.v2_all import ReasoningEffort
 
         run_started_at = time.perf_counter()
         client_started_at = time.perf_counter()
@@ -153,6 +159,9 @@ class PythonCodexSdkClient:
             turn_result = thread.run(
                 prompt,
                 approval_mode=ApprovalMode.auto_review,
+                effort=ReasoningEffort(reasoning_effort)
+                if reasoning_effort is not None
+                else None,
                 model=model,
                 sandbox=sandbox,
             )
@@ -227,8 +236,9 @@ class CodexMenuPlannerAgent:
         client: CodexSdkClient,
         model: str,
         sandbox_mode: str = "read-only",
+        reasoning_effort: str | None = None,
         timeout_seconds: float = 60.0,
-        max_retries: int = 1,
+        max_retries: int = 0,
         timing_sink: PlannerTimingSink | None = None,
         mcp_server_command: tuple[str, ...] = (
             "python",
@@ -239,6 +249,7 @@ class CodexMenuPlannerAgent:
         self._client = client
         self._model = model
         self._sandbox_mode = sandbox_mode
+        self._reasoning_effort = reasoning_effort
         self._timeout_seconds = timeout_seconds
         self._max_retries = max_retries
         self._timing_sink = timing_sink
@@ -268,6 +279,7 @@ class CodexMenuPlannerAgent:
                     prompt=prompt,
                     model=self._model,
                     sandbox_mode=self._sandbox_mode,
+                    reasoning_effort=self._reasoning_effort,
                     mcp_servers=self._mcp_servers,
                     timeout_seconds=self._timeout_seconds,
                     timing_sink=self._timing_sink,
@@ -399,33 +411,25 @@ def _build_planner_prompt(
     return "\n".join(
         (
             "You are Tavola's Planner for a small Italian deli.",
-            "You MUST use Tavola MCP tools before proposing products.",
-            "Do not rely on memory, visible page data, or guessed catalog data.",
-            "Before final JSON, call these tools successfully in this order:",
-            "1. list_package_templates before choosing a package template.",
-            "2. search_catalog for candidate products.",
-            "3. validate_menu_proposal for the completed proposal.",
-            "After list_package_templates, your next action must be search_catalog.",
-            "After search_catalog, build a draft from the search result summaries "
-            "and call validate_menu_proposal.",
-            "Do not call get_sku_detail during the first pass; search_catalog "
-            "already returns product names, units, prices, availability, dietary "
-            "facets, and short descriptions.",
-            "Call get_sku_detail only if a selected product needs extra detail "
-            "that is missing from search_catalog.",
-            "Your final response is invalid unless this turn used all three "
-            "required Tavola tool names.",
-            "If any required Tavola MCP tool is unavailable, do not return a "
-            "menu proposal.",
-            "SKU validity, availability, quantities, and totals must come from "
-            "Tavola tools.",
+            "Minimum contract: use package templates; call list_package_templates, "
+            "search_catalog, and validate_menu_proposal before any menu proposal.",
+            "If party size is missing, ask one follow-up question instead of "
+            "guessing quantities.",
+            "Use search_catalog summaries for product names, units, prices, "
+            "availability, dietary facets, and short descriptions.",
+            "Call get_sku_detail only when a chosen product needs extra detail.",
+            "Do not invent products or prices; Tavola validation owns SKU "
+            "validity, availability, quantities, and totals.",
+            "Apply supported vegetarian, vegan, gluten-free, no-alcohol, and "
+            "budget constraints honestly. Explain unsupported constraints.",
             "Final JSON contract:",
+            '{ "follow_up_question": string } OR',
             '{ "title": string, "explanation": string, '
             '"planner_notes": string[], "party_size": number | null, '
             '"package_template_id": string, "courses": [ { "course": string, '
             '"lines": [ { "sku_id": string, "quantity": number, '
             '"rationale": string } ] } ], "warnings"?: string[] }',
-            "Return JSON only, without Markdown or commentary.",
+            "Return one JSON object only, without Markdown or commentary.",
             "Customer request:",
             customer_request,
             "Follow-up answers:",

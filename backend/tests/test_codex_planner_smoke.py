@@ -47,6 +47,7 @@ def test_benchmark_payload_omits_proposals_by_default() -> None:
     )
 
     assert payload["mode"] == "benchmark"
+    assert payload["reasoning_effort"] == "low"
     assert payload["thresholds"] == {"ideal_ms": 10_000, "acceptable_ms": 30_000}
     runs = payload["runs"]
     assert isinstance(runs, list)

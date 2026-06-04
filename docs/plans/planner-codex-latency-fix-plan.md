@@ -294,6 +294,47 @@ tool-use, and deterministic validation contract.
   - `cd backend && uv run pytest tests/test_settings.py tests/test_codex_planner_adapter.py`
   - Benchmark includes malformed-output or repair-observed run notes if seen.
 
+### Sprint 2 Implementation Note
+
+- Reconciled Tavola's real planner default model documentation around
+  `gpt-5.5`; the stale `.env.example` `gpt-5.2-codex` reference was removed.
+- Added `TAVOLA_PLANNER_CODEX_REASONING_EFFORT`, defaulting to `low`, because
+  installed `openai-codex` 0.1.0b3 exposes a typed `Thread.run(effort=...)`
+  hook. `sdk-default` omits the effort argument for benchmark comparisons.
+- Compressed the planner prompt into a short contract that still requires
+  package templates, catalog search, validation, party-size follow-up handling,
+  no invented products or prices, and final JSON only.
+- Made MCP tool outputs more decisive with bounded `search_catalog` results,
+  result counts, and `recommended_next_action` guidance while preserving
+  Tavola's authoritative validation totals.
+- Set the live demo retry default to
+  `TAVOLA_PLANNER_CODEX_MAX_RETRIES=0`; repair tests opt in with
+  `max_retries=1`.
+- Did not add the consolidated `draft_validated_menu_proposal` tool from
+  Task 2.5 in this pass; that spike remains conditional on post-change
+  benchmarks still missing the 30-second acceptable threshold.
+- Real Codex benchmark on `gpt-5.5` with `low` reasoning effort for
+  `Vegetarian dinner for 4 around GBP 50` produced three slow runs:
+  two technical timeouts at 60,007 ms and 60,003 ms, and one valid proposal at
+  57,368 ms. Summary: 1 successful run, 2 failed timeout runs, min 57,368 ms,
+  median 60,003 ms, max 60,007 ms. This misses both the 10-second ideal and
+  30-second acceptable benchmarks, so Task 2.5 remains a live candidate for the
+  next latency pass.
+- `codex-mini-latest` was checked through the same live SDK credential path.
+  With `low` reasoning effort it failed before Tavola validation in 4,895 ms;
+  with `sdk-default` reasoning effort it failed before Tavola validation in
+  4,223 ms. Both runs were fast but returned `tool_failure` with no detected
+  Tavola tool usage, so the mini model is not currently a viable default for
+  Tavola's MCP-backed planner flow.
+- `gpt-5.4-mini` was accepted by the same live SDK credential path and produced
+  a valid proposal with required Tavola tool usage at 39,928 ms. This improves
+  over `gpt-5.5` but still misses the 30-second acceptable benchmark.
+- `gpt-5.3-codex-spark` was accepted by the same live SDK credential path but
+  did not use Tavola tools. With `low` reasoning effort it failed with
+  `missing_tool_use` at 17,975 ms; with `sdk-default` reasoning effort it failed
+  with `missing_tool_use` at 35,557 ms. Spark is fast enough to be interesting,
+  but not currently viable for Tavola's required MCP validation contract.
+
 ## Sprint 3: Add Planning-First User Experience
 
 **Goal**: Make live planner submissions enter a planning session immediately,

@@ -23,6 +23,8 @@ PLANNER_TOOL_INSTRUCTIONS = (
     "Use Tavola tools for SKU validity, availability, quantity, and totals. "
     "Do not invent SKUs or prices. Do not mutate baskets or checkout orders."
 )
+DEFAULT_SEARCH_LIMIT = 8
+MAX_SEARCH_LIMIT = 12
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,13 +140,19 @@ def _tool_descriptions() -> list[ToolPayload]:
             "name": "search_catalog",
             "description": (
                 "Search buyable Tavola products using customer request terms, "
-                "tags, categories, and dietary facets."
+                "tags, categories, and dietary facets. Returns compact summaries "
+                "for proposal drafting."
             ),
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "query": {"type": "string"},
                     "category_id": {"type": "string"},
+                    "max_results": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": MAX_SEARCH_LIMIT,
+                    },
                 },
             },
         },
@@ -195,6 +203,9 @@ def _list_package_templates(arguments: Mapping[str, Any]) -> ToolPayload:
     del arguments
     return {
         "instructions": PLANNER_TOOL_INSTRUCTIONS,
+        "recommended_next_action": (
+            "Choose one template, then call search_catalog for matching products."
+        ),
         "templates": [
             {
                 "template_id": template.template_id,
@@ -220,7 +231,14 @@ def _search_catalog_handler(catalog_repository: CatalogRepository) -> ToolHandle
             query=query if isinstance(query, str) else None,
             category_id=category_id if isinstance(category_id, str) else None,
         )
-        return {"products": [_sku_summary_payload(sku) for sku in result.products]}
+        max_results = _search_limit(arguments.get("max_results"))
+        products = result.products[:max_results]
+        return {
+            "result_count": len(result.products),
+            "returned_count": len(products),
+            "recommended_next_action": _search_recommended_next_action(products),
+            "products": [_sku_summary_payload(sku) for sku in products],
+        }
 
     return search_catalog
 
@@ -249,6 +267,10 @@ def _validate_proposal_handler(catalog_repository: CatalogRepository) -> ToolHan
             return {
                 "is_valid": False,
                 "menu_proposal": None,
+                "recommended_next_action": (
+                    "Revise the proposal using only valid catalog products and call "
+                    "validate_menu_proposal again."
+                ),
                 "validation_errors": [
                     _validation_error_payload(error)
                     for error in result.validation_errors
@@ -257,10 +279,28 @@ def _validate_proposal_handler(catalog_repository: CatalogRepository) -> ToolHan
         return {
             "is_valid": True,
             "menu_proposal": _validated_menu_proposal_payload(result.menu_proposal),
+            "recommended_next_action": (
+                "Return the validated menu proposal as the final JSON object."
+            ),
             "validation_errors": [],
         }
 
     return validate_proposal
+
+
+def _search_limit(raw_limit: Any) -> int:
+    if not isinstance(raw_limit, int):
+        return DEFAULT_SEARCH_LIMIT
+    return min(max(raw_limit, 1), MAX_SEARCH_LIMIT)
+
+
+def _search_recommended_next_action(products: tuple[CatalogSku, ...]) -> str:
+    if not products:
+        return "Search again with broader request terms or a different category."
+    return (
+        "Build a draft menu proposal from these products, then call "
+        "validate_menu_proposal."
+    )
 
 
 def _sku_summary_payload(sku: CatalogSku) -> ToolPayload:

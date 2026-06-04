@@ -17,8 +17,10 @@ def test_settings_defaults_are_local_development_friendly() -> None:
     assert settings.planner_codex_enabled is False
     assert settings.planner_codex_model == "gpt-5.5"
     assert settings.planner_codex_sandbox_mode == "read-only"
+    assert settings.planner_codex_reasoning_effort == "low"
+    assert settings.codex_sdk_reasoning_effort() == "low"
     assert settings.planner_codex_timeout_seconds == 60
-    assert settings.planner_codex_max_retries == 1
+    assert settings.planner_codex_max_retries == 0
     assert settings.planner_codex_missing_credentials == "disable"
     assert settings.planner_codex_credentials_configured is False
     assert settings.use_real_codex_planner() is False
@@ -36,6 +38,7 @@ def test_planner_codex_settings_can_be_configured_from_environment(
     monkeypatch.setenv("TAVOLA_PLANNER_CODEX_ENABLED", "true")
     monkeypatch.setenv("TAVOLA_PLANNER_CODEX_MODEL", "gpt-test-codex")
     monkeypatch.setenv("TAVOLA_PLANNER_CODEX_SANDBOX_MODE", "workspace-write")
+    monkeypatch.setenv("TAVOLA_PLANNER_CODEX_REASONING_EFFORT", "minimal")
     monkeypatch.setenv("TAVOLA_PLANNER_CODEX_TIMEOUT_SECONDS", "120")
     monkeypatch.setenv("TAVOLA_PLANNER_CODEX_MAX_RETRIES", "3")
     monkeypatch.setenv("TAVOLA_PLANNER_CODEX_MISSING_CREDENTIALS", "error")
@@ -46,6 +49,8 @@ def test_planner_codex_settings_can_be_configured_from_environment(
     assert settings.planner_codex_enabled is True
     assert settings.planner_codex_model == "gpt-test-codex"
     assert settings.planner_codex_sandbox_mode == "workspace-write"
+    assert settings.planner_codex_reasoning_effort == "minimal"
+    assert settings.codex_sdk_reasoning_effort() == "minimal"
     assert settings.planner_codex_timeout_seconds == 120
     assert settings.planner_codex_max_retries == 3
     assert settings.planner_codex_missing_credentials == "error"
@@ -87,6 +92,26 @@ def test_missing_codex_credentials_can_raise_for_demo_setup(
 
     with pytest.raises(MissingPlannerCodexCredentialsError):
         settings.use_real_codex_planner()
+
+
+def test_codex_reasoning_effort_can_use_sdk_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TAVOLA_PLANNER_CODEX_REASONING_EFFORT", "sdk-default")
+
+    settings = Settings()
+
+    assert settings.planner_codex_reasoning_effort == "sdk-default"
+    assert settings.codex_sdk_reasoning_effort() is None
+
+
+def test_invalid_codex_reasoning_effort_fails_settings_construction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TAVOLA_PLANNER_CODEX_REASONING_EFFORT", "faster-please")
+
+    with pytest.raises(ValueError, match="TAVOLA_PLANNER_CODEX_REASONING_EFFORT"):
+        Settings()
 
 
 def test_planner_runtime_status_reports_disabled_by_default(

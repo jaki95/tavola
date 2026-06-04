@@ -3,6 +3,15 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 CodexSandboxMode = Literal["read-only", "workspace-write", "danger-full-access"]
+CodexReasoningEffort = Literal[
+    "sdk-default",
+    "none",
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+]
 MissingCredentialsBehavior = Literal["disable", "error"]
 PlannerRuntimeMode = Literal["real_codex", "disabled"]
 
@@ -77,6 +86,26 @@ def _env_codex_sandbox_mode() -> CodexSandboxMode:
     return value
 
 
+def _env_codex_reasoning_effort() -> CodexReasoningEffort:
+    value = _env_str("TAVOLA_PLANNER_CODEX_REASONING_EFFORT", "low")
+    allowed_values: tuple[CodexReasoningEffort, ...] = (
+        "sdk-default",
+        "none",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+    )
+    if value not in allowed_values:
+        msg = (
+            "TAVOLA_PLANNER_CODEX_REASONING_EFFORT must be one of: "
+            "sdk-default, none, minimal, low, medium, high, xhigh"
+        )
+        raise ValueError(msg)
+    return value
+
+
 def _env_missing_credentials_behavior() -> MissingCredentialsBehavior:
     value = _env_str("TAVOLA_PLANNER_CODEX_MISSING_CREDENTIALS", "disable")
     allowed_values: tuple[MissingCredentialsBehavior, ...] = ("disable", "error")
@@ -112,6 +141,9 @@ class Settings:
     planner_codex_sandbox_mode: CodexSandboxMode = field(
         default_factory=_env_codex_sandbox_mode
     )
+    planner_codex_reasoning_effort: CodexReasoningEffort = field(
+        default_factory=_env_codex_reasoning_effort
+    )
     planner_codex_timeout_seconds: int = field(
         default_factory=lambda: _env_positive_int(
             "TAVOLA_PLANNER_CODEX_TIMEOUT_SECONDS", 60
@@ -119,7 +151,7 @@ class Settings:
     )
     planner_codex_max_retries: int = field(
         default_factory=lambda: _env_non_negative_int(
-            "TAVOLA_PLANNER_CODEX_MAX_RETRIES", 1
+            "TAVOLA_PLANNER_CODEX_MAX_RETRIES", 0
         )
     )
     planner_codex_missing_credentials: MissingCredentialsBehavior = field(
@@ -141,6 +173,11 @@ class Settings:
             )
             raise MissingPlannerCodexCredentialsError(msg)
         return False
+
+    def codex_sdk_reasoning_effort(self) -> str | None:
+        if self.planner_codex_reasoning_effort == "sdk-default":
+            return None
+        return self.planner_codex_reasoning_effort
 
     def planner_runtime_status(self) -> PlannerRuntimeStatus:
         if not self.planner_codex_enabled:

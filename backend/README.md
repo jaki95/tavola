@@ -51,8 +51,15 @@ Configure real runs with:
 - `TAVOLA_PLANNER_CODEX_SANDBOX_MODE`: default `read-only`. Use
   `workspace-write` only if a later adapter spike proves the MCP setup needs
   write access.
+- `TAVOLA_PLANNER_CODEX_REASONING_EFFORT`: SDK turn reasoning effort, default
+  `low` for the constrained live demo planner task. Set `sdk-default` to omit
+  the effort argument when comparing against the SDK's implicit default in
+  opt-in benchmarks. Other supported values are `none`, `minimal`, `medium`,
+  `high`, and `xhigh`.
 - `TAVOLA_PLANNER_CODEX_TIMEOUT_SECONDS`: planner run timeout, default `60`.
-- `TAVOLA_PLANNER_CODEX_MAX_RETRIES`: adapter retry count, default `1`.
+- `TAVOLA_PLANNER_CODEX_MAX_RETRIES`: adapter retry count, default `0`. Repair
+  retries are configurable for experiments, but the live demo default avoids
+  doubling a slow customer wait after malformed output.
 - `TAVOLA_PLANNER_CODEX_MISSING_CREDENTIALS`: `disable` reports the Planner as
   unavailable when credentials are missing; `error` raises during setup checks.
 - `TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED`: set to `true` only when relying
@@ -88,14 +95,20 @@ uv run python -m tavola.infrastructure.codex_planner_smoke \
   "Vegetarian dinner for 4 around GBP 50"
 ```
 
-Benchmark output includes the selected model, timeout, retry count, sanitized
-timing events, per-run totals, and min/median/max elapsed milliseconds. It
-classifies valid runs under 10 seconds as `ideal`, valid runs under 30 seconds
-as `acceptable`, and valid runs at or above 30 seconds as `slow`. Slow valid
-runs exit zero; planner failures, malformed output, missing required Tavola tool
-use, technical timeout, and missing configuration exit nonzero. Do not paste
-prompts, raw Codex transcripts, tool arguments, credentials, stack traces, or
-proposal JSON into handoff notes.
+Benchmark output includes the selected model, reasoning effort, timeout, retry
+count, sanitized timing events, per-run totals, and min/median/max elapsed
+milliseconds. It classifies valid runs under 10 seconds as `ideal`, valid runs
+under 30 seconds as `acceptable`, and valid runs at or above 30 seconds as
+`slow`. Slow valid runs exit zero; planner failures, malformed output, missing
+required Tavola tool use, technical timeout, and missing configuration exit
+nonzero. Do not paste prompts, raw Codex transcripts, tool arguments,
+credentials, stack traces, or proposal JSON into handoff notes.
+
+The installed `openai-codex` SDK accepts model names as strings; public model
+documentation is not proof that a model is available through the active local
+credential path. Keep `gpt-5.5` as the documented default unless an opt-in
+benchmark run proves another SDK-accepted model is faster and still returns
+valid Tavola proposals.
 
 For an operator-facing walkthrough of the browser demo, persona prompts, safe
 planner notes, and customer-facing language rules, see
