@@ -250,6 +250,17 @@ customer-facing feature.
   against the seed catalog and produces a JSON proposal that passes Tavola
   validation.
 
+**Implementation note (2026-06-04)**: Sprint 2 is implemented. The application
+now depends on a `MenuPlannerAgent` port, tests use a deterministic fake agent,
+and Codex-facing code remains in infrastructure. Tavola exposes a bounded
+stdio MCP tool server for package templates, catalog search, product detail,
+and deterministic proposal validation. The Codex adapter proof uses a concrete
+Python SDK client wrapper with injectable tests so tests can verify tool
+configuration, JSON parsing, required tool use, timeout/error mapping, and
+Tavola validation without real credentials. Real Codex runs are configured
+through opt-in settings, documented backend environment variables, and the
+`tavola.infrastructure.codex_planner_smoke` command.
+
 ### Task 2.1: Add Planner Agent Port And Fake Adapter
 
 - **Location**: `backend/src/tavola/application/planner.py`,

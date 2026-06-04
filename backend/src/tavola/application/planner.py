@@ -1,5 +1,6 @@
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any, Protocol
 
 from tavola.application.catalog import CatalogRepository
@@ -43,10 +44,123 @@ class PlannerSessionRepository(Protocol):
         """Persist the latest planner session state."""
 
 
+class PlannerAgentErrorCode(StrEnum):
+    MALFORMED_OUTPUT = "malformed_output"
+    MISSING_TOOL_USE = "missing_tool_use"
+    TOOL_FAILURE = "tool_failure"
+    TIMEOUT = "timeout"
+
+
+@dataclass(frozen=True, slots=True)
+class PlannerAgentError:
+    code: PlannerAgentErrorCode
+    message: str
+
+    def __post_init__(self) -> None:
+        if not self.message.strip():
+            raise ValueError("message is required")
+
+
+@dataclass(frozen=True, slots=True)
+class MenuPlannerAgentResponse:
+    follow_up_question: FollowUpQuestion | None = None
+    raw_proposal: dict[str, Any] | None = None
+    failure: PlannerAgentError | None = None
+
+    def __post_init__(self) -> None:
+        states = (
+            self.follow_up_question is not None,
+            self.raw_proposal is not None,
+            self.failure is not None,
+        )
+        if sum(states) > 1:
+            raise ValueError("planner response cannot include multiple states")
+
+
+class MenuPlannerAgent(Protocol):
+    def plan_menu(self, *, customer_request: str) -> MenuPlannerAgentResponse:
+        """Return a follow-up question or raw menu proposal from the planner."""
+
+
 @dataclass(frozen=True, slots=True)
 class MenuProposalValidationResult:
     menu_proposal: ValidatedMenuProposal | None
     validation_errors: tuple[PlannerValidationError, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class MenuPlannerRunResult:
+    status: ProposalStatus
+    follow_up_question: FollowUpQuestion | None = None
+    menu_proposal: ValidatedMenuProposal | None = None
+    validation_errors: tuple[PlannerValidationError, ...] = ()
+    agent_error: PlannerAgentError | None = None
+
+
+class PlanMenuFromRequest:
+    """Ask a planner agent for a proposal and validate it through Tavola."""
+
+    def __init__(
+        self,
+        *,
+        agent: MenuPlannerAgent,
+        catalog_repository: CatalogRepository,
+    ) -> None:
+        self._agent = agent
+        self._validate_menu_proposal = ValidateMenuProposal(catalog_repository)
+
+    def __call__(self, *, customer_request: str) -> MenuPlannerRunResult:
+        if not customer_request.strip():
+            return MenuPlannerRunResult(
+                status=ProposalStatus.FAILED,
+                validation_errors=(
+                    PlannerValidationError(
+                        code=PlannerValidationErrorCode.INVALID_PROPOSAL,
+                        message="customer_request is required",
+                    ),
+                ),
+            )
+
+        response = self._agent.plan_menu(customer_request=customer_request)
+        if response.failure is not None:
+            return MenuPlannerRunResult(
+                status=ProposalStatus.FAILED,
+                validation_errors=(
+                    PlannerValidationError(
+                        code=PlannerValidationErrorCode.INVALID_PROPOSAL,
+                        message=response.failure.message,
+                    ),
+                ),
+                agent_error=response.failure,
+            )
+        if response.follow_up_question is not None:
+            return MenuPlannerRunResult(
+                status=ProposalStatus.NEEDS_INPUT,
+                follow_up_question=response.follow_up_question,
+            )
+        if response.raw_proposal is None:
+            return MenuPlannerRunResult(
+                status=ProposalStatus.FAILED,
+                validation_errors=(
+                    PlannerValidationError(
+                        code=PlannerValidationErrorCode.INVALID_PROPOSAL,
+                        message="planner did not return a menu proposal",
+                    ),
+                ),
+            )
+
+        validation_result = self._validate_menu_proposal.validate_raw(
+            response.raw_proposal
+        )
+        if validation_result.menu_proposal is None:
+            return MenuPlannerRunResult(
+                status=ProposalStatus.FAILED,
+                validation_errors=validation_result.validation_errors,
+            )
+        return MenuPlannerRunResult(
+            status=ProposalStatus.PROPOSAL_READY,
+            menu_proposal=validation_result.menu_proposal,
+        )
 
 
 class ValidateMenuProposal:
