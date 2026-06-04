@@ -1,6 +1,6 @@
 import pytest
 
-from tavola.application.planner import ValidateMenuProposal
+from tavola.application.planner import PlanMenuFromRequest, ValidateMenuProposal
 from tavola.domain.catalog import (
     CatalogCategory,
     CatalogSku,
@@ -10,11 +10,14 @@ from tavola.domain.catalog import (
 from tavola.domain.planner import (
     Course,
     CourseProposal,
+    FollowUpQuestion,
     MenuProposal,
     PlannerValidationErrorCode,
     ProposalLine,
+    ProposalStatus,
 )
 from tavola.infrastructure.catalog_repository import StaticCatalogRepository
+from tavola.infrastructure.codex_planner import FakeMenuPlannerAgent
 
 
 def make_sku(
@@ -257,3 +260,69 @@ def test_validate_menu_proposal_preserves_course_grouping() -> None:
         Course.DESSERT,
     ]
     assert result.menu_proposal.total.amount_minor == 1800
+
+
+def test_plan_menu_from_request_returns_follow_up_from_fake_agent() -> None:
+    follow_up = FollowUpQuestion(message="How many people should this serve?")
+    planner = PlanMenuFromRequest(
+        agent=FakeMenuPlannerAgent.with_follow_up(follow_up),
+        catalog_repository=StaticCatalogRepository([make_sku()]),
+    )
+
+    result = planner(customer_request="Help me plan Sunday lunch")
+
+    assert result.status == ProposalStatus.NEEDS_INPUT
+    assert result.follow_up_question == follow_up
+    assert result.menu_proposal is None
+    assert result.validation_errors == ()
+
+
+def test_plan_menu_from_request_validates_fake_agent_proposal() -> None:
+    planner = PlanMenuFromRequest(
+        agent=FakeMenuPlannerAgent.with_proposal(
+            {
+                "title": "Weeknight Pasta",
+                "explanation": "A compact pasta proposal.",
+                "planner_notes": ("Catalog identities checked.",),
+                "party_size": 2,
+                "package_template_id": "primo-only",
+                "courses": (
+                    {
+                        "course": "primo",
+                        "lines": (
+                            {
+                                "sku_id": "fresh-tagliatelle-250g",
+                                "quantity": 2,
+                                "rationale": "A flexible pasta course.",
+                            },
+                        ),
+                    },
+                ),
+            }
+        ),
+        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+    )
+
+    result = planner(customer_request="Dinner for two")
+
+    assert result.status == ProposalStatus.PROPOSAL_READY
+    assert result.menu_proposal is not None
+    assert result.menu_proposal.total.amount_minor == 850
+    assert result.validation_errors == ()
+
+
+def test_plan_menu_from_request_maps_malformed_fake_agent_output_to_failed_state() -> (
+    None
+):
+    planner = PlanMenuFromRequest(
+        agent=FakeMenuPlannerAgent.with_proposal({"title": "Missing details"}),
+        catalog_repository=StaticCatalogRepository([make_sku()]),
+    )
+
+    result = planner(customer_request="Dinner for two")
+
+    assert result.status == ProposalStatus.FAILED
+    assert result.menu_proposal is None
+    assert (
+        result.validation_errors[0].code == PlannerValidationErrorCode.INVALID_PROPOSAL
+    )
