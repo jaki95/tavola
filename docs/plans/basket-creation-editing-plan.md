@@ -193,7 +193,18 @@ keeping domain rules outside the transport layer.
 - `DELETE /api/baskets/{basket_id}/lines/{sku_id}` removes a line and keeps the
   basket.
 
+**Progress**: Completed on 2026-06-04.
+
+- Added basket API schemas, router, and dependency wiring.
+- Added process-lifetime in-memory basket repository dependency for API requests.
+- Added API tests for response shapes, persisted fetch/edit behavior, and
+  application error to HTTP response mapping.
+- Fixed blank/whitespace SKU IDs to fail at the Pydantic request boundary.
+- Validation run: `cd backend && uv run pytest tests/test_basket_api.py tests/test_basket_use_cases.py`.
+
 ### Task 2.1: Add Basket API Schemas
+
+**Status**: Completed on 2026-06-04.
 
 - **Location**: `backend/src/tavola/api/schemas/basket.py`,
   `backend/tests/test_basket_api.py`
@@ -213,6 +224,8 @@ keeping domain rules outside the transport layer.
 
 ### Task 2.2: Add Basket Router And Dependency Wiring
 
+**Status**: Completed on 2026-06-04.
+
 - **Location**: `backend/src/tavola/api/routers/basket.py`,
   `backend/src/tavola/api/dependencies.py`,
   `backend/src/tavola/api/main.py`,
@@ -231,6 +244,8 @@ keeping domain rules outside the transport layer.
   and edited by later requests.
 
 ### Task 2.3: Map Application Errors To HTTP Responses
+
+**Status**: Completed on 2026-06-04.
 
 - **Location**: `backend/src/tavola/api/routers/basket.py`,
   `backend/tests/test_basket_api.py`
