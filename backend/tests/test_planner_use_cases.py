@@ -366,6 +366,77 @@ def test_validate_menu_proposal_prices_appended_drinks_course() -> None:
     assert result.menu_proposal.courses[1].lines[0].line_total.amount_minor == 600
 
 
+def test_validate_menu_proposal_rejects_drink_product_in_required_course() -> None:
+    drinks = make_drinks_sku()
+    proposal = MenuProposal(
+        title="Aperitivo",
+        explanation="A compact aperitivo proposal.",
+        planner_notes=("Catalog identities checked.",),
+        party_size=2,
+        package_template_id="aperitivo",
+        courses=(
+            CourseProposal(
+                course=Course.APERITIVO,
+                lines=(
+                    ProposalLine(
+                        sku_id="san-pellegrino-limonata-4x330ml",
+                        quantity=1,
+                        rationale="Drink should be separate from food.",
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    result = ValidateMenuProposal(StaticCatalogRepository([drinks]))(proposal)
+
+    assert result.menu_proposal is None
+    assert result.validation_errors[0].code == PlannerValidationErrorCode.INVALID_PROPOSAL
+    assert result.validation_errors[0].sku_id == "san-pellegrino-limonata-4x330ml"
+    assert result.validation_errors[0].course == Course.APERITIVO
+
+
+def test_validate_menu_proposal_rejects_food_product_in_drinks_course() -> None:
+    pasta = make_sku()
+    gnocchi = make_sku("potato-gnocchi-500g", name="Potato Gnocchi")
+    proposal = MenuProposal(
+        title="Pasta With Drinks",
+        explanation="A compact pasta proposal with drinks.",
+        planner_notes=("Catalog identities checked.",),
+        party_size=2,
+        package_template_id="primo-only",
+        courses=(
+            CourseProposal(
+                course=Course.PRIMO,
+                lines=(
+                    ProposalLine(
+                        sku_id="potato-gnocchi-500g",
+                        quantity=1,
+                        rationale="Main pasta course.",
+                    ),
+                ),
+            ),
+            CourseProposal(
+                course=Course.DRINKS,
+                lines=(
+                    ProposalLine(
+                        sku_id="fresh-tagliatelle-250g",
+                        quantity=1,
+                        rationale="Food should not be a drinks line.",
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    result = ValidateMenuProposal(StaticCatalogRepository([pasta, gnocchi]))(proposal)
+
+    assert result.menu_proposal is None
+    assert result.validation_errors[0].code == PlannerValidationErrorCode.INVALID_PROPOSAL
+    assert result.validation_errors[0].sku_id == "fresh-tagliatelle-250g"
+    assert result.validation_errors[0].course == Course.DRINKS
+
+
 def test_validate_menu_proposal_reports_unsupported_raw_course_name() -> None:
     result = ValidateMenuProposal(StaticCatalogRepository([make_sku()])).validate_raw(
         {
