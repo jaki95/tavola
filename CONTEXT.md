@@ -39,7 +39,13 @@ Initial build order:
 
 ## Main AI Feature
 
-The main AI feature is a Codex-powered menu-to-basket planner.
+The main AI feature is a Codex-powered menu-to-basket planner. In product and
+domain language, this feature is the **Planner**; Codex is the implementation
+technology behind it. The UI may include a small "powered by Codex" attribution,
+but customer workflows should still be framed around Tavola's Planner and menu
+proposals rather than Codex-specific operations. The attribution belongs in the
+Planner surface only; accepted basket and order summaries should return to
+Tavola meal-plan language without repeating Codex branding.
 
 A customer describes an occasion or meal need, such as a small dinner party,
 picnic, antipasti board, or family lunch. Codex works inside a bounded planning
@@ -58,6 +64,51 @@ explanation, course sections, SKU lines, quantities, server-priced totals, and
 concise per-line rationale. The customer can remove lines or adjust quantities
 before accepting the proposal into the basket.
 
+Planner proposals should include customer-facing explainability that helps the
+customer trust the suggestion. This should describe planning evidence in Tavola
+language, such as party size used, template chosen, dietary constraints applied,
+excluded non-matching options, catalog validation, and server-calculated pricing.
+It should not expose low-level Codex runtime metadata such as model names, tool
+counts, retries, thread IDs, or raw transcripts.
+
+Planner rationale may explain why SKUs work together for a course or occasion,
+but the planner should not provide recipe instructions, cooking timings, or
+exact serving guarantees.
+
+When a request cannot be honestly satisfied from the current catalog, the
+planner should either produce the closest valid menu proposal with clear
+assumptions or explain that Tavola cannot build that proposal from current SKUs.
+It must not invent SKUs or ignore explicit dietary constraints.
+
+Explicit supported dietary constraints are hard constraints for planner
+proposals. In the first catalog, Tavola can verify vegetarian, vegan,
+gluten-free, and no-alcohol requests through structured facets. If the customer
+asks for one of these, every proposed product must satisfy that constraint.
+Style preferences such as lighter, richer, cozy, or special are softer planning
+preferences.
+
+The planner must not guarantee constraints that Tavola does not track. If a
+customer asks for an unsupported constraint, such as dairy-free when no
+dairy-free facet exists, the planner should explain the limitation rather than
+claiming compliance.
+
+Unsupported safety or allergy-like constraints should stop the planner from
+returning a menu proposal that claims to satisfy them. Lower-stakes preferences
+may be handled as best-effort only when the limitation is made clear.
+
+Budget language depends on phrasing. Approximate budget requests, such as
+"around £50", are soft targets that should be approached transparently with the
+server-calculated total shown. Firm budget caps, such as "under £50", are hard
+constraints unless the planner explains that no suitable menu proposal can be
+built within the cap.
+
+The planner should ask a follow-up question only when required planning
+information is missing. Party size is the main required input because quantities
+cannot be responsibly suggested without it. Other preferences, such as budget,
+dietary needs, and style, may be inferred or treated as optional unless the
+customer mentions them. The customer experience remains free-text-first, but
+known party size should be preserved as structured planner session context.
+
 Planner composition should use simple package templates rather than arbitrary
 recipe generation. Initial templates are:
 
@@ -72,11 +123,19 @@ checkout remain based on real SKUs. A course such as Primo may contain one SKU
 for a prepared dish or multiple SKUs for a simple pairing, such as fresh pasta
 plus sauce.
 
+Drinks are contextual add-ons for planner proposals, not automatic parts of meal
+packages. The planner should include drinks only when the customer asks for them
+or the occasion clearly implies them, such as an aperitivo, picnic drinks, or a
+wine pairing.
+
 Accepted planner proposals may later carry lightweight meal-plan grouping
 metadata in the basket and order summary so the customer can still see the shape
-of the meal plan after accepting it. This metadata should preserve context such
-as "Dinner for 4" with Antipasto, Primo, and Dessert sections, while SKU lines
-remain the source of pricing and checkout truth.
+of the meal plan after accepting it. This metadata should preserve only
+customer-readable context and organization, such as proposal title, party size,
+package template, course names, and which basket lines belong to each course.
+It should not preserve planner rationale, AI transcript, Codex run metadata, or
+alternative suggestions in the basket or order domain. SKU lines remain the
+source of pricing and checkout truth.
 
 Checkout should allow future order summaries to preserve optional meal-plan
 grouping metadata copied from a basket, while order lines remain the source of
@@ -120,6 +179,7 @@ Use these terms consistently when shaping the codebase:
   each product has exactly one SKU.
 - SKU: The concrete catalog identity that can be added to a basket and validated
   for availability, quantity, and pricing.
+  _Avoid in customer-facing copy_: SKU; use Product or item instead.
 - Unit label: The required free-text customer-facing sellable unit for a SKU,
   such as `250g`, `serves 2`, `single portion`, `750ml`, or `jar 180g`.
 - Short description: A compact customer-facing product sentence used for catalog
@@ -148,18 +208,28 @@ Use these terms consistently when shaping the codebase:
   quantity and customer-facing price details.
 - Pickup window: A backend-defined customer-facing pickup choice for mock
   checkout; it is not a capacity reservation or live schedule.
+- Planner: Tavola's customer-facing assistant for turning a meal request into a
+  menu proposal.
 - Planner session: A bounded AI-assisted workflow for turning a meal request
-  into a proposed basket.
-- Menu proposal: The planner's suggested meal or occasion plan before final SKU
-  validation.
+  into a menu proposal.
+- Menu proposal: The planner's suggested meal or occasion plan while it is being
+  reviewed, including after deterministic validation and before basket
+  acceptance.
+- Planner note: Customer-facing explainability on a menu proposal that describes
+  the planning evidence, constraints, validation, and assumptions behind the
+  suggestion.
+- Party size: The number of people the customer wants the menu proposal to
+  serve, extracted from the meal request or a follow-up answer.
 - Course: A planner or menu structure role, such as Antipasto, Primo, Dessert,
   or Aperitivo; courses are not the same as catalog categories.
 - Package template: A planner-only course structure such as Antipasto + Primo +
   Dessert, used to shape a proposal without becoming a purchasable product.
-- Meal-plan grouping: Optional basket or order metadata that preserves the
-  accepted proposal's course structure while SKU lines remain authoritative.
-- Validated basket: A basket proposal that has passed deterministic application
-  checks and is safe to present for cart creation or update.
+- Meal-plan grouping: Optional basket or order metadata that preserves an
+  accepted menu proposal's title, party size, package template, course names,
+  and line grouping while SKU lines remain authoritative.
+- Validated menu proposal: A menu proposal that has passed deterministic
+  application checks and is safe to present for basket acceptance.
+  _Avoid_: Validated basket, basket proposal.
 
 Initial product/SKU relationship:
 
@@ -171,16 +241,94 @@ Initial product/SKU relationship:
 - Basket lines store SKU identity and quantity; customer-facing SKU details and
   prices are resolved from the current backend catalog when a basket is
   displayed or validated.
+- Planner output remains a **Menu proposal** until the customer accepts it into a
+  **Basket**; validation alone does not make planner output a basket.
+- A **Planner session** has at most one current **Menu proposal** in the first
+  version. Follow-ups can fill missing information before proposal creation, and
+  customer edits can revalidate the current proposal, but comparison between
+  multiple simultaneous proposals is out of scope.
+- Follow-up questions happen before a menu proposal exists. After a menu
+  proposal is ready, the first version supports deterministic product removal,
+  quantity editing, revalidation, and acceptance rather than conversational
+  refinement such as "make it cheaper" or "swap dessert."
+- Planning is independent of the customer's current **Basket** until
+  acceptance. The existing basket does not shape the first version's menu
+  proposal; basket merge or replacement happens only when the customer accepts
+  the proposal.
+- Accepting a **Menu proposal** marks that proposal as accepted for its
+  **Planner session**. The accepted proposal should not be accepted again; the
+  customer can start a new planner session or edit the basket after acceptance.
+- A **Planner session** should keep only the minimum customer text needed for
+  the demonstrator, such as the original meal request and latest follow-up
+  answer. Normalized planning context, such as party size, constraints, current
+  menu proposal, and accepted status, is the primary session state; full AI or
+  tool transcripts are not part of the domain record.
+- **Planner notes** should be structured customer-facing messages with a note
+  type, such as constraint applied, catalog checked, pricing checked,
+  quantity assumption, assumption, or substitution, rather than one
+  undifferentiated prose block.
+- **Planner notes** belong to the current **Menu proposal**, not the surrounding
+  session status. Revalidating an edited menu proposal should refresh its notes.
+- **Planner notes** should record whether their source is Tavola's deterministic
+  validation or the planner's composition reasoning. Dietary exclusions, catalog
+  checks, and pricing checks are Tavola-sourced; taste and pairing explanations
+  may be planner-sourced.
+- Planner notes should explain quantity assumptions when party size or unit
+  labels materially shape the suggested quantities, without implying exact
+  serving guarantees.
+- The UI should show a small set of proposal-level planner notes for trust
+  evidence, while per-line rationale explains why each product belongs in the
+  menu proposal.
+- Customers can edit a menu proposal's product quantities or remove product
+  lines before acceptance, but they cannot directly edit course names or move
+  products between courses in the first version.
+- Revalidating an edited menu proposal should remove empty courses rather than
+  showing course sections with no products.
+- Removing or adjusting products in a menu proposal should trigger
+  deterministic revalidation and price recalculation only. The planner should
+  not automatically generate replacement products in the first version.
+- Accepting a **Menu proposal** into a **Basket** can add proposal lines to the
+  existing basket or replace all current basket lines. Replace means all current
+  basket lines are removed regardless of whether they came from catalog browsing
+  or an earlier planner proposal.
+- Adding a **Menu proposal** to an existing **Basket** follows the normal basket
+  merge rule: matching SKU lines are combined by increasing quantity rather than
+  creating duplicate grouped lines.
+- The first version does not need a pre-accept merge preview. After **Add to
+  basket**, the updated basket is the confirmation of merged quantities.
+- **Replace basket** should require lightweight confirmation when the current
+  basket is non-empty because it removes existing basket lines. No confirmation
+  is needed when the basket is empty.
+- **Meal-plan grouping** should survive ordinary basket edits only while it
+  remains coherent. Removing all products from a grouped course removes that
+  course; removing all grouped products removes the grouping. Quantity edits keep
+  the grouping attached to the same product lines, and later catalog-browsed
+  additions are ungrouped.
 - Catalog APIs may expose customer-facing product data with a `sku_id` because
   the SKU is the stable basket identity.
+- Customer-facing UI, planner notes, checkout copy, and error messages should
+  call sellable things **Products** or items, never SKUs. SKU remains an
+  internal/API identity term, so API fields such as `sku_id` do not need to be
+  renamed as long as user-facing text translates them.
+- Customer-facing validation errors should describe product problems in
+  action-oriented language. Internal error codes may mention SKU, but visible UI
+  copy should not.
 - Basket quantities count SKU units. For example, quantity `2` of Fresh
   Tagliatelle with unit label `250g` means two 250g packs.
 - Unit labels are not parsed as structured measurement data in the first
   version; exact serving guarantees and nutritional measurement logic remain out
   of scope.
+- The planner may use unit labels as human-readable hints when suggesting
+  practical quantities, especially obvious labels such as `serves 2`, but unit
+  labels do not create exact serving guarantees.
+- Codex may propose product quantities using party size, catalog context, and
+  unit labels. Tavola validates that those quantities are allowed and
+  recalculates prices, but it does not independently certify that quantities
+  exactly serve the party size.
 - Customer-facing catalog browsing, search, and detail endpoints expose only
-  available products; unavailable SKUs remain relevant to deterministic basket
-  and planner validation but are not shown in the public catalog.
+  products that can be bought in the demonstrator. Unavailable SKUs are not a
+  planned customer-facing state for Tavola; existing availability checks are
+  defensive validation only.
 
 Category/course relationship:
 
@@ -205,9 +353,9 @@ Missing unit labels, unclear descriptions, invalid image IDs, or weak tags
 should be treated as catalog data-quality issues.
 
 All 20 seed catalog SKUs are available in the first catalog slice so the
-customer-facing browseable catalog remains complete. Unavailable-SKU behavior can
-be tested with separate fixtures until real catalog availability changes are in
-scope.
+customer-facing browseable catalog remains complete. Unavailable-SKU behavior is
+not part of the product experience and should appear only in defensive tests
+unless real catalog availability is explicitly brought into scope.
 
 Each seed catalog product should meet a minimum content bar: real deli-style
 name, stable SKU slug, primary category, required unit label, GBP price, one
@@ -244,9 +392,7 @@ display names.
 The seed catalog should contain exactly 5 Antipasti, 6 Primi, 3 Desserts, 3
 Drinks, and 3 Pantry items. Primi may include prepared dishes such as lasagne or
 parmigiana di melanzane as well as simple composed options such as fresh pasta
-and sauce. Drinks are contextual add-ons for planner proposals, not automatic
-parts of meal packages unless the customer asks or the occasion clearly implies
-them.
+and sauce.
 
 Prices are owned by the backend and represented as integer minor units with a
 currency, such as `unit_price_minor` and `currency`. The first seed catalog uses
@@ -261,7 +407,7 @@ the basket during a restart, the frontend should create a new basket.
 Basket validation should start with these rules:
 
 - SKU must exist in the catalog.
-- SKU must be available.
+- SKU must pass any defensive availability guard in the catalog.
 - Quantity must be a positive integer.
 - Quantity must not exceed a simple per-line maximum of 10 units per SKU.
 - Totals are calculated by the backend from catalog prices.
@@ -340,8 +486,12 @@ and uses, such as `pasta`, `sauce`, `dinner-party`, `starter`, `picnic`,
 thoughtful tagging is part of the planner's product quality.
 
 Tags may hint at a course or use, such as `primo` for a Pantry sauce that pairs
-with pasta, but deterministic dietary or availability checks must use structured
-facets and availability fields rather than tags.
+with pasta, but deterministic dietary checks must use structured facets rather
+than tags.
+
+Catalog tags and structured dietary facets should not contradict each other.
+If they ever do, hard constraint validation trusts the structured facets and the
+catalog data should be treated as needing correction.
 
 Raw tags are not rendered directly as customer-facing labels. If the UI needs
 visible descriptors beyond facets, use curated customer copy such as "Good for"
@@ -349,8 +499,8 @@ phrases rather than title-casing tag values.
 
 Customer-facing catalog API responses should not expose raw tags or availability
 fields in the first catalog slice. Tags remain backend metadata for search and
-future planner support, and availability is enforced by excluding unavailable
-products from customer-facing catalog responses.
+future planner support. Availability is a defensive backend guard, not a normal
+catalog state shown to customers.
 
 Customer-facing catalog search should be deterministic and match only product
 name, primary category label, short description, tags, and positive structured
@@ -373,9 +523,8 @@ facet filter controls.
 Product detail should add richer product context beyond the card: detail
 description, larger image, unit label, price, and visible facets. Curated
 "good for" descriptors can be added later if detail panels need more
-customer-facing guidance. Because customer-facing catalog endpoints expose only
-available products, availability is not presented as a normal customer-facing
-detail state in the first catalog slice.
+customer-facing guidance. Availability is not presented as a normal
+customer-facing detail state in the first catalog slice.
 
 Catalog browsing is inspect-only until the basket slice exists. Product cards
 and detail surfaces should not include add-to-basket buttons, disabled basket
@@ -456,6 +605,9 @@ enhancements.
 
 ## Flagged Ambiguities
 
+- "SKU" is a valid internal/API identity term, but it should not appear in
+  customer-facing UI, planner notes, checkout copy, or visible error messages.
+  Use **Product** or item in user-facing text.
 - "Storefront workspace" was used in early UI copy for the opening screen, but it
   is not canonical customer-facing language. The opening screen should be framed
   around **Catalog browsing**, with the **Basket** visible as supporting context.
