@@ -378,7 +378,7 @@ should guide future planner UI work.
 ### Task 5.2: Add Visual Style Notes For Future Planner Work
 
 - **Location**: `docs/plans/codex-menu-to-basket-planner-plan.md`,
-  `docs/plans/tavola-visual-style-refresh-plan.md`
+  `docs/plans/completed/tavola-visual-style-refresh-plan.md`
 - **Description**: Add or preserve a short note that the Codex planner can later
   use the refreshed visual language, but the planner implementation remains a
   separate feature slice.

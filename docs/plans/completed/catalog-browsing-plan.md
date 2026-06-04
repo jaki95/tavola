@@ -106,7 +106,7 @@ and routes in `api`.
 ## Prerequisites
 
 - Existing backend and frontend scaffold from
-  `docs/plans/backend-frontend-scaffold-plan.md`.
+  `docs/plans/completed/backend-frontend-scaffold-plan.md`.
 - Backend dependencies installed with `cd backend && uv sync`.
 - Frontend dependencies installed with `cd frontend && npm install`.
 - Existing local API proxy remains available for `/api/*` during Vite

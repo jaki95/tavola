@@ -472,7 +472,7 @@ for mock pickup checkout.
 **Status**: Completed on 2026-06-04.
 
 - **Location**: `docs/scaffold-smoke-check.md` or a new checklist section in
-  `docs/plans/basket-creation-editing-plan.md`
+  `docs/plans/completed/basket-creation-editing-plan.md`
 - **Description**: Document the manual browser workflow for basket creation and
   editing using the existing backend and frontend dev servers.
 - **Dependencies**: Sprint 4.

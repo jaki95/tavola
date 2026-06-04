@@ -57,7 +57,7 @@ flow.
 - Accepting a menu proposal is terminal for that planner session's current
   proposal; duplicate accept attempts should be rejected.
 - Future planner UI work should use the compact planner-band visual direction
-  from `docs/plans/tavola-visual-style-refresh-plan.md` and
+  from `docs/plans/completed/tavola-visual-style-refresh-plan.md` and
   `docs/plans/assets/tavola-planner-band-visual-reference.png`; that visual
   refresh does not mean planner behavior has already been implemented.
 - Runtime image generation, real payments, accounts, inventory reservation,
