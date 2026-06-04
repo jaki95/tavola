@@ -194,6 +194,21 @@ polished desktop structure.
   - Page still feels warm and branded.
 - **Validation**: Visual comparison against the mockup and current app.
 
+### Sprint 2 Implementation Notes
+
+- Tightened the storefront banner into a compact Tavola brand area with a
+  secondary service status readout, preserving loading, success, and error
+  status behavior in App tests.
+- Widened the desktop commerce workspace, stabilized the right-side basket rail,
+  and kept catalog and basket visible together at the supported desktop browser
+  viewport.
+- Reduced decorative page/background treatment to a warmer paper canvas with
+  subtle hairlines, and softened the catalog control and basket panel surfaces
+  so product browsing remains the primary focus.
+- Browser approval covered the loaded storefront, empty basket, populated basket,
+  checkout modal, service/API error state through the Vite proxy, keyboard focus,
+  and console-error checks.
+
 ## Sprint 3: Catalog Browser And Product Cards
 
 **Goal**: Bring the main product browsing surface closer to the mockup's

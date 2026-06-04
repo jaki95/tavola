@@ -23,13 +23,17 @@ export function HomePage({ backendStatus }: HomePageProps) {
 
   return (
     <div className="site-shell">
-      <header className="top-bar">
+      <header aria-label="Tavola storefront" className="top-bar">
         <div className="top-bar__inner">
-          <a className="brand-mark" href="#catalog-title">
-            <span className="brand-mark__eyebrow">Independent Italian deli</span>
-            <span className="brand-mark__name">Tavola</span>
-          </a>
-          <BackendStatusPanel status={backendStatus} />
+          <div className="top-bar__brand-area">
+            <a className="brand-mark brand-mark--compact" href="#catalog-title">
+              <span className="brand-mark__name">Tavola</span>
+              <span className="brand-mark__eyebrow">Italian deli</span>
+            </a>
+          </div>
+          <div className="top-bar__service-status">
+            <BackendStatusPanel status={backendStatus} />
+          </div>
         </div>
       </header>
 
