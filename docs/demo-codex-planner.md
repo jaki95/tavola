@@ -33,6 +33,11 @@ shell or a local secret manager. Use `backend/README.md` for the current planner
 environment settings and opt-in smoke command. Do not commit real credential
 values or paste them into demo notes.
 
+Live planner prompts send Tavola planner context, including bounded catalog and
+proposal-validation details, through the configured Codex credential path. Get
+explicit operator approval before running live smoke prompts or browser flows
+that submit planner requests.
+
 The planner surface should show the small `powered by Codex` attribution. Basket
 and checkout copy should return to Tavola meal-plan language after the proposal
 is accepted.
