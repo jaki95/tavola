@@ -189,6 +189,12 @@ backend pytest suite.
 - Adapter guardrails require candidate finding and proposal validation only for
   proposal outputs; follow-up-only outputs can skip tool calls.
 
+**Implementation note**: Sprint 2 is implemented. The Planner MCP server now
+lists only `find_catalog_candidates` and `validate_menu_proposal`, builds
+candidate schemas from the active catalog repository, validates invalid MCP
+arguments with JSON-RPC `-32602`, and the Codex adapter prompt/required-tool
+guardrails use the smaller candidate-plus-validation contract.
+
 ### Task 2.1: Generate tool descriptions from handlers
 
 - **Location**:
