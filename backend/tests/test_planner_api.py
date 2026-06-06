@@ -225,6 +225,21 @@ def expected_session_response(quantity: int = 2) -> dict[str, object]:
         "follow_up_question": None,
         "menu_proposal": expected_menu_proposal_response(quantity),
         "validation_errors": [],
+        "planning_updates": [
+            {
+                "stage": "queued",
+                "message": "Tavola is getting your menu request ready.",
+            },
+            {"stage": "started", "message": "Planning has started."},
+            {
+                "stage": "validating",
+                "message": "Checking the menu against Tavola's catalog.",
+            },
+            {
+                "stage": "ready",
+                "message": "Your menu proposal is ready to review.",
+            },
+        ],
     }
 
 
@@ -333,6 +348,12 @@ def test_start_planner_session_returns_planning_then_polling_observes_proposal(
         "follow_up_question": None,
         "menu_proposal": None,
         "validation_errors": [],
+        "planning_updates": [
+            {
+                "stage": "queued",
+                "message": "Tavola is getting your menu request ready.",
+            }
+        ],
     }
 
     assert (
@@ -358,6 +379,14 @@ def test_start_planner_session_returns_quickly_while_agent_keeps_running(
     assert response.json()["status"] == "planning"
     assert elapsed < 1
     assert agent.started.wait(timeout=1)
+    planning_response = client.client.get("/api/planner/sessions/planner-1")
+    assert planning_response.json()["planning_updates"] == [
+        {
+            "stage": "queued",
+            "message": "Tavola is getting your menu request ready.",
+        },
+        {"stage": "started", "message": "Planning has started."},
+    ]
 
     busy_response = client.client.post(
         "/api/planner/sessions",

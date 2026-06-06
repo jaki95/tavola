@@ -2,6 +2,8 @@ from tavola.domain.planner import (
     FollowUpQuestion,
     PlannerSession,
     PlannerSessionId,
+    PlanningUpdate,
+    PlanningUpdateStage,
     ProposalStatus,
 )
 from tavola.infrastructure.planner_repository import InMemoryPlannerSessionRepository
@@ -67,3 +69,49 @@ def test_missing_session_lookup_returns_none() -> None:
     repository = InMemoryPlannerSessionRepository(id_generator=lambda: "planner-1")
 
     assert repository.get_session(PlannerSessionId("missing-session")) is None
+
+
+def test_append_planning_update_preserves_session_fields_and_order() -> None:
+    repository = InMemoryPlannerSessionRepository(id_generator=lambda: "planner-1")
+    session = repository.create_session(
+        customer_request="Dinner for friends",
+        status=ProposalStatus.NEEDS_INPUT,
+        follow_up_answers=("Four people.",),
+        follow_up_question=FollowUpQuestion(message="Any dietary preferences?"),
+    )
+    first = PlanningUpdate(
+        stage=PlanningUpdateStage.QUEUED,
+        message="We have added your request to the planning queue.",
+    )
+    second = PlanningUpdate(
+        stage=PlanningUpdateStage.STARTED,
+        message="We have started planning your menu.",
+    )
+
+    repository.append_planning_update(session.planner_session_id, first)
+    updated = repository.append_planning_update(session.planner_session_id, second)
+
+    assert updated == PlannerSession(
+        planner_session_id=PlannerSessionId("planner-1"),
+        customer_request="Dinner for friends",
+        follow_up_answers=("Four people.",),
+        status=ProposalStatus.NEEDS_INPUT,
+        follow_up_question=FollowUpQuestion(message="Any dietary preferences?"),
+        planning_updates=(first, second),
+    )
+    assert repository.get_session(session.planner_session_id) == updated
+
+
+def test_append_planning_update_returns_none_for_missing_session() -> None:
+    repository = InMemoryPlannerSessionRepository(id_generator=lambda: "planner-1")
+    update = PlanningUpdate(
+        stage=PlanningUpdateStage.QUEUED,
+        message="We have added your request to the planning queue.",
+    )
+
+    result = repository.append_planning_update(
+        PlannerSessionId("missing-session"),
+        update,
+    )
+
+    assert result is None

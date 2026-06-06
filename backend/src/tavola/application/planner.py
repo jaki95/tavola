@@ -19,6 +19,8 @@ from tavola.domain.planner import (
     PlannerSessionId,
     PlannerValidationError,
     PlannerValidationErrorCode,
+    PlanningUpdate,
+    PlanningUpdateStage,
     ProposalLine,
     ProposalStatus,
     ValidatedCourseProposal,
@@ -48,6 +50,13 @@ class PlannerSessionRepository(Protocol):
 
     def save_session(self, session: PlannerSession) -> None:
         """Persist the latest planner session state."""
+
+    def append_planning_update(
+        self,
+        planner_session_id: PlannerSessionId,
+        update: PlanningUpdate,
+    ) -> PlannerSession | None:
+        """Append one ordered Planning update to an existing session."""
 
 
 class PlannerBackgroundRunner(Protocol):
@@ -112,6 +121,11 @@ class MenuPlannerAgent(Protocol):
         validation_errors: tuple[PlannerValidationError, ...],
     ) -> MenuPlannerAgentResponse:
         """Return one repaired raw proposal after Tavola validation fails."""
+
+
+class PlanningUpdateRecorder(Protocol):
+    def __call__(self, stage: PlanningUpdateStage) -> None:
+        """Record a customer-safe Planning lifecycle update."""
 
 
 class AcceptanceMode(StrEnum):
@@ -217,6 +231,18 @@ class AcceptedMenuProposal:
     meal_plan_grouping: MealPlanGrouping
 
 
+_PLANNING_UPDATE_MESSAGES = {
+    PlanningUpdateStage.QUEUED: "Tavola is getting your menu request ready.",
+    PlanningUpdateStage.STARTED: "Planning has started.",
+    PlanningUpdateStage.CONNECTING: "Connecting to Tavola's planner.",
+    PlanningUpdateStage.PLANNING: "Checking Tavola's catalog.",
+    PlanningUpdateStage.VALIDATING: "Checking the menu against Tavola's catalog.",
+    PlanningUpdateStage.READY: "Your menu proposal is ready to review.",
+    PlanningUpdateStage.NEEDS_INPUT: "Tavola needs one more detail.",
+    PlanningUpdateStage.FAILED: "Tavola could not finish this menu plan.",
+}
+
+
 class PlanMenuFromRequest:
     """Ask a planner agent for a proposal and validate it through Tavola."""
 
@@ -225,9 +251,11 @@ class PlanMenuFromRequest:
         *,
         agent: MenuPlannerAgent,
         catalog_repository: CatalogRepository,
+        planning_update_recorder: PlanningUpdateRecorder | None = None,
     ) -> None:
         self._agent = agent
         self._validate_menu_proposal = ValidateMenuProposal(catalog_repository)
+        self._planning_update_recorder = planning_update_recorder
 
     def __call__(
         self,
@@ -277,6 +305,7 @@ class PlanMenuFromRequest:
                 ),
             )
 
+        self._record_planning_update(PlanningUpdateStage.VALIDATING)
         validation_result = self._validate_menu_proposal.validate_raw(
             response.raw_proposal
         )
@@ -341,6 +370,7 @@ class PlanMenuFromRequest:
                     ),
                 ),
             )
+        self._record_planning_update(PlanningUpdateStage.VALIDATING)
         validation_result = self._validate_menu_proposal.validate_raw(
             response.raw_proposal
         )
@@ -353,6 +383,10 @@ class PlanMenuFromRequest:
             status=ProposalStatus.PROPOSAL_READY,
             menu_proposal=validation_result.menu_proposal,
         )
+
+    def _record_planning_update(self, stage: PlanningUpdateStage) -> None:
+        if self._planning_update_recorder is not None:
+            self._planning_update_recorder(stage)
 
 
 class StartPlannerSession:
@@ -401,9 +435,17 @@ class CreatePlanningSession:
 
     def __call__(self, *, message: str) -> PlannerSession:
         customer_request = _require_message(message)
-        return self._planner_repository.create_session(
+        session = self._planner_repository.create_session(
             customer_request=customer_request,
             status=ProposalStatus.PLANNING,
+        )
+        return (
+            _append_planning_update(
+                self._planner_repository,
+                session.planner_session_id,
+                PlanningUpdateStage.QUEUED,
+            )
+            or session
         )
 
 
@@ -427,9 +469,17 @@ class SubmitPlannerFollowUp:
             customer_request=session.customer_request,
             follow_up_answers=(*session.follow_up_answers, answer),
             status=ProposalStatus.PLANNING,
+            planning_updates=session.planning_updates,
         )
         self._planner_repository.save_session(updated)
-        return updated
+        return (
+            _append_planning_update(
+                self._planner_repository,
+                updated.planner_session_id,
+                PlanningUpdateStage.QUEUED,
+            )
+            or updated
+        )
 
 
 class CompletePlanningSession:
@@ -441,9 +491,11 @@ class CompletePlanningSession:
         catalog_repository: CatalogRepository,
     ) -> None:
         self._planner_repository = planner_repository
+        self._planning_update_recorder: PlanningUpdateRecorder | None = None
         self._plan_menu = PlanMenuFromRequest(
             agent=agent,
             catalog_repository=catalog_repository,
+            planning_update_recorder=self._record_planning_update,
         )
 
     def __call__(self, *, planner_session_id: str) -> PlannerSession:
@@ -456,6 +508,11 @@ class CompletePlanningSession:
                 "planner completion is accepted only while planning"
             )
 
+        self._planning_update_recorder = _session_update_recorder(
+            self._planner_repository,
+            session.planner_session_id,
+        )
+        self._record_planning_update(PlanningUpdateStage.STARTED)
         try:
             result = self._plan_menu(
                 customer_request=session.customer_request,
@@ -472,6 +529,10 @@ class CompletePlanningSession:
                 ),
             )
 
+        latest = self._planner_repository.get_session(session.planner_session_id)
+        planning_updates = (
+            latest.planning_updates if latest is not None else session.planning_updates
+        )
         updated = PlannerSession(
             planner_session_id=session.planner_session_id,
             customer_request=session.customer_request,
@@ -480,9 +541,17 @@ class CompletePlanningSession:
             follow_up_question=result.follow_up_question,
             menu_proposal=result.menu_proposal,
             validation_errors=result.validation_errors,
+            planning_updates=(
+                *planning_updates,
+                _planning_update(_terminal_update_stage(result.status)),
+            ),
         )
         self._planner_repository.save_session(updated)
         return updated
+
+    def _record_planning_update(self, stage: PlanningUpdateStage) -> None:
+        if self._planning_update_recorder is not None:
+            self._planning_update_recorder(stage)
 
 
 class AnswerPlannerFollowUp:
@@ -523,6 +592,7 @@ class AnswerPlannerFollowUp:
             follow_up_question=result.follow_up_question,
             menu_proposal=result.menu_proposal,
             validation_errors=result.validation_errors,
+            planning_updates=session.planning_updates,
         )
         self._planner_repository.save_session(updated)
         return updated
@@ -575,6 +645,7 @@ class RevalidateMenuProposal:
                 follow_up_answers=session.follow_up_answers,
                 status=ProposalStatus.FAILED,
                 validation_errors=validation_result.validation_errors,
+                planning_updates=session.planning_updates,
             )
         else:
             updated = PlannerSession(
@@ -583,6 +654,7 @@ class RevalidateMenuProposal:
                 follow_up_answers=session.follow_up_answers,
                 status=ProposalStatus.PROPOSAL_READY,
                 menu_proposal=validation_result.menu_proposal,
+                planning_updates=session.planning_updates,
             )
         self._planner_repository.save_session(updated)
         return updated
@@ -665,6 +737,7 @@ class AcceptMenuProposal:
             follow_up_answers=session.follow_up_answers,
             status=ProposalStatus.ACCEPTED,
             menu_proposal=menu_proposal,
+            planning_updates=session.planning_updates,
         )
         self._planner_repository.save_session(accepted)
         return AcceptedMenuProposal(
@@ -912,6 +985,39 @@ def _require_message(message: str) -> str:
     if not stripped:
         raise PlannerInputInvalid()
     return stripped
+
+
+def _planning_update(stage: PlanningUpdateStage) -> PlanningUpdate:
+    return PlanningUpdate(stage=stage, message=_PLANNING_UPDATE_MESSAGES[stage])
+
+
+def _append_planning_update(
+    repository: PlannerSessionRepository,
+    planner_session_id: PlannerSessionId,
+    stage: PlanningUpdateStage,
+) -> PlannerSession | None:
+    return repository.append_planning_update(
+        planner_session_id,
+        _planning_update(stage),
+    )
+
+
+def _session_update_recorder(
+    repository: PlannerSessionRepository,
+    planner_session_id: PlannerSessionId,
+) -> PlanningUpdateRecorder:
+    def record(stage: PlanningUpdateStage) -> None:
+        _append_planning_update(repository, planner_session_id, stage)
+
+    return record
+
+
+def _terminal_update_stage(status: ProposalStatus) -> PlanningUpdateStage:
+    if status == ProposalStatus.PROPOSAL_READY:
+        return PlanningUpdateStage.READY
+    if status == ProposalStatus.NEEDS_INPUT:
+        return PlanningUpdateStage.NEEDS_INPUT
+    return PlanningUpdateStage.FAILED
 
 
 def _get_session_or_raise(

@@ -34,6 +34,20 @@ def emit_timing(
     )
 
 
+def emit_lifecycle_timing(
+    timing_sink: PlannerTimingSink | None,
+    name: str,
+    *,
+    started_at: float,
+) -> None:
+    emit_timing(
+        timing_sink,
+        name,
+        started_at=started_at,
+        attributes={},
+    )
+
+
 def emit_parse_timing(
     timing_sink: PlannerTimingSink | None,
     *,

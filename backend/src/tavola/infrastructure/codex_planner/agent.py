@@ -18,6 +18,7 @@ from tavola.infrastructure.codex_planner.sdk_client import (
 )
 from tavola.infrastructure.codex_planner.timing import (
     PlannerTimingSink,
+    emit_lifecycle_timing,
     emit_parse_timing,
     emit_timing,
     emit_total_timing,
@@ -63,6 +64,22 @@ class CodexMenuPlannerAgent:
                 command=mcp_server_command,
             ),
         )
+        self._mcp_server_command = mcp_server_command
+
+    def with_timing_sink(
+        self,
+        timing_sink: PlannerTimingSink | None,
+    ) -> "CodexMenuPlannerAgent":
+        return CodexMenuPlannerAgent(
+            client=self._client,
+            model=self._model,
+            sandbox_mode=self._sandbox_mode,
+            reasoning_effort=self._reasoning_effort,
+            timeout_seconds=self._timeout_seconds,
+            max_retries=self._max_retries,
+            timing_sink=timing_sink,
+            mcp_server_command=self._mcp_server_command,
+        )
 
     def plan_menu(
         self,
@@ -79,6 +96,11 @@ class CodexMenuPlannerAgent:
         repair_attempts = 0
         for attempt in range(self._max_retries + 1):
             try:
+                emit_lifecycle_timing(
+                    self._timing_sink,
+                    "connecting",
+                    started_at=run_started_at,
+                )
                 run_result = self._client.run(
                     prompt=prompt,
                     model=self._model,
@@ -202,6 +224,11 @@ class CodexMenuPlannerAgent:
             validation_errors=validation_errors,
         )
         try:
+            emit_lifecycle_timing(
+                self._timing_sink,
+                "connecting",
+                started_at=run_started_at,
+            )
             run_result = self._client.run(
                 prompt=prompt,
                 model=self._model,
