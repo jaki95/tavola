@@ -183,6 +183,14 @@ describe("CheckoutPanel", () => {
     expect(within(panel).getByLabelText("Pickup window")).toHaveDisplayValue(
       "Today afternoon pickup"
     );
+    expect(
+      within(panel).getByText(
+        "This creates a mock pickup order. No payment is collected. Pickup: Today afternoon pickup. Basket can still be changed with Back to basket."
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(panel).getByRole("button", { name: "Create pickup order" })
+    ).toHaveAttribute("aria-describedby", "checkout-submit-note");
     expect(within(panel).getAllByText("£8.50").length).toBeGreaterThan(0);
   });
 
@@ -265,7 +273,7 @@ describe("CheckoutPanel", () => {
     expect(
       await within(panel).findByRole("heading", {
         level: 3,
-        name: "Order confirmed. Thank you for shopping with us."
+        name: "Your deli pickup is arranged."
       })
     ).toBeInTheDocument();
     expect(
