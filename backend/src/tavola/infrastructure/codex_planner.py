@@ -11,15 +11,9 @@ from tavola.application.planner import (
     PlannerAgentError,
     PlannerAgentErrorCode,
 )
-from tavola.domain.planner import FollowUpQuestion
+from tavola.domain.planner import FollowUpQuestion, PlannerValidationError
 
 _PLANNER_MCP_SERVER_NAME = "tavola-planner-tools"
-_REQUIRED_TOOL_NAMES = frozenset(
-    {
-        "find_catalog_candidates",
-        "validate_menu_proposal",
-    }
-)
 
 
 @dataclass(frozen=True, slots=True)
@@ -242,7 +236,7 @@ class CodexMenuPlannerAgent:
         mcp_server_command: tuple[str, ...] = (
             "python",
             "-m",
-            "tavola.infrastructure.planner_mcp_server",
+            "tavola.infrastructure.planner_catalog_mcp_server",
         ),
     ) -> None:
         self._client = client
@@ -328,27 +322,6 @@ class CodexMenuPlannerAgent:
                 return response
 
             parsed_response, repair_reason = _parse_final_output(run_result)
-            if (
-                parsed_response is not None
-                and parsed_response.raw_proposal is not None
-                and not _used_required_tools(run_result.tool_names)
-            ):
-                response = _failure(
-                    PlannerAgentErrorCode.MISSING_TOOL_USE,
-                    "Planner did not verify catalog and pricing with Tavola checks.",
-                )
-                _emit_parse_timing(
-                    self._timing_sink,
-                    started_at=run_started_at,
-                    result="missing_tool_use",
-                )
-                _emit_total_timing(
-                    self._timing_sink,
-                    started_at=run_started_at,
-                    response=response,
-                    repair_attempts=repair_attempts,
-                )
-                return response
 
             if parsed_response is not None:
                 _emit_parse_timing(
@@ -402,6 +375,105 @@ class CodexMenuPlannerAgent:
         )
         return malformed_failure
 
+    def repair_menu(
+        self,
+        *,
+        customer_request: str,
+        follow_up_answers: tuple[str, ...] = (),
+        raw_proposal: dict[str, Any],
+        validation_errors: tuple[PlannerValidationError, ...],
+    ) -> MenuPlannerAgentResponse:
+        run_started_at = time.perf_counter()
+        prompt = _build_validation_repair_prompt(
+            customer_request=customer_request,
+            follow_up_answers=follow_up_answers,
+            raw_proposal=raw_proposal,
+            validation_errors=validation_errors,
+        )
+        try:
+            run_result = self._client.run(
+                prompt=prompt,
+                model=self._model,
+                sandbox_mode=self._sandbox_mode,
+                reasoning_effort=self._reasoning_effort,
+                mcp_servers=self._mcp_servers,
+                timeout_seconds=self._timeout_seconds,
+                timing_sink=self._timing_sink,
+            )
+        except TimeoutError:
+            response = _failure(
+                PlannerAgentErrorCode.TIMEOUT,
+                "Planner repair timed out before Tavola could validate a proposal.",
+            )
+            _emit_timing(
+                self._timing_sink,
+                "timeout",
+                started_at=run_started_at,
+                attributes={"timeout_seconds": self._timeout_seconds},
+            )
+            _emit_total_timing(
+                self._timing_sink,
+                started_at=run_started_at,
+                response=response,
+                repair_attempts=0,
+            )
+            return response
+        except Exception:
+            response = _failure(
+                PlannerAgentErrorCode.TOOL_FAILURE,
+                "Planner repair failed before Tavola could validate a proposal.",
+            )
+            _emit_total_timing(
+                self._timing_sink,
+                started_at=run_started_at,
+                response=response,
+                repair_attempts=0,
+            )
+            return response
+
+        if run_result.tool_error is not None:
+            response = _failure(
+                PlannerAgentErrorCode.TOOL_FAILURE,
+                "Planner repair checks failed before Tavola could validate a proposal.",
+            )
+            _emit_total_timing(
+                self._timing_sink,
+                started_at=run_started_at,
+                response=response,
+                repair_attempts=0,
+            )
+            return response
+
+        parsed_response, repair_reason = _parse_final_output(run_result)
+
+        if parsed_response is not None:
+            _emit_parse_timing(
+                self._timing_sink,
+                started_at=run_started_at,
+                result=_response_status(parsed_response),
+            )
+            _emit_total_timing(
+                self._timing_sink,
+                started_at=run_started_at,
+                response=parsed_response,
+                repair_attempts=0,
+            )
+            return parsed_response
+
+        response = _failure(PlannerAgentErrorCode.MALFORMED_OUTPUT, repair_reason)
+        _emit_parse_timing(
+            self._timing_sink,
+            started_at=run_started_at,
+            result="malformed_output",
+        )
+        _emit_total_timing(
+            self._timing_sink,
+            started_at=run_started_at,
+            response=response,
+            repair_attempts=0,
+        )
+        return response
+
 
 def _build_planner_prompt(
     customer_request: str,
@@ -416,11 +488,25 @@ def _build_planner_prompt(
             "You are Tavola's Planner for a small Italian deli.",
             "If party size is missing, ask one follow-up question instead of "
             "guessing quantities. Follow-up-only JSON may skip tool calls.",
+            "If party size is already present, do not ask a follow-up question "
+            "unless the request is impossible to interpret.",
+            "Example: 'Vegetarian dinner for 4 around GBP 50' has party_size 4, "
+            "an approximate GBP 50 budget, and should return a menu proposal, not "
+            "a follow-up question.",
             "Proposal flow: choose antipasto-primo-dessert, antipasto-primo, "
-            "primo-dessert, primo-only, or aperitivo; call find_catalog_candidates "
-            "with only category_ids, dietary_facets, tags, tag_match, alcohol, "
-            "and max_results; call validate_menu_proposal; return final JSON only "
-            "after validation succeeds.",
+            "primo-dessert, primo-only, or aperitivo; for proposal outputs you "
+            "must call find_catalog_candidates before returning final JSON.",
+            "Call find_catalog_candidates with only category_ids, dietary_facets, "
+            "tags, tag_match, alcohol, and max_results. Tavola validates the "
+            "returned proposal after your response.",
+            "Use exact package_template_id values: antipasto-primo-dessert, "
+            "antipasto-primo, primo-dessert, primo-only, aperitivo.",
+            "Use exact course values only: antipasto, primo, dessert, aperitivo, "
+            "drinks. Do not use category labels like Antipasti, Primi, Desserts, "
+            "or Drinks as course values.",
+            "Template course map: antipasto-primo-dessert has antipasto, primo, "
+            "dessert; antipasto-primo has antipasto, primo; primo-dessert has "
+            "primo, dessert; primo-only has primo; aperitivo has aperitivo.",
             "Do not pass party size, budget, occasion, or chosen course set as "
             "search text or candidate filters. Use candidate summaries for names, "
             "units, prices, availability, dietary facets, tags, and short "
@@ -476,6 +562,42 @@ def _build_repair_prompt(
             "Return one corrected JSON object that matches the Final JSON contract.",
         )
     )
+
+
+def _build_validation_repair_prompt(
+    *,
+    customer_request: str,
+    follow_up_answers: tuple[str, ...],
+    raw_proposal: dict[str, Any],
+    validation_errors: tuple[PlannerValidationError, ...],
+) -> str:
+    return "\n".join(
+        (
+            _build_planner_prompt(customer_request, follow_up_answers),
+            "Repair your previous menu proposal.",
+            "Tavola validation errors:",
+            json.dumps(
+                [_validation_error_payload(error) for error in validation_errors],
+                separators=(",", ":"),
+            ),
+            "Previous proposal JSON:",
+            json.dumps(raw_proposal, separators=(",", ":")),
+            "Use Tavola catalog candidates to replace invalid products, quantities, "
+            "or courses. Do not invent products, prices, SKUs, or templates.",
+            "Do not repeat stack traces, credentials, tool transcripts, or raw "
+            "runtime details.",
+            "Return one corrected JSON object that matches the Final JSON contract.",
+        )
+    )
+
+
+def _validation_error_payload(error: PlannerValidationError) -> dict[str, object]:
+    return {
+        "code": error.code.value,
+        "message": error.message,
+        "sku_id": error.sku_id,
+        "course": error.course.value if error.course is not None else None,
+    }
 
 
 def _parse_final_output(
@@ -558,10 +680,6 @@ def _line_matches_contract(line: Any) -> bool:
         and isinstance(line.get("quantity"), int)
         and isinstance(line.get("rationale"), str)
     )
-
-
-def _used_required_tools(tool_names: tuple[str, ...]) -> bool:
-    return _REQUIRED_TOOL_NAMES.issubset(frozenset(tool_names))
 
 
 def _mcp_config_overrides(

@@ -101,7 +101,9 @@ class SequencedCodexClient:
         return self.results.pop(0)
 
 
-def test_codex_adapter_configures_bounded_tools_and_validates_final_json() -> None:
+def test_codex_adapter_configures_catalog_tool_and_tavola_validates_final_json() -> (
+    None
+):
     client = CapturingCodexClient(
         result=CodexSdkRunResult(
             final_output=json.dumps(
@@ -133,7 +135,6 @@ def test_codex_adapter_configures_bounded_tools_and_validates_final_json() -> No
         model="codex-test-model",
         reasoning_effort="low",
         timeout_seconds=12,
-        mcp_server_command=("python", "-m", "tavola.infrastructure.planner_mcp_server"),
     )
     planner = PlanMenuFromRequest(
         agent=agent,
@@ -152,11 +153,15 @@ def test_codex_adapter_configures_bounded_tools_and_validates_final_json() -> No
     assert client.mcp_servers == (
         CodexMcpServerConfig(
             name="tavola-planner-tools",
-            command=("python", "-m", "tavola.infrastructure.planner_mcp_server"),
+            command=(
+                "python",
+                "-m",
+                "tavola.infrastructure.planner_catalog_mcp_server",
+            ),
         ),
     )
     assert client.prompt is not None
-    assert len(client.prompt) < 2200
+    assert len(client.prompt) < 3200
     assert "Proposal flow" in client.prompt
     assert "antipasto-primo-dessert" in client.prompt
     assert "antipasto-primo" in client.prompt
@@ -167,12 +172,18 @@ def test_codex_adapter_configures_bounded_tools_and_validates_final_json() -> No
     assert "find_catalog_candidates" in client.prompt
     assert "tag_match" in client.prompt
     assert "alcohol" in client.prompt
-    assert "validate_menu_proposal" in client.prompt
+    assert "validate_menu_proposal" not in client.prompt
+    assert "Tavola validates the returned proposal after your response" in client.prompt
     assert "Do not pass party size, budget, occasion" in client.prompt
     assert "chosen course set" in client.prompt
     assert "Drinks course" in client.prompt
     assert "ask one follow-up question" in client.prompt
+    assert "If party size is already present, do not ask a follow-up" in client.prompt
+    assert "must call find_catalog_candidates" in client.prompt
     assert "party size" in client.prompt
+    assert "Use exact course values only" in client.prompt
+    assert "antipasto, primo, dessert" in client.prompt
+    assert "Do not use category labels like Antipasti" in client.prompt
     assert "Do not invent products or prices" in client.prompt
     assert "vegetarian, vegan, gluten-free, and no-alcohol" in client.prompt
     assert "whole-menu vegetarian request" in client.prompt
@@ -361,6 +372,42 @@ def test_codex_adapter_repairs_output_contract_failure_once() -> None:
     assert "Final output did not match Tavola's JSON contract" in client.prompts[1]
 
 
+def test_codex_adapter_repairs_after_tavola_validation_failure() -> None:
+    client = SequencedCodexClient(
+        results=[
+            CodexSdkRunResult(
+                final_output=json.dumps(valid_raw_proposal(sku_id="missing-product")),
+                tool_names=required_tool_names(),
+            ),
+            CodexSdkRunResult(
+                final_output=json.dumps(valid_raw_proposal()),
+                tool_names=required_tool_names(),
+            ),
+        ]
+    )
+    planner = PlanMenuFromRequest(
+        agent=CodexMenuPlannerAgent(
+            client=client,
+            model="codex-test-model",
+        ),
+        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+    )
+
+    result = planner(customer_request="Vegetarian dinner for 2")
+
+    assert result.status == ProposalStatus.PROPOSAL_READY
+    assert result.menu_proposal is not None
+    assert result.menu_proposal.total.amount_minor == 850
+    assert client.prompts is not None
+    assert len(client.prompts) == 2
+    repair_prompt = client.prompts[1]
+    assert "Repair your previous menu proposal" in repair_prompt
+    assert "Tavola validation errors" in repair_prompt
+    assert "unknown_sku" in repair_prompt
+    assert "missing-product" in repair_prompt
+    assert "Return one corrected JSON object" in repair_prompt
+
+
 def test_codex_adapter_stops_after_configured_repair_attempts() -> None:
     client = SequencedCodexClient(
         results=[
@@ -411,7 +458,11 @@ def test_python_codex_sdk_client_starts_thread_with_mcp_server_config() -> None:
         mcp_servers=(
             CodexMcpServerConfig(
                 name="tavola-planner-tools",
-                command=("python", "-m", "tavola.infrastructure.planner_mcp_server"),
+                command=(
+                    "python",
+                    "-m",
+                    "tavola.infrastructure.planner_catalog_mcp_server",
+                ),
             ),
         ),
         timeout_seconds=10,
@@ -419,15 +470,12 @@ def test_python_codex_sdk_client_starts_thread_with_mcp_server_config() -> None:
     )
 
     assert result.final_output == '{"title": "Dinner"}'
-    assert result.tool_names == (
-        "find_catalog_candidates",
-        "validate_menu_proposal",
-    )
+    assert result.tool_names == ("find_catalog_candidates",)
     fake_codex = created_clients[0]
     assert fake_codex.config.config_overrides == (
         'mcp_servers.tavola-planner-tools.command="python"',
         'mcp_servers.tavola-planner-tools.args=["-m", '
-        '"tavola.infrastructure.planner_mcp_server"]',
+        '"tavola.infrastructure.planner_catalog_mcp_server"]',
     )
     assert fake_codex.started_model == "codex-test-model"
     assert fake_codex.started_sandbox == "read-only"
@@ -443,12 +491,7 @@ def test_python_codex_sdk_client_starts_thread_with_mcp_server_config() -> None:
         "tool_names_detected",
     ]
     assert events[0].attributes == {"mcp_server_count": 1}
-    assert events[3].attributes == {
-        "tool_names": (
-            "find_catalog_candidates",
-            "validate_menu_proposal",
-        )
-    }
+    assert events[3].attributes == {"tool_names": ("find_catalog_candidates",)}
 
 
 def test_codex_adapter_maps_malformed_json_to_typed_failure() -> None:
@@ -464,7 +507,7 @@ def test_codex_adapter_maps_malformed_json_to_typed_failure() -> None:
     assert result.agent_error.code == PlannerAgentErrorCode.MALFORMED_OUTPUT
 
 
-def test_codex_adapter_requires_tavola_tool_use_before_final_output() -> None:
+def test_codex_adapter_accepts_catalog_only_tool_use_before_final_output() -> None:
     result = _run_agent(
         CodexSdkRunResult(
             final_output=json.dumps(valid_raw_proposal()),
@@ -472,12 +515,22 @@ def test_codex_adapter_requires_tavola_tool_use_before_final_output() -> None:
         )
     )
 
-    assert result.status == ProposalStatus.FAILED
-    assert result.agent_error is not None
-    assert result.agent_error.code == PlannerAgentErrorCode.MISSING_TOOL_USE
-    assert result.agent_error.message == (
-        "Planner did not verify catalog and pricing with Tavola checks."
+    assert result.status == ProposalStatus.PROPOSAL_READY
+    assert result.agent_error is None
+    assert result.menu_proposal is not None
+
+
+def test_codex_adapter_allows_server_validation_when_tool_use_is_not_reported() -> None:
+    result = _run_agent(
+        CodexSdkRunResult(
+            final_output=json.dumps(valid_raw_proposal()),
+            tool_names=(),
+        )
     )
+
+    assert result.status == ProposalStatus.PROPOSAL_READY
+    assert result.agent_error is None
+    assert result.menu_proposal is not None
 
 
 def test_codex_adapter_maps_tool_failure_to_typed_failure() -> None:
@@ -485,7 +538,7 @@ def test_codex_adapter_maps_tool_failure_to_typed_failure() -> None:
         CodexSdkRunResult(
             final_output="{}",
             tool_names=required_tool_names(),
-            tool_error="validate_menu_proposal failed",
+            tool_error="find_catalog_candidates failed",
         )
     )
 
@@ -523,13 +576,10 @@ def _run_agent(run_result: CodexSdkRunResult):
 
 
 def required_tool_names() -> tuple[str, ...]:
-    return (
-        "find_catalog_candidates",
-        "validate_menu_proposal",
-    )
+    return ("find_catalog_candidates",)
 
 
-def valid_raw_proposal() -> dict[str, object]:
+def valid_raw_proposal(sku_id: str = "fresh-tagliatelle-250g") -> dict[str, object]:
     return {
         "title": "Weeknight Pasta",
         "explanation": "A compact pasta proposal.",
@@ -541,7 +591,7 @@ def valid_raw_proposal() -> dict[str, object]:
                 "course": "primo",
                 "lines": [
                     {
-                        "sku_id": "fresh-tagliatelle-250g",
+                        "sku_id": sku_id,
                         "quantity": 2,
                         "rationale": "A flexible pasta course.",
                     }
@@ -595,8 +645,5 @@ class FakeMcpToolCall:
 
 class FakeTurnResult:
     final_response = '{"title": "Dinner"}'
-    items = [
-        FakeThreadItem(root=FakeMcpToolCall("find_catalog_candidates")),
-        FakeMcpToolCall("validate_menu_proposal"),
-    ]
+    items = [FakeThreadItem(root=FakeMcpToolCall("find_catalog_candidates"))]
     error = None

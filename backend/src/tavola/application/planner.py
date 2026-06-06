@@ -103,6 +103,16 @@ class MenuPlannerAgent(Protocol):
     ) -> MenuPlannerAgentResponse:
         """Return a follow-up question or raw menu proposal from the planner."""
 
+    def repair_menu(
+        self,
+        *,
+        customer_request: str,
+        follow_up_answers: tuple[str, ...] = (),
+        raw_proposal: dict[str, Any],
+        validation_errors: tuple[PlannerValidationError, ...],
+    ) -> MenuPlannerAgentResponse:
+        """Return one repaired raw proposal after Tavola validation fails."""
+
 
 class AcceptanceMode(StrEnum):
     APPEND = "append"
@@ -267,6 +277,70 @@ class PlanMenuFromRequest:
                 ),
             )
 
+        validation_result = self._validate_menu_proposal.validate_raw(
+            response.raw_proposal
+        )
+        if validation_result.menu_proposal is None:
+            repaired_response = self._repair_after_validation_failure(
+                customer_request=customer_request,
+                follow_up_answers=follow_up_answers,
+                raw_proposal=response.raw_proposal,
+                validation_errors=validation_result.validation_errors,
+            )
+            if repaired_response is not None:
+                return repaired_response
+            return MenuPlannerRunResult(
+                status=ProposalStatus.FAILED,
+                validation_errors=validation_result.validation_errors,
+            )
+        return MenuPlannerRunResult(
+            status=ProposalStatus.PROPOSAL_READY,
+            menu_proposal=validation_result.menu_proposal,
+        )
+
+    def _repair_after_validation_failure(
+        self,
+        *,
+        customer_request: str,
+        follow_up_answers: tuple[str, ...],
+        raw_proposal: dict[str, Any],
+        validation_errors: tuple[PlannerValidationError, ...],
+    ) -> MenuPlannerRunResult | None:
+        repair_menu = getattr(self._agent, "repair_menu", None)
+        if not callable(repair_menu):
+            return None
+        response = repair_menu(
+            customer_request=customer_request,
+            follow_up_answers=follow_up_answers,
+            raw_proposal=raw_proposal,
+            validation_errors=validation_errors,
+        )
+        if response.failure is not None:
+            return MenuPlannerRunResult(
+                status=ProposalStatus.FAILED,
+                validation_errors=(
+                    PlannerValidationError(
+                        code=PlannerValidationErrorCode.INVALID_PROPOSAL,
+                        message=response.failure.message,
+                    ),
+                ),
+                agent_error=response.failure,
+            )
+        if response.follow_up_question is not None:
+            return MenuPlannerRunResult(
+                status=ProposalStatus.NEEDS_INPUT,
+                follow_up_question=response.follow_up_question,
+            )
+        if response.raw_proposal is None:
+            return MenuPlannerRunResult(
+                status=ProposalStatus.FAILED,
+                validation_errors=(
+                    PlannerValidationError(
+                        code=PlannerValidationErrorCode.INVALID_PROPOSAL,
+                        message="planner did not return a repaired menu proposal",
+                    ),
+                ),
+            )
         validation_result = self._validate_menu_proposal.validate_raw(
             response.raw_proposal
         )
