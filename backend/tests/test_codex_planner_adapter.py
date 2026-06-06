@@ -1,5 +1,6 @@
 import json
 from dataclasses import dataclass
+from pathlib import Path
 
 from tavola.application.planner import PlanMenuFromRequest, PlannerAgentErrorCode
 from tavola.domain.catalog import (
@@ -173,17 +174,22 @@ def test_codex_adapter_configures_catalog_tool_and_tavola_validates_final_json()
     assert "tag_match" in client.prompt
     assert "alcohol" in client.prompt
     assert "validate_menu_proposal" not in client.prompt
-    assert "Tavola validates the returned proposal after your response" in client.prompt
+    normalized_prompt = " ".join(client.prompt.split())
+    assert (
+        "Tavola validates the returned proposal after your response"
+        in normalized_prompt
+    )
     assert "Do not pass party size, budget, occasion" in client.prompt
     assert "chosen course set" in client.prompt
     assert "Drinks course" in client.prompt
     assert "ask one follow-up question" in client.prompt
     assert "If party size is already present, do not ask a follow-up" in client.prompt
-    assert "must call find_catalog_candidates" in client.prompt
+    assert "'Vegetarian dinner for 4 around GBP 50' has party_size 4" in client.prompt
+    assert "must call find_catalog_candidates" in normalized_prompt
     assert "party size" in client.prompt
     assert "Use exact course values only" in client.prompt
     assert "antipasto, primo, dessert" in client.prompt
-    assert "Do not use category labels like Antipasti" in client.prompt
+    assert "Do not use category labels like Antipasti" in normalized_prompt
     assert "Do not invent products or prices" in client.prompt
     assert "vegetarian, vegan, gluten-free, and no-alcohol" in client.prompt
     assert "whole-menu vegetarian request" in client.prompt
@@ -198,6 +204,34 @@ def test_codex_adapter_configures_catalog_tool_and_tavola_validates_final_json()
     assert "search_catalog" not in client.prompt
     assert "list_package_templates" not in client.prompt
     assert "get_sku_detail" not in client.prompt
+
+
+def test_codex_adapter_loads_prompt_template_from_markdown_file() -> None:
+    client = CapturingCodexClient(
+        result=CodexSdkRunResult(
+            final_output=json.dumps(valid_raw_proposal()),
+            tool_names=required_tool_names(),
+        )
+    )
+    planner = PlanMenuFromRequest(
+        agent=CodexMenuPlannerAgent(client=client, model="codex-test-model"),
+        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+    )
+    prompt_file = (
+        Path(__file__).parents[1]
+        / "src"
+        / "tavola"
+        / "infrastructure"
+        / "codex_planner"
+        / "codex_planner_prompt.md"
+    )
+
+    result = planner(customer_request="Vegetarian dinner for 2")
+
+    assert result.status == ProposalStatus.PROPOSAL_READY
+    assert client.prompt is not None
+    assert prompt_file.read_text(encoding="utf-8").strip() in client.prompt
+    assert "Customer request:\nVegetarian dinner for 2" in client.prompt
 
 
 def test_codex_adapter_repairs_malformed_json_once() -> None:
