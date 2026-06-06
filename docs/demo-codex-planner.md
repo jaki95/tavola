@@ -120,6 +120,12 @@ proposal-validation details, through the configured Codex credential path. Get
 explicit operator approval before running live smoke prompts or browser flows
 that submit planner requests.
 
+During proposal runs, the Planner should narrow Tavola's real products with
+catalog-native filters such as category, dietary needs, tags, and alcohol mode,
+then validate the drafted menu before anything can reach the basket. In demo
+narration, describe this as Tavola checking the catalog and prices rather than
+as generic search.
+
 The planner surface should show the small `powered by Codex` attribution. Basket
 and checkout copy should return to Tavola meal-plan language after the proposal
 is accepted.
