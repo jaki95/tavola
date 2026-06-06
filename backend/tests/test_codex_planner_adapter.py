@@ -194,6 +194,9 @@ def test_codex_adapter_configures_catalog_tool_and_tavola_validates_final_json()
     assert "vegetarian, vegan, gluten-free, and no-alcohol" in client.prompt
     assert "whole-menu vegetarian request" in client.prompt
     assert "2 vegetarian guests" in client.prompt
+    assert "mixed group" in client.prompt
+    assert "Run separate candidate searches" in normalized_prompt
+    assert "unfiltered searches for the wider group" in normalized_prompt
     assert "do not force every line to be vegetarian" in client.prompt
     assert "Final JSON contract" in client.prompt
     assert '"follow_up_question"' in client.prompt

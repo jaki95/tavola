@@ -264,13 +264,17 @@ describe("PlannerWorkspace", () => {
       screen.queryByPlaceholderText("Vegetarian dinner for 4 around £50")
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Vegetarian dinner for 4 around £50" })
+      screen.getByRole("button", {
+        name: "Dinner for 10 with one vegetarian guest"
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Antipasti and pasta for 4 around £50"
+      })
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Aperitivo for 6 with drinks" })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Help me plan Sunday lunch" })
     ).toBeInTheDocument();
   });
 

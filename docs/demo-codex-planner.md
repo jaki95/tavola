@@ -62,8 +62,9 @@ Vegetarian dinner for 4 around GBP 50
 
 Recommended comparison personas:
 
-- `Classic Italian dinner for 2`
-- `Antipasti spread for a party`
+- `Dinner for 10 with one vegetarian guest`
+- `Antipasti and pasta for 4 around GBP 50`
+- `Aperitivo for 6 with drinks`
 - `Help me plan Sunday lunch`, followed by a party-size answer in the browser
 - An unsupported safety or allergy-like constraint request that Tavola cannot
   honestly satisfy from current catalog facets
