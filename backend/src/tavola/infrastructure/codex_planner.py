@@ -416,16 +416,15 @@ def _build_planner_prompt(
             "You are Tavola's Planner for a small Italian deli.",
             "If party size is missing, ask one follow-up question instead of "
             "guessing quantities. Follow-up-only JSON may skip tool calls.",
-            "For proposals, choose a menu structure: antipasto-primo-dessert, "
-            "antipasto-primo, primo-dessert, primo-only, or aperitivo.",
-            "Call find_catalog_candidates with only category_ids, dietary_facets, "
-            "tags, tag_match, alcohol, and max_results.",
+            "Proposal flow: choose antipasto-primo-dessert, antipasto-primo, "
+            "primo-dessert, primo-only, or aperitivo; call find_catalog_candidates "
+            "with only category_ids, dietary_facets, tags, tag_match, alcohol, "
+            "and max_results; call validate_menu_proposal; return final JSON only "
+            "after validation succeeds.",
             "Do not pass party size, budget, occasion, or menu structure as "
-            "search text or candidate filters.",
-            "Use candidate summaries for names, units, prices, "
-            "availability, dietary facets, tags, and short descriptions.",
-            "Choose products, quantities, courses, and concise rationales; "
-            "then call validate_menu_proposal before returning any proposal.",
+            "search text or candidate filters. Use candidate summaries for names, "
+            "units, prices, availability, dietary facets, tags, and short "
+            "descriptions.",
             "Append one non-empty Drinks course only when drinks are requested or "
             "clearly implied. Drinks are optional courses, not separate package "
             "templates.",

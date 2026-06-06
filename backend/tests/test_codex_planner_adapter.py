@@ -157,7 +157,7 @@ def test_codex_adapter_configures_bounded_tools_and_validates_final_json() -> No
     )
     assert client.prompt is not None
     assert len(client.prompt) < 2200
-    assert "choose a menu structure" in client.prompt
+    assert "Proposal flow" in client.prompt
     assert "antipasto-primo-dessert" in client.prompt
     assert "antipasto-primo" in client.prompt
     assert "primo-dessert" in client.prompt
