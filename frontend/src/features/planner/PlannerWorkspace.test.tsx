@@ -235,6 +235,26 @@ describe("PlannerWorkspace", () => {
     expect(container.querySelector(".planner-workspace__icon")).toBeNull();
   });
 
+  test("shows persona examples and a neutral request prompt", () => {
+    const client = createPlannerClient({});
+
+    renderPlannerWorkspace({ client });
+
+    expect(screen.getByPlaceholderText("What are you planning?")).toBeInTheDocument();
+    expect(
+      screen.queryByPlaceholderText("Vegetarian dinner for 4 around £50")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Vegetarian dinner for 4 around £50" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Aperitivo for 6 with drinks" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Help me plan Sunday lunch" })
+    ).toBeInTheDocument();
+  });
+
   test("submits a meal prompt and renders a reviewable proposal", async () => {
     vi.useFakeTimers();
     const client = createPlannerClient({
@@ -445,7 +465,7 @@ describe("PlannerWorkspace", () => {
     expect(screen.getByLabelText("Meal request")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Plan menu" })).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "Classic Italian dinner for 2" })
+      screen.getByRole("button", { name: "Aperitivo for 6 with drinks" })
     ).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText("Meal request"), {
