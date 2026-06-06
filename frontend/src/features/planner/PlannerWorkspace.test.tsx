@@ -400,11 +400,20 @@ describe("PlannerWorkspace", () => {
     expect(screen.queryByText("Live planner mode")).not.toBeInTheDocument();
     expect(screen.queryByText("Live planner is ready.")).not.toBeInTheDocument();
     expect(
-      screen.queryByText("Checks products against Tavola's catalog")
-    ).not.toBeInTheDocument();
+      screen.getByLabelText("Planner validation promise")
+    ).toHaveTextContent("Tavola validates before Basket changes.");
     expect(
-      screen.queryByText("Prices calculated by Tavola")
-    ).not.toBeInTheDocument();
+      screen.getByText("Real Products from the catalog")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Prices come from Tavola's catalog")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Dietary requests checked against product labels")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Menu proposal shown for review")
+    ).toBeInTheDocument();
   });
 
   test("disables prompt submission when the planner is unavailable", async () => {
