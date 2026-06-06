@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-06T00:00:00.000Z",
+  "title": "Design System: Tavola",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#201a16",
+        "tonalRamp": ["#1b1512", "#201a16", "#3d332c", "#66584c", "#8f7d6c", "#bcae9c", "#e4d8c8", "#fffdf7"]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Counter Muted",
+        "canonical": "#66584c",
+        "tonalRamp": ["#1f1915", "#3d332c", "#66584c", "#8d7c6d", "#b5a696", "#d6cabb", "#efe5d7", "#fffdf7"]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#fffdf7",
+        "tonalRamp": ["#2b241d", "#4a3d31", "#746354", "#a59584", "#cdbfae", "#e9dfcf", "#f8f3ea", "#fffdf7"]
+      },
+      "porcelain": {
+        "role": "neutral",
+        "displayName": "Porcelain",
+        "canonical": "#f8f3ea",
+        "tonalRamp": ["#2b241d", "#4a3d31", "#746354", "#a59584", "#cdbfae", "#e4d8c8", "#f8f3ea", "#fffdf7"]
+      },
+      "flour": {
+        "role": "neutral",
+        "displayName": "Flour",
+        "canonical": "#efe1c8",
+        "tonalRamp": ["#2a2116", "#493923", "#735a38", "#a17d4d", "#c6a778", "#dcc59f", "#efe1c8", "#fff6e6"]
+      },
+      "tomato": {
+        "role": "primary",
+        "displayName": "Counter Tomato",
+        "canonical": "#b22017",
+        "tonalRamp": ["#2a0805", "#5b100b", "#87180f", "#b22017", "#cf4b3f", "#df8078", "#f0b8b3", "#fde8e6"]
+      },
+      "tomato-dark": {
+        "role": "primary",
+        "displayName": "Dark Tomato",
+        "canonical": "#87180f",
+        "tonalRamp": ["#240704", "#4d0e08", "#87180f", "#b22017", "#cf4b3f", "#df8078", "#f0b8b3", "#fde8e6"]
+      },
+      "basil": {
+        "role": "secondary",
+        "displayName": "Fresh Basil",
+        "canonical": "#2d6544",
+        "tonalRamp": ["#09170e", "#173524", "#2d6544", "#3f825b", "#65a07a", "#94bea2", "#c3dcc9", "#e2eddc"]
+      },
+      "basil-soft": {
+        "role": "secondary",
+        "displayName": "Basil Soft",
+        "canonical": "#e2eddc",
+        "tonalRamp": ["#09170e", "#173524", "#2d6544", "#3f825b", "#65a07a", "#94bea2", "#c3dcc9", "#e2eddc"]
+      },
+      "enamel": {
+        "role": "tertiary",
+        "displayName": "Service Enamel",
+        "canonical": "#21566d",
+        "tonalRamp": ["#07141a", "#102b37", "#21566d", "#33728e", "#6093ab", "#93b8c7", "#c5dce5", "#e7f3f6"]
+      },
+      "saffron": {
+        "role": "tertiary",
+        "displayName": "Pickup Saffron",
+        "canonical": "#c98f1f",
+        "tonalRamp": ["#241804", "#513608", "#855b12", "#c98f1f", "#dfa83f", "#edc479", "#f7e0b2", "#fff3d9"]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Deli Border",
+        "canonical": "#cdb991",
+        "tonalRamp": ["#2b2418", "#4b3d28", "#735f3e", "#9e8458", "#cdb991", "#deceb0", "#efe5d3", "#fff7ec"]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#4a311c29",
+        "tonalRamp": ["#201a16", "#4a311c", "#6f5134", "#967650", "#bea47f", "#dac9aa", "#efe5d3", "#fffdf7"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Tavola brand mark and the rare screen-level title."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Planner, checkout, Basket, product detail, and proposal headings."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Product names, Basket line names, course names, and compact section titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Descriptions, helper copy, state messages, and review text."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Buttons, tabs, fields, categories, badges, and quantities."
+      }
+    },
+    "shadows": [
+      {
+        "name": "soft-panel",
+        "value": "0 18px 46px rgb(54 36 20 / 11%)",
+        "purpose": "Modal and major framed overlay containment."
+      },
+      {
+        "name": "card-lift",
+        "value": "0 12px 26px rgb(54 36 20 / 10%)",
+        "purpose": "Small hover or framed-card elevation."
+      },
+      {
+        "name": "control-press",
+        "value": "inset 0 -2px 0 rgb(32 26 22 / 10%)",
+        "purpose": "Tactile inset for buttons and compact controls."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-fast",
+        "value": "160ms ease",
+        "purpose": "Default button, tab, filter, and control state transitions."
+      },
+      {
+        "name": "card-hover",
+        "value": "180ms ease",
+        "purpose": "Product card lift and border-color response."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "tablet-stack",
+        "value": "860px"
+      },
+      {
+        "name": "compact-controls",
+        "value": "760px"
+      },
+      {
+        "name": "small-phone",
+        "value": "420px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Tomato commerce action for add, checkout, submit, retry, and planning actions.",
+      "html": "<button class=\"ds-btn-primary\">Create pickup order</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 14px; border: 1px solid var(--color-tomato-dark, #87180f); border-radius: 7px; background: linear-gradient(180deg, rgb(255 255 255 / 10%), transparent 48%), var(--color-tomato, #b22017); color: #fff; font: 900 0.9rem/1.1 \"Avenir Next\", \"Gill Sans\", \"Trebuchet MS\", ui-sans-serif, sans-serif; cursor: pointer; box-shadow: inset 0 -2px 0 rgb(32 26 22 / 10%); transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; } .ds-btn-primary:hover { background: linear-gradient(180deg, rgb(255 255 255 / 8%), transparent 48%), var(--color-tomato-dark, #87180f); box-shadow: inset 0 -2px 0 rgb(32 26 22 / 18%), 0 10px 22px rgb(178 32 23 / 18%); transform: translateY(-1px); } .ds-btn-primary:focus-visible { outline: 3px solid rgb(33 86 109 / 82%); outline-offset: 3px; } .ds-btn-primary:disabled { cursor: not-allowed; opacity: 0.56; transform: none; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Quiet paper action for secondary choices such as Back to basket or View details.",
+      "html": "<button class=\"ds-btn-secondary\">Back to basket</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 14px; border: 1px solid var(--color-hairline, #4a311c29); border-radius: 7px; background: rgb(255 253 247 / 82%); color: var(--color-tomato, #b22017); font: 900 0.9rem/1.1 \"Avenir Next\", \"Gill Sans\", \"Trebuchet MS\", ui-sans-serif, sans-serif; cursor: pointer; box-shadow: inset 0 -2px 0 rgb(74 49 28 / 5%); transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease; } .ds-btn-secondary:hover { border-color: rgb(178 32 23 / 34%); background: var(--color-paper, #fffdf7); color: var(--color-tomato-dark, #87180f); box-shadow: inset 0 -2px 0 rgb(74 49 28 / 6%), 0 10px 20px rgb(54 36 20 / 8%); transform: translateY(-1px); } .ds-btn-secondary:focus-visible { outline: 3px solid rgb(33 86 109 / 82%); outline-offset: 3px; }"
+    },
+    {
+      "name": "Workflow Tabs",
+      "kind": "nav",
+      "refersTo": "workflow-tab",
+      "description": "Compact Shop and Plan workflow control with a restrained proposal-ready badge.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\" aria-label=\"Storefront workflows\"><button class=\"ds-tab ds-tab-active\" role=\"tab\" aria-selected=\"true\">Shop</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">Plan <span class=\"ds-tab-badge\">Proposal ready</span></button></div>",
+      "css": ".ds-tabs { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--color-hairline, #4a311c29); border-radius: 8px; background: rgb(248 243 234 / 82%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 68%); } .ds-tab { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 4.7rem; min-height: 2rem; padding: 5px 12px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--color-muted, #66584c); font: 900 0.9rem/1 \"Avenir Next\", \"Gill Sans\", \"Trebuchet MS\", ui-sans-serif, sans-serif; cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, color 160ms ease, transform 160ms ease; } .ds-tab:hover { border-color: rgb(178 32 23 / 24%); background: rgb(255 253 247 / 64%); color: var(--color-tomato-dark, #87180f); } .ds-tab-active { border-color: rgb(178 32 23 / 34%); background: var(--color-paper, #fffdf7); color: var(--color-tomato-dark, #87180f); box-shadow: inset 0 -2px 0 rgb(178 32 23 / 18%), 0 1px 0 rgb(255 255 255 / 84%); } .ds-tab:focus-visible { outline: 3px solid rgb(33 86 109 / 86%); outline-offset: 2px; } .ds-tab-badge { min-height: 1.1rem; padding: 2px 6px; border: 1px solid rgb(45 101 68 / 24%); border-radius: 999px; background: rgb(45 101 68 / 10%); color: var(--color-basil, #2d6544); font-size: 0.68rem; font-weight: 900; }"
+    },
+    {
+      "name": "Catalog Product Card",
+      "kind": "card",
+      "refersTo": "product-card",
+      "description": "Food-led catalog card with image band, serif product name, price, unit, badges, and actions.",
+      "html": "<article class=\"ds-product-card\"><div class=\"ds-product-image\"></div><div class=\"ds-product-body\"><p class=\"ds-product-category\">Antipasti</p><h3>Marinated Artichokes</h3><div class=\"ds-product-purchase\"><strong>£7.50</strong><span>jar 180g</span></div><p class=\"ds-product-copy\">Tender artichokes in olive oil with herbs.</p><ul class=\"ds-product-badges\"><li>Vegetarian</li><li>Gluten-free</li></ul><div class=\"ds-product-actions\"><button class=\"ds-card-link\">View details</button><button class=\"ds-card-add\">Add</button></div></div></article>",
+      "css": ".ds-product-card { display: grid; grid-template-rows: 178px 1fr; overflow: hidden; border: 1px solid var(--color-hairline, #4a311c29); border-radius: 8px; background: linear-gradient(180deg, rgb(255 253 247 / 98%), rgb(255 253 247 / 92%)), var(--color-paper, #fffdf7); color: var(--color-ink, #201a16); box-shadow: inset 0 1px 0 rgb(255 255 255 / 82%), 0 1px 0 rgb(255 255 255 / 86%); transition: box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease; max-width: 260px; } .ds-product-card:hover { border-color: rgb(32 26 22 / 22%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 82%), 0 12px 24px rgb(54 36 20 / 9%); transform: translateY(-1px); } .ds-product-image { border-bottom: 1px solid var(--color-hairline, #4a311c29); background: linear-gradient(135deg, rgb(157 47 34 / 24%), transparent 44%), linear-gradient(315deg, rgb(211 155 32 / 22%), transparent 42%), var(--color-flour, #efe1c8); } .ds-product-body { display: flex; flex-direction: column; gap: 8px; padding: 13px 14px 14px; } .ds-product-category { margin: 0; color: var(--color-basil, #2d6544); font-size: 0.7rem; font-weight: 900; text-transform: uppercase; } .ds-product-body h3 { margin: 0; font: 800 1.24rem/1.08 Fraunces, Georgia, serif; } .ds-product-purchase { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; } .ds-product-purchase strong { font-weight: 950; } .ds-product-purchase span, .ds-product-copy { color: var(--color-muted, #66584c); } .ds-product-copy { margin: 0; font-size: 0.9rem; line-height: 1.35; } .ds-product-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; } .ds-product-badges li { padding: 3px 7px; border-radius: 999px; background: var(--color-basil-soft, #e2eddc); color: var(--color-basil, #2d6544); font-size: 0.68rem; font-weight: 900; text-transform: uppercase; } .ds-product-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; } .ds-card-link, .ds-card-add { border-radius: 7px; font-weight: 900; cursor: pointer; } .ds-card-link { border: 0; background: transparent; color: var(--color-tomato, #b22017); padding: 6px 0; } .ds-card-add { min-height: 2.35rem; padding: 6px 12px; border: 1px solid rgb(178 32 23 / 72%); background: rgb(255 253 247 / 90%); color: var(--color-tomato, #b22017); box-shadow: inset 0 -2px 0 rgb(74 49 28 / 5%); } .ds-card-add:hover { background: rgb(178 32 23 / 8%); color: var(--color-tomato-dark, #87180f); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Compact paper field for search, checkout contact, pickup, and Planner follow-up inputs.",
+      "html": "<label class=\"ds-field\"><span>Contact email</span><input placeholder=\"name@example.com\" /></label>",
+      "css": ".ds-field { display: grid; gap: 6px; color: var(--color-ink, #201a16); font: 900 0.72rem/1.2 \"Avenir Next\", \"Gill Sans\", \"Trebuchet MS\", ui-sans-serif, sans-serif; text-transform: uppercase; } .ds-field input { min-height: 40px; padding: 0 0.8rem; border: 1px solid var(--color-hairline, #4a311c29); border-radius: 7px; background: var(--color-paper, #fffdf7); color: var(--color-ink, #201a16); box-shadow: inset 0 2px 0 rgb(74 49 28 / 5%); font: 400 1rem/1.5 \"Avenir Next\", \"Gill Sans\", \"Trebuchet MS\", ui-sans-serif, sans-serif; text-transform: none; } .ds-field input::placeholder { color: rgb(102 88 76 / 68%); } .ds-field input:focus-visible { outline: 3px solid rgb(33 86 109 / 82%); outline-offset: 3px; } .ds-field input:disabled { opacity: 0.58; }"
+    },
+    {
+      "name": "Basket Line",
+      "kind": "custom",
+      "description": "Basket item row with thumbnail, price hierarchy, and quantity controls.",
+      "html": "<div class=\"ds-basket-line\"><div class=\"ds-basket-image\"></div><div class=\"ds-basket-content\"><div class=\"ds-basket-summary\"><div><h3>Fresh Tagliatelle</h3><p><span>250g</span><span>£4.50 each</span></p></div><strong>£9.00</strong></div><div class=\"ds-basket-controls\"><div class=\"ds-qty\"><button>-</button><input value=\"2\" aria-label=\"Quantity\" /><button>+</button></div><button class=\"ds-remove\">Remove</button></div></div></div>",
+      "css": ".ds-basket-line { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--color-hairline, #4a311c29); color: var(--color-ink, #201a16); } .ds-basket-image { width: 64px; height: 64px; border: 1px solid var(--color-hairline, #4a311c29); border-radius: 7px; background: linear-gradient(135deg, rgb(211 155 32 / 24%), transparent 44%), var(--color-flour, #efe1c8); } .ds-basket-content { display: grid; gap: 8px; min-width: 0; } .ds-basket-summary { display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: 8px; align-items: start; } .ds-basket-summary h3 { margin: 0; font: 800 1rem/1.05 Fraunces, Georgia, serif; } .ds-basket-summary p { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; color: var(--color-muted, #66584c); font-size: 0.82rem; font-weight: 800; } .ds-basket-summary strong { font-weight: 950; } .ds-basket-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; } .ds-qty { display: inline-grid; grid-template-columns: 28px 40px 28px; border: 1px solid var(--color-hairline, #4a311c29); border-radius: 7px; overflow: hidden; } .ds-qty button, .ds-qty input { min-height: 32px; border: 0; background: var(--color-paper, #fffdf7); color: var(--color-ink, #201a16); text-align: center; font-weight: 900; } .ds-qty input { width: 40px; border-inline: 1px solid var(--color-hairline, #4a311c29); } .ds-remove { border: 1px solid var(--color-hairline, #4a311c29); border-radius: 7px; background: rgb(255 253 247 / 82%); color: var(--color-tomato, #b22017); padding: 6px 10px; font-weight: 900; cursor: pointer; box-shadow: inset 0 -2px 0 rgb(74 49 28 / 5%); } .ds-remove:focus-visible, .ds-qty button:focus-visible, .ds-qty input:focus-visible { outline: 3px solid rgb(33 86 109 / 82%); outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Working Deli Counter",
+    "overview": "Tavola should feel like a polished working counter at a neighborhood Italian deli: close to the food, clear about prices, and composed enough to make the Planner feel inspectable rather than magical. The interface is practical first. Warmth comes from product photography, the serif brand treatment, compact surface layering, and restrained tomato, basil, saffron, and enamel accents.\n\nThis is product UI, not a campaign page. The Shop, Plan, Basket, and checkout surfaces need earned familiarity: standard controls, consistent button states, visible focus, readable labels, and dense but calm scanning. Planner assistance must build on the same Basket and checkout vocabulary as ordinary shopping.\n\nThe system explicitly rejects enterprise commerce bulk, generic SaaS dashboard styling, dark terminal styling, noisy AI branding, decorative metrics, and landing-page hero behavior. It also rejects customer-facing SKU language and low-level Codex runtime details.",
+    "keyCharacteristics": [
+      "Compact desktop storefront with catalog and Basket visible together.",
+      "Food-led product cards with warm paper surfaces and thin hairline borders.",
+      "Tomato primary actions used sparingly for concrete commerce actions.",
+      "Serif display moments for brand, product names, and proposal titles.",
+      "Operational sans labels, form fields, tabs, quantities, and state messages."
+    ],
+    "rules": [
+      {
+        "name": "The Tomato Means Action Rule",
+        "body": "Tomato belongs to actions, active commerce states, and rare alerts. Do not use it as broad decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Warmth Through Product Rule",
+        "body": "Food imagery, copy, and small accents carry the deli warmth. Do not rely on beige wash alone to create atmosphere.",
+        "section": "colors"
+      },
+      {
+        "name": "The Serif Is for Meaning Rule",
+        "body": "Use Fraunces for brand and named objects, not for every label. Buttons, tabs, quantities, and dense controls stay sans.",
+        "section": "typography"
+      },
+      {
+        "name": "The No Tracked Kicker Rule",
+        "body": "Tavola may use small uppercase metadata, but it must keep letter spacing at 0 and avoid stacked marketing eyebrows.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Until Touched Rule",
+        "body": "Cards and controls can lift on hover or active state. They should not float at rest unless they are modal or sticky commerce surfaces.",
+        "section": "elevation"
+      },
+      {
+        "name": "The One Depth Cue Rule",
+        "body": "Do not pair a strong border with a wide decorative shadow on the same ordinary card. If the border explains the structure, keep the shadow quiet.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep the Basket visible beside Shop and Plan on the supported desktop surface.",
+      "Do use tomato for add, checkout, submit, and destructive confirmation moments, with basil and enamel reserved for distinct state roles.",
+      "Do keep customer-facing copy in Tavola language: Products, Basket, Checkout, Planner, Plan a menu, Menu proposal, and Pickup.",
+      "Do show useful Planner evidence: party size, dietary constraints, catalog checks, pricing checks, assumptions, and validation.",
+      "Do keep controls familiar, keyboard accessible, and visually consistent across catalog, planner, basket, and checkout.",
+      "Do verify that muted text, placeholder text, badges, and disabled states remain readable against warm surfaces."
+    ],
+    "donts": [
+      "Don't make Tavola feel like an enterprise commerce platform, a marketplace, a generic SaaS dashboard, or a marketing landing page wrapped around a small app.",
+      "Don't use oversized hero sections, decorative dashboard metrics, noisy AI branding, dark terminal styling, or mobile-first layout decisions.",
+      "Don't expose SKU language, Codex run metadata, tool counts, transcripts, retries, or low-level backend service plumbing in customer-facing UI.",
+      "Don't make Planner look like a separate cart flow. It must create reviewable menu proposals that accept into the same Basket.",
+      "Don't claim unsupported dietary guarantees, invent products, or hide validation behind vague AI language.",
+      "Don't use colored side-stripe borders, gradient text, glass cards, repeated stripe decoration, or decorative motion that does not communicate state."
+    ]
+  }
+}
