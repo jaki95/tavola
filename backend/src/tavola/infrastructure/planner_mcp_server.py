@@ -228,9 +228,7 @@ def _find_catalog_candidates_handler(
     candidate_finder = FindCatalogCandidates(catalog_repository)
 
     def find_catalog_candidates(arguments: Mapping[str, Any]) -> ToolPayload:
-        result = candidate_finder(
-            _parse_candidate_filters(arguments, tag_vocabulary)
-        )
+        result = candidate_finder(_parse_candidate_filters(arguments, tag_vocabulary))
         products = result.products
         return {
             "result_count": result.result_count,
