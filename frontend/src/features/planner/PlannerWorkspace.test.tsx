@@ -625,7 +625,7 @@ describe("PlannerWorkspace", () => {
     );
 
     expect(screen.queryByText("Focaccia Genovese")).not.toBeInTheDocument();
-    expect(screen.getByText("£32.70")).toBeInTheDocument();
+    expect(screen.getAllByText("£32.70")).toHaveLength(2);
   });
 
   test("removes the final item from a package course", async () => {
@@ -645,8 +645,36 @@ describe("PlannerWorkspace", () => {
 
     expect(screen.queryByText("Tiramisu Cup")).not.toBeInTheDocument();
     expect(screen.queryByText("Dessert")).not.toBeInTheDocument();
-    expect(screen.getByText("£13.45")).toBeInTheDocument();
+    expect(screen.getAllByText("£13.45")).toHaveLength(2);
     expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByLabelText("Proposal basket actions")).toHaveTextContent(
+      "3 items"
+    );
+  });
+
+  test("keeps proposal basket actions visible near the top of review", async () => {
+    const client = createPlannerClient({
+      createResults: [success(readySession)]
+    });
+
+    renderPlannerWorkspace({ basket: populatedBasket, client });
+    submitReadyPrompt();
+
+    const actionStrip = await screen.findByLabelText("Proposal basket actions");
+
+    expect(actionStrip).toHaveTextContent("£28.45");
+    expect(actionStrip).toHaveTextContent("7 items");
+    expect(actionStrip).toHaveTextContent(
+      "1 Product already in Basket. Add increases quantities; Replace swaps Basket."
+    );
+    expect(
+      within(actionStrip).getByRole("button", { name: "Add proposal to basket" })
+    ).toHaveTextContent("Add to basket");
+    expect(
+      within(actionStrip).getByRole("button", {
+        name: "Replace basket with proposal"
+      })
+    ).toHaveTextContent("Replace basket");
   });
 
   test("accepts a proposal by appending it to the basket", async () => {
@@ -674,8 +702,27 @@ describe("PlannerWorkspace", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Menu proposal added to your basket."
     );
-    expect(screen.getByRole("button", { name: "Add to basket" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Replace basket" })).toBeDisabled();
+    expect(screen.getByLabelText("Menu proposal receipt")).toHaveTextContent(
+      "Basket updated"
+    );
+    expect(screen.getByLabelText("Menu proposal receipt")).toHaveTextContent(
+      "£28.45 · 7 items moved to Basket. Continue from Basket when ready."
+    );
+    expect(screen.queryByLabelText("Proposal basket actions")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add to basket" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Replace basket" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Proposal courses")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "View proposal" }));
+
+    expect(screen.getByLabelText("Proposal courses")).toHaveTextContent(
+      "Fresh Tagliatelle"
+    );
+    expect(screen.queryByRole("button", {
+      name: "Remove Fresh Tagliatelle from proposal"
+    })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Quantity for Fresh Tagliatelle")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hide proposal" })).toBeInTheDocument();
   });
 
   test("requires confirmation before replacing a non-empty basket", async () => {
