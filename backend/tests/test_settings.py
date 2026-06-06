@@ -46,7 +46,7 @@ def test_settings_defaults_are_local_development_friendly() -> None:
     assert settings.planner_codex_sandbox_mode == "read-only"
     assert settings.planner_codex_reasoning_effort == "low"
     assert settings.codex_sdk_reasoning_effort() == "low"
-    assert settings.planner_codex_timeout_seconds == 60
+    assert settings.planner_codex_timeout_seconds == 120
     assert settings.planner_codex_max_retries == 0
     assert settings.planner_codex_missing_credentials == "disable"
     assert settings.planner_codex_credentials_configured is False
