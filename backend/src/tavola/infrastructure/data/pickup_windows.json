@@ -1,0 +1,17 @@
+[
+  {
+    "pickup_window_id": "friday-afternoon",
+    "label": "Friday afternoon collection",
+    "display_order": 1
+  },
+  {
+    "pickup_window_id": "saturday-midday",
+    "label": "Saturday midday collection",
+    "display_order": 2
+  },
+  {
+    "pickup_window_id": "sunday-morning",
+    "label": "Sunday morning collection",
+    "display_order": 3
+  }
+]
