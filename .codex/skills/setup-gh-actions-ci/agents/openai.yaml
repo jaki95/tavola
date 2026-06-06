@@ -1,0 +1,4 @@
+interface:
+  display_name: "Setup GitHub Actions CI"
+  short_description: "Add Tavola frontend and backend CI"
+  default_prompt: "Use $setup-gh-actions-ci to add GitHub Actions CI for frontend and backend linting and tests."
