@@ -135,6 +135,11 @@ Explicit supported dietary constraints are hard constraints for planner
 proposals. In the first catalog, Tavola can verify vegetarian, vegan,
 gluten-free, and no-alcohol requests through structured facets. If the customer
 asks for one of these, every proposed product must satisfy that constraint.
+When the customer gives a partial guest count, such as "6 people with 2
+vegetarian guests", the constraint applies to those guests rather than the whole
+menu. The planner should provide vegetarian-safe coverage for the named guests,
+make that coverage clear in Tavola language, and avoid claiming that every
+selected item is vegetarian unless it is.
 Style preferences such as lighter, richer, cozy, or special are softer planning
 preferences.
 

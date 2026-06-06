@@ -33,37 +33,7 @@ def make_sku(
     )
 
 
-def test_list_package_templates_exposes_courses_and_instructions() -> None:
-    tools = create_planner_tool_handlers(StaticCatalogRepository([]))
-
-    result = tools.call("list_package_templates", {})
-
-    assert {
-        "template_id": "antipasto-primo-dessert",
-        "label": "Antipasto + Primo + Dessert",
-        "courses": [
-            {"course": "antipasto", "label": "Antipasto"},
-            {"course": "primo", "label": "Primo"},
-            {"course": "dessert", "label": "Dessert"},
-        ],
-    } in result["templates"]
-    assert (
-        "Use Tavola tools for SKU validity, availability, quantity, and totals."
-        in result["instructions"]
-    )
-    assert "Do not mutate baskets or checkout orders." in result["instructions"]
-    assert result["recommended_next_action"] == (
-        "Choose one menu structure, then call search_catalog for matching products."
-    )
-    assert set(tools.available_tool_names()) == {
-        "list_package_templates",
-        "search_catalog",
-        "get_sku_detail",
-        "validate_menu_proposal",
-    }
-
-
-def test_search_catalog_returns_customer_safe_sku_summaries() -> None:
+def test_find_catalog_candidates_returns_candidate_summaries() -> None:
     tools = create_planner_tool_handlers(
         StaticCatalogRepository(
             [
@@ -81,7 +51,15 @@ def test_search_catalog_returns_customer_safe_sku_summaries() -> None:
         )
     )
 
-    result = tools.call("search_catalog", {"query": "vegetarian pasta"})
+    result = tools.call(
+        "find_catalog_candidates",
+        {
+            "category_ids": ["primi"],
+            "dietary_facets": ["vegetarian"],
+            "tags": ["pasta"],
+            "alcohol": "exclude",
+        },
+    )
 
     assert result == {
         "result_count": 1,
@@ -112,19 +90,20 @@ def test_search_catalog_returns_customer_safe_sku_summaries() -> None:
             }
         ],
     }
+    assert "detail_description" not in result["products"][0]
 
 
-def test_search_catalog_seed_finds_pantry_pesto_for_pasta_requests() -> None:
+def test_find_catalog_candidates_seed_finds_pantry_pesto_by_tag() -> None:
     tools = create_planner_tool_handlers(StaticCatalogRepository.from_seed())
 
-    result = tools.call("search_catalog", {"query": "pasta"})
+    result = tools.call("find_catalog_candidates", {"tags": ["pasta"]})
 
     assert "pesto-genovese-180g" in {
         product["sku_id"] for product in result["products"]
     }
 
 
-def test_search_catalog_limits_results_and_reports_available_count() -> None:
+def test_find_catalog_candidates_limits_results_and_reports_available_count() -> None:
     tools = create_planner_tool_handlers(
         StaticCatalogRepository(
             [
@@ -138,7 +117,10 @@ def test_search_catalog_limits_results_and_reports_available_count() -> None:
         )
     )
 
-    result = tools.call("search_catalog", {"query": "pasta", "max_results": 3})
+    result = tools.call(
+        "find_catalog_candidates",
+        {"tags": ["pasta"], "max_results": 3},
+    )
 
     assert result["result_count"] == 10
     assert result["returned_count"] == 3
@@ -153,26 +135,22 @@ def test_search_catalog_limits_results_and_reports_available_count() -> None:
     )
 
 
-def test_get_sku_detail_returns_customer_safe_detail_for_catalog_identity() -> None:
+def test_find_catalog_candidates_empty_results_recommends_broadening_filters() -> None:
     tools = create_planner_tool_handlers(
-        StaticCatalogRepository(
-            [
-                make_sku(
-                    facets=DietaryFacets(is_vegetarian=True, is_gluten_free=True),
-                )
-            ]
-        )
+        StaticCatalogRepository([make_sku(facets=DietaryFacets(is_vegetarian=True))])
     )
 
-    result = tools.call("get_sku_detail", {"sku_id": "fresh-tagliatelle-250g"})
-
-    assert result["product"]["sku_id"] == "fresh-tagliatelle-250g"
-    assert result["product"]["detail_description"] == (
-        "Silky ribbons of egg pasta for a quick supper."
+    result = tools.call(
+        "find_catalog_candidates",
+        {"dietary_facets": ["vegan"]},
     )
-    assert result["product"]["dietary_facets"]["is_gluten_free"] is True
-    assert "display_order" not in result["product"]
-    assert "basket" not in result
+
+    assert result["products"] == []
+    assert result["result_count"] == 0
+    assert result["returned_count"] == 0
+    assert result["recommended_next_action"] == (
+        "Broaden the catalog-native filters, then call find_catalog_candidates again."
+    )
 
 
 def test_validate_proposal_returns_normalized_totals_from_tavola_validation() -> None:
@@ -295,8 +273,8 @@ def test_mcp_protocol_lists_and_calls_planner_tools() -> None:
             "id": 3,
             "method": "tools/call",
             "params": {
-                "name": "search_catalog",
-                "arguments": {"query": "pasta"},
+                "name": "find_catalog_candidates",
+                "arguments": {"tags": ["pasta"]},
             },
         },
         tools,
@@ -309,9 +287,7 @@ def test_mcp_protocol_lists_and_calls_planner_tools() -> None:
     assert list_response is not None
     tool_names = {tool["name"] for tool in list_response["result"]["tools"]}
     assert tool_names == {
-        "list_package_templates",
-        "search_catalog",
-        "get_sku_detail",
+        "find_catalog_candidates",
         "validate_menu_proposal",
     }
     assert call_response is not None
@@ -320,3 +296,121 @@ def test_mcp_protocol_lists_and_calls_planner_tools() -> None:
         "fresh-tagliatelle-250g"
     )
     assert call_response["result"]["content"][0]["type"] == "text"
+
+
+def test_mcp_protocol_lists_candidate_schema_with_repository_tag_enums() -> None:
+    tools = create_planner_tool_handlers(
+        StaticCatalogRepository([make_sku(tags=("pasta", "fresh"))])
+    )
+
+    list_response = handle_mcp_message(
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+        tools,
+    )
+
+    assert list_response is not None
+    candidate_tool = next(
+        tool
+        for tool in list_response["result"]["tools"]
+        if tool["name"] == "find_catalog_candidates"
+    )
+    properties = candidate_tool["inputSchema"]["properties"]
+    assert candidate_tool["inputSchema"]["additionalProperties"] is False
+    assert properties["category_ids"]["items"]["enum"] == [
+        "antipasti",
+        "primi",
+        "desserts",
+        "drinks",
+        "pantry",
+    ]
+    assert properties["dietary_facets"]["items"]["enum"] == [
+        "vegetarian",
+        "vegan",
+        "gluten_free",
+    ]
+    assert properties["tags"]["items"]["enum"] == ["fresh", "pasta"]
+    assert properties["tag_match"]["enum"] == ["any", "all"]
+    assert properties["alcohol"]["enum"] == ["include", "exclude", "only"]
+    assert properties["max_results"]["minimum"] == 1
+    assert properties["max_results"]["maximum"] == 20
+
+
+def test_mcp_protocol_omits_tag_enum_for_empty_catalog() -> None:
+    tools = create_planner_tool_handlers(StaticCatalogRepository([]))
+
+    list_response = handle_mcp_message(
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+        tools,
+    )
+
+    assert list_response is not None
+    candidate_tool = next(
+        tool
+        for tool in list_response["result"]["tools"]
+        if tool["name"] == "find_catalog_candidates"
+    )
+    tag_items = candidate_tool["inputSchema"]["properties"]["tags"]["items"]
+    assert tag_items == {"type": "string"}
+
+
+def test_mcp_protocol_rejects_invalid_candidate_enum() -> None:
+    tools = create_planner_tool_handlers(StaticCatalogRepository([make_sku()]))
+
+    response = handle_mcp_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {
+                "name": "find_catalog_candidates",
+                "arguments": {"category_ids": ["meat-counter"]},
+            },
+        },
+        tools,
+    )
+
+    assert response is not None
+    assert response["error"]["code"] == -32602
+    assert "unsupported category_ids" in response["error"]["message"]
+
+
+def test_mcp_protocol_rejects_non_array_candidate_filters() -> None:
+    tools = create_planner_tool_handlers(StaticCatalogRepository([make_sku()]))
+
+    response = handle_mcp_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {
+                "name": "find_catalog_candidates",
+                "arguments": {"tags": "pasta"},
+            },
+        },
+        tools,
+    )
+
+    assert response is not None
+    assert response["error"]["code"] == -32602
+    assert "tags must be an array" in response["error"]["message"]
+
+
+def test_mcp_protocol_rejects_unsupported_candidate_fields() -> None:
+    tools = create_planner_tool_handlers(StaticCatalogRepository([make_sku()]))
+
+    response = handle_mcp_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {
+                "name": "find_catalog_candidates",
+                "arguments": {"query": "pasta"},
+            },
+        },
+        tools,
+    )
+
+    assert response is not None
+    assert response["error"]["code"] == -32602
+    assert "unsupported find_catalog_candidates fields" in response["error"]["message"]

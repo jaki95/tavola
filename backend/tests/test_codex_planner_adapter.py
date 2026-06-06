@@ -125,11 +125,7 @@ def test_codex_adapter_configures_bounded_tools_and_validates_final_json() -> No
                     ],
                 }
             ),
-            tool_names=(
-                "list_package_templates",
-                "search_catalog",
-                "validate_menu_proposal",
-            ),
+            tool_names=required_tool_names(),
         )
     )
     agent = CodexMenuPlannerAgent(
@@ -160,21 +156,38 @@ def test_codex_adapter_configures_bounded_tools_and_validates_final_json() -> No
         ),
     )
     assert client.prompt is not None
-    assert len(client.prompt) < 1300
-    assert "choose a menu structure" in client.prompt
+    assert len(client.prompt) < 2200
+    assert "Proposal flow" in client.prompt
+    assert "antipasto-primo-dessert" in client.prompt
+    assert "antipasto-primo" in client.prompt
+    assert "primo-dessert" in client.prompt
+    assert "primo-only" in client.prompt
+    assert "aperitivo" in client.prompt
     assert "do not mention templates" in client.prompt
-    assert "list_package_templates" in client.prompt
-    assert "search_catalog" in client.prompt
+    assert "find_catalog_candidates" in client.prompt
+    assert "tag_match" in client.prompt
+    assert "alcohol" in client.prompt
     assert "validate_menu_proposal" in client.prompt
+    assert (
+        "Do not pass party size, budget, occasion, or menu structure" in client.prompt
+    )
+    assert "Drinks course" in client.prompt
     assert "ask one follow-up question" in client.prompt
     assert "party size" in client.prompt
     assert "Do not invent products or prices" in client.prompt
+    assert "vegetarian, vegan, gluten-free, and no-alcohol" in client.prompt
+    assert "whole-menu vegetarian request" in client.prompt
+    assert "2 vegetarian guests" in client.prompt
+    assert "do not force every line to be vegetarian" in client.prompt
     assert "Final JSON contract" in client.prompt
     assert '"follow_up_question"' in client.prompt
     assert '"courses"' in client.prompt
     assert '"sku_id"' in client.prompt
     assert "Return one JSON object only" in client.prompt
     assert "Vegetarian dinner for 2" in client.prompt
+    assert "search_catalog" not in client.prompt
+    assert "list_package_templates" not in client.prompt
+    assert "get_sku_detail" not in client.prompt
 
 
 def test_codex_adapter_repairs_malformed_json_once() -> None:
@@ -236,13 +249,13 @@ def test_codex_adapter_does_not_repair_malformed_json_by_default() -> None:
     assert len(client.prompts) == 1
 
 
-def test_codex_adapter_maps_required_tool_follow_up_to_needs_input() -> None:
+def test_codex_adapter_maps_follow_up_without_tools_to_needs_input() -> None:
     result = _run_agent(
         CodexSdkRunResult(
             final_output=json.dumps(
                 {"follow_up_question": "How many people should Tavola plan for?"}
             ),
-            tool_names=required_tool_names(),
+            tool_names=(),
         )
     )
 
@@ -408,9 +421,7 @@ def test_python_codex_sdk_client_starts_thread_with_mcp_server_config() -> None:
 
     assert result.final_output == '{"title": "Dinner"}'
     assert result.tool_names == (
-        "list_package_templates",
-        "search_catalog",
-        "get_sku_detail",
+        "find_catalog_candidates",
         "validate_menu_proposal",
     )
     fake_codex = created_clients[0]
@@ -435,9 +446,7 @@ def test_python_codex_sdk_client_starts_thread_with_mcp_server_config() -> None:
     assert events[0].attributes == {"mcp_server_count": 1}
     assert events[3].attributes == {
         "tool_names": (
-            "list_package_templates",
-            "search_catalog",
-            "get_sku_detail",
+            "find_catalog_candidates",
             "validate_menu_proposal",
         )
     }
@@ -447,11 +456,7 @@ def test_codex_adapter_maps_malformed_json_to_typed_failure() -> None:
     result = _run_agent(
         CodexSdkRunResult(
             final_output="not json",
-            tool_names=(
-                "list_package_templates",
-                "search_catalog",
-                "validate_menu_proposal",
-            ),
+            tool_names=required_tool_names(),
         )
     )
 
@@ -463,8 +468,8 @@ def test_codex_adapter_maps_malformed_json_to_typed_failure() -> None:
 def test_codex_adapter_requires_tavola_tool_use_before_final_output() -> None:
     result = _run_agent(
         CodexSdkRunResult(
-            final_output=json.dumps({"title": "Skipped tools"}),
-            tool_names=("search_catalog",),
+            final_output=json.dumps(valid_raw_proposal()),
+            tool_names=("find_catalog_candidates",),
         )
     )
 
@@ -480,11 +485,7 @@ def test_codex_adapter_maps_tool_failure_to_typed_failure() -> None:
     result = _run_agent(
         CodexSdkRunResult(
             final_output="{}",
-            tool_names=(
-                "list_package_templates",
-                "search_catalog",
-                "validate_menu_proposal",
-            ),
+            tool_names=required_tool_names(),
             tool_error="validate_menu_proposal failed",
         )
     )
@@ -524,8 +525,7 @@ def _run_agent(run_result: CodexSdkRunResult):
 
 def required_tool_names() -> tuple[str, ...]:
     return (
-        "list_package_templates",
-        "search_catalog",
+        "find_catalog_candidates",
         "validate_menu_proposal",
     )
 
@@ -597,9 +597,7 @@ class FakeMcpToolCall:
 class FakeTurnResult:
     final_response = '{"title": "Dinner"}'
     items = [
-        {"name": "list_package_templates"},
-        FakeThreadItem(root=FakeMcpToolCall("search_catalog")),
-        {"name": "get_sku_detail"},
+        FakeThreadItem(root=FakeMcpToolCall("find_catalog_candidates")),
         FakeMcpToolCall("validate_menu_proposal"),
     ]
     error = None

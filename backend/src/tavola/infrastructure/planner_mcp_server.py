@@ -4,11 +4,21 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from tavola.application.catalog import BrowseCatalog, CatalogRepository
+from tavola.application.catalog import (
+    DEFAULT_CATALOG_CANDIDATE_LIMIT,
+    MAX_CATALOG_CANDIDATE_LIMIT,
+    CatalogRepository,
+    FindCatalogCandidates,
+    FindCatalogCandidatesInput,
+    ListAvailableCatalogTags,
+)
 from tavola.application.planner import ValidateMenuProposal
-from tavola.domain.catalog import CatalogSku
+from tavola.domain.catalog import (
+    CatalogSku,
+    catalog_category_ids,
+    catalog_dietary_facet_ids,
+)
 from tavola.domain.planner import (
-    PackageTemplate,
     PlannerValidationError,
     ValidatedMenuProposal,
     ValidatedProposalLine,
@@ -19,20 +29,17 @@ ToolPayload = dict[str, Any]
 ToolHandler = Callable[[Mapping[str, Any]], ToolPayload]
 JsonRpcMessage = Mapping[str, Any]
 
-PLANNER_TOOL_INSTRUCTIONS = (
-    "Use Tavola tools for SKU validity, availability, quantity, and totals. "
-    "Do not invent SKUs or prices. Do not mutate baskets or checkout orders."
-)
-DEFAULT_SEARCH_LIMIT = 8
-MAX_SEARCH_LIMIT = 12
-
 
 @dataclass(frozen=True, slots=True)
 class PlannerToolHandlers:
     _handlers: Mapping[str, ToolHandler]
+    _tool_descriptions: tuple[ToolPayload, ...]
 
     def available_tool_names(self) -> tuple[str, ...]:
         return tuple(self._handlers)
+
+    def tool_descriptions(self) -> tuple[ToolPayload, ...]:
+        return self._tool_descriptions
 
     def call(self, name: str, arguments: Mapping[str, Any]) -> ToolPayload:
         try:
@@ -60,7 +67,7 @@ def handle_mcp_message(
             },
         )
     if method == "tools/list":
-        return _json_rpc_result(request_id, {"tools": _tool_descriptions()})
+        return _json_rpc_result(request_id, {"tools": list(tools.tool_descriptions())})
     if method == "tools/call":
         return _handle_tool_call(request_id, message, tools)
     return _json_rpc_error(request_id, -32601, f"unsupported method: {method}")
@@ -88,13 +95,16 @@ def run_stdio_server(
 def create_planner_tool_handlers(
     catalog_repository: CatalogRepository,
 ) -> PlannerToolHandlers:
+    tag_vocabulary = ListAvailableCatalogTags(catalog_repository)().tags
     return PlannerToolHandlers(
         {
-            "list_package_templates": _list_package_templates,
-            "search_catalog": _search_catalog_handler(catalog_repository),
-            "get_sku_detail": _get_sku_detail_handler(catalog_repository),
+            "find_catalog_candidates": _find_catalog_candidates_handler(
+                catalog_repository,
+                tag_vocabulary,
+            ),
             "validate_menu_proposal": _validate_proposal_handler(catalog_repository),
-        }
+        },
+        _tool_descriptions(tag_vocabulary),
     )
 
 
@@ -126,46 +136,58 @@ def _handle_tool_call(
     )
 
 
-def _tool_descriptions() -> list[ToolPayload]:
-    return [
+def _tool_descriptions(tag_vocabulary: tuple[str, ...]) -> tuple[ToolPayload, ...]:
+    tag_items: ToolPayload = {"type": "string"}
+    if tag_vocabulary:
+        tag_items["enum"] = list(tag_vocabulary)
+    return (
         {
-            "name": "list_package_templates",
+            "name": "find_catalog_candidates",
             "description": (
-                "List Tavola planner menu structures. Use this before choosing "
-                "a proposal shape. Do not mention templates in customer-facing text."
-            ),
-            "inputSchema": {"type": "object", "properties": {}},
-        },
-        {
-            "name": "search_catalog",
-            "description": (
-                "Search buyable Tavola products using customer request terms, "
-                "tags, categories, and dietary facets. Returns compact summaries "
-                "for proposal drafting."
+                "Find buyable Tavola products with catalog-native filters. Use "
+                "category ids, dietary facets, tags, alcohol mode, and a bounded "
+                "result limit; do not pass party size, budget, occasion, or menu "
+                "structure as search text."
             ),
             "inputSchema": {
                 "type": "object",
+                "additionalProperties": False,
                 "properties": {
-                    "query": {"type": "string"},
-                    "category_id": {"type": "string"},
+                    "category_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": list(catalog_category_ids()),
+                        },
+                    },
+                    "dietary_facets": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": list(catalog_dietary_facet_ids()),
+                        },
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": tag_items,
+                    },
+                    "tag_match": {
+                        "type": "string",
+                        "enum": ["any", "all"],
+                        "default": "any",
+                    },
+                    "alcohol": {
+                        "type": "string",
+                        "enum": ["include", "exclude", "only"],
+                        "default": "include",
+                    },
                     "max_results": {
                         "type": "integer",
                         "minimum": 1,
-                        "maximum": MAX_SEARCH_LIMIT,
+                        "maximum": MAX_CATALOG_CANDIDATE_LIMIT,
+                        "default": DEFAULT_CATALOG_CANDIDATE_LIMIT,
                     },
                 },
-            },
-        },
-        {
-            "name": "get_sku_detail",
-            "description": (
-                "Get customer-safe detail for one Tavola product identity before "
-                "adding it to a proposal."
-            ),
-            "inputSchema": {
-                "type": "object",
-                "properties": {"sku_id": {"type": "string"}},
-                "required": ["sku_id"],
             },
         },
         {
@@ -180,7 +202,7 @@ def _tool_descriptions() -> list[ToolPayload]:
                 "required": ["proposal"],
             },
         },
-    ]
+    )
 
 
 def _json_rpc_result(request_id: Any, result: ToolPayload) -> ToolPayload:
@@ -199,62 +221,133 @@ def _json_rpc_error(
     }
 
 
-def _list_package_templates(arguments: Mapping[str, Any]) -> ToolPayload:
-    del arguments
-    return {
-        "instructions": PLANNER_TOOL_INSTRUCTIONS,
-        "recommended_next_action": (
-            "Choose one menu structure, then call search_catalog for matching products."
-        ),
-        "templates": [
-            {
-                "template_id": template.template_id,
-                "label": template.label,
-                "courses": [
-                    {"course": course.value, "label": course.label}
-                    for course in template.courses
-                ],
-            }
-            for template in (
-                PackageTemplate.by_id(template_id)
-                for template_id in PackageTemplate.supported_ids()
-            )
-        ],
-    }
+def _find_catalog_candidates_handler(
+    catalog_repository: CatalogRepository,
+    tag_vocabulary: tuple[str, ...],
+) -> ToolHandler:
+    candidate_finder = FindCatalogCandidates(catalog_repository)
 
-
-def _search_catalog_handler(catalog_repository: CatalogRepository) -> ToolHandler:
-    def search_catalog(arguments: Mapping[str, Any]) -> ToolPayload:
-        query = arguments.get("query")
-        category_id = arguments.get("category_id")
-        result = BrowseCatalog(catalog_repository)(
-            query=query if isinstance(query, str) else None,
-            category_id=category_id if isinstance(category_id, str) else None,
-        )
-        max_results = _search_limit(arguments.get("max_results"))
-        products = result.products[:max_results]
+    def find_catalog_candidates(arguments: Mapping[str, Any]) -> ToolPayload:
+        result = candidate_finder(_parse_candidate_filters(arguments, tag_vocabulary))
+        products = result.products
         return {
-            "result_count": len(result.products),
+            "result_count": result.result_count,
             "returned_count": len(products),
-            "recommended_next_action": _search_recommended_next_action(products),
+            "recommended_next_action": _candidate_recommended_next_action(products),
             "products": [_sku_summary_payload(sku) for sku in products],
         }
 
-    return search_catalog
+    return find_catalog_candidates
 
 
-def _get_sku_detail_handler(catalog_repository: CatalogRepository) -> ToolHandler:
-    def get_sku_detail(arguments: Mapping[str, Any]) -> ToolPayload:
-        sku_id = arguments.get("sku_id")
-        if not isinstance(sku_id, str):
-            return {"product": None}
+def _parse_candidate_filters(
+    arguments: Mapping[str, Any],
+    tag_vocabulary: tuple[str, ...],
+) -> FindCatalogCandidatesInput:
+    _reject_unsupported_candidate_fields(arguments)
+    category_ids = _optional_string_array(
+        arguments,
+        "category_ids",
+        allowed_values=catalog_category_ids(),
+    )
+    dietary_facets = _optional_string_array(
+        arguments,
+        "dietary_facets",
+        allowed_values=catalog_dietary_facet_ids(),
+    )
+    tags = _optional_string_array(
+        arguments,
+        "tags",
+        allowed_values=tag_vocabulary,
+    )
+    tag_match = _optional_enum(arguments, "tag_match", ("any", "all"), default="any")
+    alcohol = _optional_enum(
+        arguments,
+        "alcohol",
+        ("include", "exclude", "only"),
+        default="include",
+    )
+    max_results = _optional_integer(
+        arguments,
+        "max_results",
+        default=DEFAULT_CATALOG_CANDIDATE_LIMIT,
+    )
+    return FindCatalogCandidatesInput(
+        category_ids=category_ids,
+        dietary_facets=dietary_facets,
+        tags=tags,
+        tag_match=tag_match,  # type: ignore[arg-type]
+        alcohol=alcohol,  # type: ignore[arg-type]
+        max_results=max_results,
+    )
 
-        sku = catalog_repository.get_sku(sku_id)
-        if sku is None:
-            return {"product": None}
-        return {"product": _sku_detail_payload(sku)}
 
-    return get_sku_detail
+def _reject_unsupported_candidate_fields(arguments: Mapping[str, Any]) -> None:
+    supported_fields = {
+        "category_ids",
+        "dietary_facets",
+        "tags",
+        "tag_match",
+        "alcohol",
+        "max_results",
+    }
+    unsupported_fields = sorted(set(arguments) - supported_fields)
+    if unsupported_fields:
+        raise ValueError(
+            f"unsupported find_catalog_candidates fields: {unsupported_fields}"
+        )
+
+
+def _optional_string_array(
+    arguments: Mapping[str, Any],
+    field_name: str,
+    *,
+    allowed_values: tuple[str, ...],
+) -> tuple[str, ...]:
+    if field_name not in arguments:
+        return ()
+    raw_value = arguments[field_name]
+    if not isinstance(raw_value, list | tuple):
+        raise ValueError(f"{field_name} must be an array")
+    if not all(isinstance(value, str) for value in raw_value):
+        raise ValueError(f"{field_name} must contain only strings")
+
+    values = tuple(raw_value)
+    unknown_values = sorted(set(values) - set(allowed_values))
+    if unknown_values:
+        raise ValueError(f"unsupported {field_name}: {unknown_values}")
+    return values
+
+
+def _optional_enum(
+    arguments: Mapping[str, Any],
+    field_name: str,
+    allowed_values: tuple[str, ...],
+    *,
+    default: str,
+) -> str:
+    if field_name not in arguments:
+        return default
+    raw_value = arguments[field_name]
+    if not isinstance(raw_value, str):
+        raise ValueError(f"{field_name} must be a string")
+    if raw_value not in allowed_values:
+        raise ValueError(f"unsupported {field_name}: {raw_value}")
+    return raw_value
+
+
+def _optional_integer(
+    arguments: Mapping[str, Any],
+    field_name: str,
+    *,
+    default: int,
+) -> int:
+    if field_name not in arguments:
+        return default
+    raw_value = arguments[field_name]
+    if not isinstance(raw_value, int) or isinstance(raw_value, bool):
+        raise ValueError(f"{field_name} must be an integer")
+    return raw_value
 
 
 def _validate_proposal_handler(catalog_repository: CatalogRepository) -> ToolHandler:
@@ -288,15 +381,12 @@ def _validate_proposal_handler(catalog_repository: CatalogRepository) -> ToolHan
     return validate_proposal
 
 
-def _search_limit(raw_limit: Any) -> int:
-    if not isinstance(raw_limit, int):
-        return DEFAULT_SEARCH_LIMIT
-    return min(max(raw_limit, 1), MAX_SEARCH_LIMIT)
-
-
-def _search_recommended_next_action(products: tuple[CatalogSku, ...]) -> str:
+def _candidate_recommended_next_action(products: tuple[CatalogSku, ...]) -> str:
     if not products:
-        return "Search again with broader request terms or a different category."
+        return (
+            "Broaden the catalog-native filters, then call "
+            "find_catalog_candidates again."
+        )
     return (
         "Build a draft menu proposal from these products, then call "
         "validate_menu_proposal."
@@ -317,13 +407,6 @@ def _sku_summary_payload(sku: CatalogSku) -> ToolPayload:
         "dietary_facets": _dietary_facets_payload(sku),
         "is_available": sku.is_available,
         "image_id": sku.image_id,
-    }
-
-
-def _sku_detail_payload(sku: CatalogSku) -> ToolPayload:
-    return {
-        **_sku_summary_payload(sku),
-        "detail_description": sku.detail_description,
     }
 
 

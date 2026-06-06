@@ -16,8 +16,7 @@ from tavola.domain.planner import FollowUpQuestion
 _PLANNER_MCP_SERVER_NAME = "tavola-planner-tools"
 _REQUIRED_TOOL_NAMES = frozenset(
     {
-        "list_package_templates",
-        "search_catalog",
+        "find_catalog_candidates",
         "validate_menu_proposal",
     }
 )
@@ -327,7 +326,13 @@ class CodexMenuPlannerAgent:
                     repair_attempts=repair_attempts,
                 )
                 return response
-            if not _used_required_tools(run_result.tool_names):
+
+            parsed_response, repair_reason = _parse_final_output(run_result)
+            if (
+                parsed_response is not None
+                and parsed_response.raw_proposal is not None
+                and not _used_required_tools(run_result.tool_names)
+            ):
                 response = _failure(
                     PlannerAgentErrorCode.MISSING_TOOL_USE,
                     "Planner did not verify catalog and pricing with Tavola checks.",
@@ -345,7 +350,6 @@ class CodexMenuPlannerAgent:
                 )
                 return response
 
-            parsed_response, repair_reason = _parse_final_output(run_result)
             if parsed_response is not None:
                 _emit_parse_timing(
                     self._timing_sink,
@@ -410,19 +414,36 @@ def _build_planner_prompt(
     return "\n".join(
         (
             "You are Tavola's Planner for a small Italian deli.",
-            "Minimum contract: choose a menu structure with list_package_templates; "
-            "call search_catalog and validate_menu_proposal before any menu proposal.",
             "If party size is missing, ask one follow-up question instead of "
-            "guessing quantities.",
-            "Use search_catalog summaries for product names, units, prices, "
-            "availability, dietary facets, and short descriptions.",
-            "Call get_sku_detail only when a chosen product needs extra detail.",
-            "Do not invent products or prices; Tavola validation owns SKU "
+            "guessing quantities. Follow-up-only JSON may skip tool calls.",
+            "Proposal flow: choose antipasto-primo-dessert, antipasto-primo, "
+            "primo-dessert, primo-only, or aperitivo; call find_catalog_candidates "
+            "with only category_ids, dietary_facets, tags, tag_match, alcohol, "
+            "and max_results; call validate_menu_proposal; return final JSON only "
+            "after validation succeeds.",
+            "Do not pass party size, budget, occasion, or menu structure as "
+            "search text or candidate filters. Use candidate summaries for names, "
+            "units, prices, availability, dietary facets, tags, and short "
+            "descriptions.",
+            "Append one non-empty Drinks course only when drinks are requested or "
+            "clearly implied. Drinks are optional courses, not separate package "
+            "templates.",
+            "Generic drink requests may include alcohol; no-alcohol must "
+            "use alcohol=exclude.",
+            "If suitable requested drinks are unavailable, add a warning unless "
+            "drinks are the main or firm requirement.",
+            "Do not invent products or prices; validation owns SKU "
             "validity, availability, quantities, and totals.",
-            "In customer-facing text, say menu structure or course structure; "
-            "do not mention templates.",
-            "Apply supported vegetarian, vegan, gluten-free, no-alcohol, and "
-            "budget constraints honestly. Explain unsupported constraints.",
+            "Say menu structure or course structure; do not mention templates.",
+            "Treat vegetarian, vegan, gluten-free, and no-alcohol requests as hard "
+            "constraints. Explain unsupported constraints.",
+            "For a whole-menu vegetarian request, every selected line must be "
+            "vegetarian.",
+            "For mixed groups like 6 guests with 2 vegetarian guests, provide "
+            "vegetarian-safe coverage and explain it; do not force every line to be "
+            "vegetarian.",
+            "Honor budgets honestly: approach approximate budgets transparently; "
+            "for firm caps, stay under the cap or explain Tavola cannot satisfy it.",
             "Final JSON contract:",
             '{ "follow_up_question": string } OR',
             '{ "title": string, "explanation": string, '
