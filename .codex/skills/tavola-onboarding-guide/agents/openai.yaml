@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tavola Onboarding Guide"
+  short_description: "Map Tavola architecture quickly"
+  default_prompt: "Use $tavola-onboarding-guide to explain this repository's architecture and data flow."
