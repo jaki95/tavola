@@ -34,13 +34,14 @@ environment settings and opt-in smoke command. Do not commit real credential
 values or paste them into demo notes.
 
 Current live-demo defaults are `gpt-5.5`, `low` reasoning effort, a 60-second
-technical timeout, and zero repair retries. Model strings are accepted or
-rejected by the installed Codex SDK and the active local credential path, so do
-not treat public API model documentation as a guarantee of demo availability.
-Use the benchmark smoke in `backend/README.md` to compare `low` against
-`sdk-default` reasoning effort or to test candidate model strings. Record only
-model name, reasoning effort, retry count, timeout, status, benchmark class, and
-sanitized timing totals.
+technical timeout, and zero malformed-output repair retries. Tavola validation
+failure repair is separate and can send one invalid proposal back to Codex once
+before failing safely. Model strings are accepted or rejected by the installed
+Codex SDK and the active local credential path, so do not treat public API model
+documentation as a guarantee of demo availability. Use the benchmark smoke in
+`backend/README.md` to compare `low` against `sdk-default` reasoning effort or
+to test candidate model strings. Record only model name, reasoning effort, retry
+count, timeout, status, benchmark class, and sanitized timing totals.
 
 ## Latency Benchmark Checklist
 
@@ -115,16 +116,16 @@ notes: 2 valid proposals, 1 technical timeout; browser-observed proposal
   readiness was about 65 seconds for one successful live run
 ```
 
-Live planner prompts send Tavola planner context, including bounded catalog and
-proposal-validation details, through the configured Codex credential path. Get
-explicit operator approval before running live smoke prompts or browser flows
-that submit planner requests.
+Live planner prompts send Tavola planner context and a catalog-only MCP tool
+through the configured Codex credential path. Tavola validates the proposal after
+Codex responds. Get explicit operator approval before running live smoke prompts
+or browser flows that submit planner requests.
 
-During proposal runs, the Planner should narrow Tavola's real products with
-catalog-native filters such as category, dietary needs, tags, and alcohol mode,
-then validate the drafted menu before anything can reach the basket. In demo
-narration, describe this as Tavola checking the catalog and prices rather than
-as generic search.
+During proposal runs, Codex should narrow Tavola's real products with
+catalog-native filters such as category, dietary needs, tags, and alcohol mode.
+Tavola then validates the returned menu before anything can reach the basket. In
+demo narration, describe this as Tavola checking the catalog and prices rather
+than as generic search.
 
 The planner surface should show the small `powered by Codex` attribution. Basket
 and checkout copy should return to Tavola meal-plan language after the proposal

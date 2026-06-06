@@ -60,9 +60,11 @@ Configure real runs with:
   opt-in benchmarks. Other supported values are `none`, `minimal`, `medium`,
   `high`, and `xhigh`.
 - `TAVOLA_PLANNER_CODEX_TIMEOUT_SECONDS`: planner run timeout, default `60`.
-- `TAVOLA_PLANNER_CODEX_MAX_RETRIES`: adapter retry count, default `0`. Repair
-  retries are configurable for experiments, but the live demo default avoids
-  doubling a slow customer wait after malformed output.
+- `TAVOLA_PLANNER_CODEX_MAX_RETRIES`: malformed or contract-invalid Codex output
+  retry count, default `0`. Repair retries are configurable for experiments,
+  but the live demo default avoids doubling a slow customer wait after malformed
+  output. Tavola validation failure repair is separate: the backend may send one
+  invalid proposal back to Codex once, then Tavola validates the repaired result.
 - `TAVOLA_PLANNER_CODEX_MISSING_CREDENTIALS`: `disable` reports the Planner as
   unavailable when credentials are missing; `error` raises during setup checks.
 - `TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED`: set to `true` only when relying
@@ -84,11 +86,12 @@ uv run python -m tavola.infrastructure.codex_planner_smoke \
 Use `OPENAI_API_KEY` instead of
 `TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED=true` when authenticating with an
 API key. The smoke command starts one Codex-backed planner run with Tavola's
-bounded MCP tool server and prints the validated JSON proposal, or a structured
-failure if Codex output cannot be validated. Proposal runs should use Tavola's
-catalog candidate finder and proposal validator; missing-tool failures should
-name `find_catalog_candidates` or `validate_menu_proposal`, not the removed
-generic catalog search tools.
+catalog-only MCP tool server and prints the validated JSON proposal, or a
+structured failure if Codex output cannot be validated. Codex proposal runs
+should use `find_catalog_candidates`; Tavola validates the returned proposal
+after Codex responds and may send one invalid proposal back to Codex for repair.
+The Codex-side tool surface should not expose the removed generic catalog search
+tools or `validate_menu_proposal`.
 
 Run an opt-in benchmark smoke to collect paste-safe timing evidence without
 printing the proposal by default:
@@ -105,10 +108,10 @@ Benchmark output includes the selected model, reasoning effort, timeout, retry
 count, sanitized timing events, per-run totals, and min/median/max elapsed
 milliseconds. It classifies valid runs under 10 seconds as `ideal`, valid runs
 under 30 seconds as `acceptable`, and valid runs at or above 30 seconds as
-`slow`. Slow valid runs exit zero; planner failures, malformed output, missing
-required Tavola tool use, technical timeout, and missing configuration exit
-nonzero. Do not paste prompts, raw Codex transcripts, tool arguments,
-credentials, stack traces, or proposal JSON into handoff notes.
+`slow`. Slow valid runs exit zero; planner failures, malformed output,
+technical timeout, and missing configuration exit nonzero. Do not paste prompts,
+raw Codex transcripts, tool arguments, credentials, stack traces, or proposal
+JSON into handoff notes.
 
 Use this benchmark handoff format after at least three repeats of the primary
 persona:
