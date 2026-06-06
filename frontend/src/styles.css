@@ -181,17 +181,17 @@ textarea::placeholder {
 }
 
 .storefront-workflow-tabs__tab:hover {
-  border-color: rgb(178 32 23 / 24%);
+  border-color: rgb(45 101 68 / 24%);
   background: rgb(255 253 247 / 64%);
-  color: var(--color-tomato-dark);
+  color: var(--color-basil);
 }
 
 .storefront-workflow-tabs__tab[aria-selected="true"] {
-  border-color: rgb(178 32 23 / 34%);
+  border-color: rgb(45 101 68 / 28%);
   background: var(--color-paper);
-  color: var(--color-tomato-dark);
+  color: var(--color-basil);
   box-shadow:
-    inset 0 -2px 0 rgb(178 32 23 / 18%),
+    inset 0 -2px 0 rgb(45 101 68 / 16%),
     0 1px 0 rgb(255 255 255 / 84%);
 }
 
@@ -353,8 +353,16 @@ h1 {
 
 .planner-workspace__codex {
   color: var(--color-enamel);
-  font-size: 0.86rem;
+  font-size: 0.76rem;
   font-weight: 850;
+}
+
+.planner-intake {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(13rem, 16rem);
+  align-items: stretch;
+  gap: 12px;
+  padding-top: 2px;
 }
 
 .planner-composer {
@@ -362,7 +370,6 @@ h1 {
   grid-template-columns: minmax(0, 1fr) minmax(8.5rem, 9.5rem);
   align-items: center;
   gap: 12px;
-  padding-top: 2px;
 }
 
 .planner-composer__field {
@@ -397,6 +404,52 @@ h1 {
   padding: 10px 16px;
 }
 
+.planner-trust {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgb(45 101 68 / 22%);
+  border-radius: 8px;
+  background: rgb(226 237 220 / 72%);
+  color: var(--color-ink);
+}
+
+.planner-trust strong {
+  color: var(--color-basil);
+  font-size: 0.9rem;
+  line-height: 1.18;
+}
+
+.planner-trust ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  color: var(--color-muted);
+  font-size: 0.79rem;
+  font-weight: 750;
+  line-height: 1.25;
+  list-style: none;
+}
+
+.planner-trust li {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.planner-trust li::before {
+  content: "";
+  flex: 0 0 0.42rem;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: var(--color-basil);
+  box-shadow: 0 0 0 3px rgb(45 101 68 / 10%);
+}
+
 .planner-examples {
   display: flex;
   align-items: center;
@@ -420,7 +473,7 @@ h1 {
 .planner-workspace button.planner-action--secondary {
   border-color: var(--color-hairline);
   background: rgb(255 253 247 / 82%);
-  color: var(--color-tomato);
+  color: var(--color-muted);
   box-shadow: inset 0 -2px 0 rgb(74 49 28 / 5%);
 }
 
@@ -440,9 +493,9 @@ h1 {
 }
 
 .planner-workspace button.planner-action--secondary:hover {
-  border-color: rgb(178 32 23 / 34%);
+  border-color: rgb(74 49 28 / 24%);
   background: var(--color-paper);
-  color: var(--color-tomato-dark);
+  color: var(--color-ink);
   box-shadow:
     inset 0 -2px 0 rgb(74 49 28 / 6%),
     0 10px 20px rgb(54 36 20 / 8%);
@@ -832,15 +885,13 @@ h1 {
   width: fit-content;
   min-height: 40px;
   padding: 8px 14px;
-  border: 1px solid var(--color-tomato-dark);
+  border: 1px solid var(--color-hairline);
   border-radius: 7px;
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 10%), transparent 48%),
-    var(--color-tomato);
-  color: white;
+  background: rgb(255 253 247 / 82%);
+  color: var(--color-ink);
   cursor: pointer;
   font-weight: 900;
-  box-shadow: var(--shadow-control);
+  box-shadow: inset 0 -2px 0 rgb(74 49 28 / 5%);
   transition:
     border-color 160ms ease,
     background-color 160ms ease,
@@ -856,13 +907,12 @@ h1 {
 .checkout-panel button:hover,
 .planner-workspace button:hover,
 .catalog-filters__action:hover {
-  border-color: var(--color-tomato-dark);
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 8%), transparent 48%),
-    var(--color-tomato-dark);
+  border-color: rgb(74 49 28 / 26%);
+  background: var(--color-paper);
+  color: var(--color-ink);
   box-shadow:
-    inset 0 -2px 0 rgb(32 26 22 / 18%),
-    0 10px 22px rgb(178 32 23 / 18%);
+    inset 0 -2px 0 rgb(74 49 28 / 7%),
+    0 8px 16px rgb(54 36 20 / 8%);
   transform: translateY(-1px);
 }
 
@@ -895,7 +945,7 @@ h1 {
 
 .catalog-card button.catalog-card__detail-action:hover {
   background: transparent;
-  color: var(--color-tomato-dark);
+  color: var(--color-ink);
   box-shadow: none;
 }
 
@@ -1020,7 +1070,7 @@ h1 {
 .catalog-filters__action--secondary {
   border-color: var(--color-hairline);
   background: rgb(255 253 247 / 72%);
-  color: var(--color-tomato);
+  color: var(--color-muted);
   box-shadow: inset 0 -2px 0 rgb(74 49 28 / 5%);
 }
 
@@ -1034,7 +1084,41 @@ h1 {
 
 .catalog-filters__action--secondary:hover {
   background: var(--color-paper);
-  color: var(--color-tomato-dark);
+  color: var(--color-ink);
+}
+
+.catalog-card button.catalog-add-button,
+.catalog-detail__add.catalog-add-button,
+.basket-panel__checkout button,
+.checkout-form > button[type="submit"],
+.planner-composer > button,
+.planner-follow-up__form > button,
+.planner-proposal__actions > button:first-child,
+.planner-replace-confirmation button:first-child {
+  border-color: var(--color-tomato-dark);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 10%), transparent 48%),
+    var(--color-tomato);
+  color: white;
+  box-shadow: var(--shadow-control);
+}
+
+.catalog-card button.catalog-add-button:hover,
+.catalog-detail__add.catalog-add-button:hover,
+.basket-panel__checkout button:hover,
+.checkout-form > button[type="submit"]:hover,
+.planner-composer > button:hover,
+.planner-follow-up__form > button:hover,
+.planner-proposal__actions > button:first-child:hover,
+.planner-replace-confirmation button:first-child:hover {
+  border-color: var(--color-tomato-dark);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 8%), transparent 48%),
+    var(--color-tomato-dark);
+  color: white;
+  box-shadow:
+    inset 0 -2px 0 rgb(32 26 22 / 18%),
+    0 10px 22px rgb(178 32 23 / 18%);
 }
 
 .catalog-browser__workspace {
@@ -1623,12 +1707,13 @@ h1 {
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: var(--color-tomato);
+  color: var(--color-ink);
   box-shadow: none;
 }
 
 .basket-line__quantity button:hover {
-  background: rgb(157 47 34 / 8%);
+  background: rgb(74 49 28 / 7%);
+  color: var(--color-ink);
   box-shadow: none;
   transform: none;
 }
@@ -1647,14 +1732,14 @@ h1 {
   justify-self: end;
   border-color: var(--color-hairline);
   background: rgb(255 253 247 / 82%);
-  color: var(--color-tomato);
+  color: var(--color-muted);
   min-height: 2.3rem;
   padding: 6px 10px;
   box-shadow: inset 0 -2px 0 rgb(74 49 28 / 5%);
 }
 
 .basket-panel button.basket-line__remove:hover {
-  border-color: rgb(178 32 23 / 34%);
+  border-color: rgb(157 47 34 / 30%);
   background: var(--color-paper);
   color: var(--color-tomato-dark);
   box-shadow:
@@ -1835,7 +1920,20 @@ h1 {
   text-transform: none;
 }
 
-.checkout-form > button[type="submit"] {
+.checkout-form__submit-area {
+  display: grid;
+  gap: 9px;
+}
+
+.checkout-form__reassurance {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  font-weight: 750;
+  line-height: 1.38;
+}
+
+.checkout-form__submit-area > button[type="submit"] {
   width: 100%;
   min-height: 3.15rem;
 }
@@ -1931,14 +2029,14 @@ h1 {
 .checkout-panel button.checkout-panel__back {
   border-color: var(--color-hairline);
   background: rgb(255 253 247 / 78%);
-  color: var(--color-tomato);
+  color: var(--color-muted);
   box-shadow: inset 0 -2px 0 rgb(74 49 28 / 5%);
 }
 
 .checkout-panel button.checkout-panel__back:hover {
-  border-color: rgb(178 32 23 / 34%);
+  border-color: rgb(74 49 28 / 24%);
   background: var(--color-paper);
-  color: var(--color-tomato-dark);
+  color: var(--color-ink);
   box-shadow:
     inset 0 -2px 0 rgb(74 49 28 / 6%),
     0 10px 20px rgb(54 36 20 / 8%);
@@ -1987,14 +2085,14 @@ button:disabled:hover {
   padding: 6px 10px;
   border-color: transparent;
   background: transparent;
-  color: var(--color-tomato);
+  color: var(--color-muted);
   box-shadow: none;
   font-size: 0.84rem;
 }
 
 .catalog-detail__close:hover {
-  background: rgb(157 47 34 / 8%);
-  color: var(--color-tomato-dark);
+  background: rgb(74 49 28 / 7%);
+  color: var(--color-ink);
   transform: none;
 }
 
