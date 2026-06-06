@@ -353,8 +353,16 @@ h1 {
 
 .planner-workspace__codex {
   color: var(--color-enamel);
-  font-size: 0.86rem;
+  font-size: 0.76rem;
   font-weight: 850;
+}
+
+.planner-intake {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(13rem, 16rem);
+  align-items: stretch;
+  gap: 12px;
+  padding-top: 2px;
 }
 
 .planner-composer {
@@ -362,7 +370,6 @@ h1 {
   grid-template-columns: minmax(0, 1fr) minmax(8.5rem, 9.5rem);
   align-items: center;
   gap: 12px;
-  padding-top: 2px;
 }
 
 .planner-composer__field {
@@ -395,6 +402,52 @@ h1 {
   width: 100%;
   min-height: 3.35rem;
   padding: 10px 16px;
+}
+
+.planner-trust {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgb(45 101 68 / 22%);
+  border-radius: 8px;
+  background: rgb(226 237 220 / 72%);
+  color: var(--color-ink);
+}
+
+.planner-trust strong {
+  color: var(--color-basil);
+  font-size: 0.9rem;
+  line-height: 1.18;
+}
+
+.planner-trust ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  color: var(--color-muted);
+  font-size: 0.79rem;
+  font-weight: 750;
+  line-height: 1.25;
+  list-style: none;
+}
+
+.planner-trust li {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.planner-trust li::before {
+  content: "";
+  flex: 0 0 0.42rem;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: var(--color-basil);
+  box-shadow: 0 0 0 3px rgb(45 101 68 / 10%);
 }
 
 .planner-examples {

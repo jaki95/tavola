@@ -94,25 +94,37 @@ export function PlannerWorkspace({
         </div>
       </div>
 
-      <form className="planner-composer" onSubmit={submitPrompt}>
-        <label className="planner-composer__field">
-          <span>Meal request</span>
-          <textarea
-            disabled={isPlannerUnavailable}
-            name="meal-request"
-            onChange={(event) => setPrompt(event.target.value)}
-            placeholder="Vegetarian dinner for 4 around £50"
-            rows={2}
-            value={prompt}
-          />
-        </label>
-        <button
-          disabled={isPlannerUnavailable || !prompt.trim()}
-          type="submit"
-        >
-          Plan menu
-        </button>
-      </form>
+      <div className="planner-intake">
+        <form className="planner-composer" onSubmit={submitPrompt}>
+          <label className="planner-composer__field">
+            <span>Meal request</span>
+            <textarea
+              disabled={isPlannerUnavailable}
+              name="meal-request"
+              onChange={(event) => setPrompt(event.target.value)}
+              placeholder="Vegetarian dinner for 4 around £50"
+              rows={2}
+              value={prompt}
+            />
+          </label>
+          <button
+            disabled={isPlannerUnavailable || !prompt.trim()}
+            type="submit"
+          >
+            Plan menu
+          </button>
+        </form>
+
+        <aside className="planner-trust" aria-label="Planner validation promise">
+          <strong>Tavola validates before Basket changes.</strong>
+          <ul>
+            <li>Real Products from the catalog</li>
+            <li>Prices come from Tavola's catalog</li>
+            <li>Dietary requests checked against product labels</li>
+            <li>Menu proposal shown for review</li>
+          </ul>
+        </aside>
+      </div>
 
       <div className="planner-examples" aria-label="Example meal requests">
         <span>Try an example</span>
