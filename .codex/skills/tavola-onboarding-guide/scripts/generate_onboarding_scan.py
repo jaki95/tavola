@@ -125,26 +125,6 @@ def scan_repo(root: Path) -> str:
     add("")
     for label, command in collect_commands(root):
         add(f"- {label}: `{command}`")
-    add("")
-
-    add("## Mermaid Starting Point")
-    add("")
-    add("```mermaid")
-    add("flowchart LR")
-    add('  User["Customer or operator"] --> Home["Frontend composition"]')
-    if frontend_features:
-        for feature in frontend_features:
-            node_id = mermaid_id(feature.name)
-            label = feature.name.replace("-", " ").title()
-            add(f'  Home --> {node_id}["{label} feature"]')
-            add(f'  {node_id} --> Client["Frontend API clients"]')
-    else:
-        add('  Home --> Client["Frontend API clients"]')
-    add('  Client --> Routers["Backend routers + schemas"]')
-    add('  Routers --> UseCases["Application use cases"]')
-    add('  UseCases --> Domain["Domain rules"]')
-    add('  UseCases --> Infra["Infrastructure adapters"]')
-    add("```")
 
     return "\n".join(lines)
 
@@ -321,11 +301,6 @@ def literal_string(node: ast.AST) -> str | None:
 def normalize_path(prefix: str, suffix: str) -> str:
     path = f"{prefix.rstrip('/')}/{suffix.lstrip('/')}" if suffix else prefix
     return path if path.startswith("/") else f"/{path}"
-
-
-def mermaid_id(value: str) -> str:
-    words = re.findall(r"[A-Za-z0-9]+", value)
-    return "".join(word.capitalize() for word in words) if words else "Feature"
 
 
 if __name__ == "__main__":

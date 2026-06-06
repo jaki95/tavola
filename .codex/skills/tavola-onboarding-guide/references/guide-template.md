@@ -17,10 +17,13 @@ Summarize the layer split found in the current repo. Include only layers and
 boundaries that are present:
 
 - Backend API: FastAPI routing, request/response schemas, dependency wiring.
-- Backend application: use cases and workflow orchestration.
-- Backend domain: business rules and invariants.
+- Backend application: use cases, meaning focused workflow entry points that
+  coordinate domain objects and repository/agent ports.
+- Backend domain: business rules and invariants owned by entities and value
+  objects, independent of FastAPI and infrastructure.
 - Backend infrastructure: persistence, seed/static data, external adapters,
-  background work, generated resources, or tool boundaries that exist now.
+  background work, generated resources, or tool boundaries that implement the
+  application/domain ports.
 - Frontend API clients: transport calls and response shape guards.
 - Frontend features/pages: current page composition and feature areas.
 
@@ -28,6 +31,16 @@ boundaries that are present:
 
 Group concepts by the current workflows and domain modules. Use concrete names
 from the domain/application files and avoid implying missing capabilities.
+
+When every backend concept shares the same fields, prefer a Markdown table over
+repeated named bullets:
+
+| Concept | Domain | Application | Infrastructure | Boundary rule |
+| --- | --- | --- | --- | --- |
+| Concept name | Entities, value objects, and invariants | Use cases and ports that coordinate the workflow | Repositories, seed data, adapters, or external tools | What must stay in this layer or source of truth |
+
+Keep cells concise. If any cell needs several sentences or multiple subpoints,
+fall back to named bullets for readability.
 
 ## API Routes
 
@@ -46,6 +59,16 @@ Trace the major flows discovered from routes, frontend API clients, feature
 hooks/components, and application use cases. Prefer 2-5 flows with concrete
 file references over an exhaustive list.
 
+When every flow shares the same fields, prefer a Markdown table over repeated
+named bullets:
+
+| Flow | Starts | Frontend | Backend | Rule/source of truth |
+| --- | --- | --- | --- | --- |
+| Workflow name | Page/component/hook entry point | API client or state transition | Route and application use case | Domain rule, repository, adapter, or validation owner |
+
+Keep cells concise. If any cell needs several sentences or multiple subpoints,
+fall back to named bullets for readability.
+
 ## Tests And Scripts
 
 Summarize backend pytest areas, frontend Vitest/component areas, and commands
@@ -54,8 +77,37 @@ from `AGENTS.md`, `backend/pyproject.toml`, and `frontend/package.json`.
 ## Mermaid Diagram
 
 Use a single Mermaid `flowchart LR` diagram. Keep node labels short enough to
-render cleanly. Prefer grouped subgraphs for frontend, API, application/domain,
-and infrastructure.
+render cleanly. Prefer grouped subgraphs for frontend, API, application, domain,
+and infrastructure. Avoid long labels, forced line breaks, or repeated edge
+labels that make the rendered diagram busy.
+Do not copy a generated scan into this section; design the diagram from the
+source inspection and the flows described above.
+
+Diagram rules:
+
+- Split application and domain into separate layers.
+- Explain the direction of dependency: API calls application use cases; use
+  cases call domain rules and depend on ports; infrastructure adapters implement
+  those ports and are wired in by dependency providers.
+- Show schemas and dependency providers as API-layer collaborators, not as the
+  next downstream business flow after routers.
+- Put concrete seed data, in-memory repositories, databases, or external tools
+  behind named infrastructure adapters/repositories.
+- Avoid all-to-all arrows from use cases into infrastructure. Prefer one ports
+  node such as "Repository and agent ports" when that makes dependency inversion
+  clearer than many individual infrastructure arrows.
+- Collapse repeated adapter arrows when they do not add meaning. Prefer a
+  grouped "Infrastructure adapters" subgraph with one implement/wire arrow over
+  several parallel arrows with the same label.
+- Prefer this backend relationship shape when the current source supports it:
+  `Routers -> Use cases -> Ports`, `Use cases -> Domain rules`,
+  `Dependency providers -. choose adapters .-> Concrete adapters`, and
+  `Concrete adapters -. implement .-> Ports`.
+- Put `Concrete adapters` inside the infrastructure subgraph and point arrows to
+  that node, not to the subgraph id. Include child nodes only for meaningful
+  boundaries such as static seed data, in-memory repositories, databases,
+  external services, Codex, or MCP tools.
+- Show Planner/Codex/MCP boundaries only when they exist in the inspected source.
 
 ## Where To Start
 
