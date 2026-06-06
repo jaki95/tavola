@@ -184,8 +184,8 @@ Rules:
 - Search normalization: trim, collapse whitespace, case-insensitive. Empty query
   = no query. No stemming/fuzzy/typo/ranking.
 - Multi-token search = AND; every token must match combined searchable text.
-- First catalog UI shows dietary badges and makes them searchable; no dedicated
-  facet filters.
+- First catalog search matches dietary facets, but browse cards may omit facet
+  badges to keep product scanning calm. No dedicated facet filters.
 - Product detail adds detail desc, larger image, unit label, price, visible
   facets. No add-to-basket controls before basket slice.
 

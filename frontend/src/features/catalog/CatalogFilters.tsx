@@ -4,25 +4,30 @@ import type { CatalogCategory, CatalogCategoryId } from "../../types/catalog";
 
 export type CatalogFiltersProps = {
   categories: CatalogCategory[];
-  isResetDisabled?: boolean;
   selectedCategoryId: CatalogCategoryId | null;
   searchText: string;
   onCategorySelect: (categoryId: CatalogCategoryId | null) => void;
   onSearchTextChange: (searchText: string) => void;
   onSearchSubmit: (searchText: string) => void;
   onReset: () => void;
+  hasActiveFilters?: boolean;
+  showResetAction?: boolean;
 };
 
 export function CatalogFilters({
   categories,
-  isResetDisabled = false,
   selectedCategoryId,
   searchText,
   onCategorySelect,
   onSearchTextChange,
   onSearchSubmit,
-  onReset
+  onReset,
+  hasActiveFilters,
+  showResetAction = true
 }: CatalogFiltersProps) {
+  const shouldShowReset =
+    hasActiveFilters ?? (selectedCategoryId !== null || searchText.trim() !== "");
+
   function submitSearch() {
     onSearchSubmit(searchText);
   }
@@ -35,7 +40,7 @@ export function CatalogFilters({
   }
 
   return (
-    <section aria-label="Catalog filters" className="catalog-filters">
+    <section aria-label="Browse products" className="catalog-filters">
       <fieldset className="catalog-filters__categories">
         <legend id="catalog-category-filter">Category</legend>
         <div
@@ -79,11 +84,12 @@ export function CatalogFilters({
         }}
       >
         <label className="catalog-filters__search-field" htmlFor="catalog-search">
-          Search catalog
+          <span>Search catalog</span>
           <input
             id="catalog-search"
             onChange={(event) => onSearchTextChange(event.target.value)}
             onKeyDown={handleSearchKeyDown}
+            placeholder="Search products"
             type="search"
             value={searchText}
           />
@@ -91,14 +97,16 @@ export function CatalogFilters({
         <button className="catalog-filters__action" type="submit">
           Search
         </button>
-        <button
-          className="catalog-filters__action catalog-filters__action--secondary"
-          disabled={isResetDisabled}
-          onClick={onReset}
-          type="button"
-        >
-          Reset filters
-        </button>
+        {shouldShowReset && showResetAction ? (
+          <button
+            aria-label="Reset filters"
+            className="catalog-filters__action catalog-filters__action--secondary"
+            onClick={onReset}
+            type="button"
+          >
+            Reset
+          </button>
+        ) : null}
       </form>
     </section>
   );

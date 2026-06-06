@@ -541,7 +541,7 @@ describe("App", () => {
     expect(screen.getByLabelText("Primi")).toBeChecked();
     expect(screen.getByLabelText("Search catalog")).toHaveValue("pasta");
     expect(
-      screen.getByText("Showing matches for", { exact: false })
+      screen.getByText("Matches for", { exact: false })
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("dialog", { name: "Product detail" })

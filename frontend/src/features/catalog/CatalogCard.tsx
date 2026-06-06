@@ -1,7 +1,4 @@
-import {
-  formatDietaryFacetBadges,
-  formatMoney
-} from "./catalogFormat";
+import { formatMoney } from "./catalogFormat";
 import { getCatalogImageAsset } from "./catalogImages";
 import type { CatalogProductSummary } from "../../types/catalog";
 
@@ -20,7 +17,6 @@ export function CatalogCard({
   onAddProduct = () => {},
   onSelectProduct
 }: CatalogCardProps) {
-  const dietaryBadges = formatDietaryFacetBadges(product);
   const image = getCatalogImageAsset(product.image_id, product.name);
   const isInBasket = basketQuantity > 0;
   const basketQuantityLabel = formatBasketQuantityLabel(basketQuantity);
@@ -53,13 +49,6 @@ export function CatalogCard({
           <p className="catalog-card__unit">{product.unit_label}</p>
         </div>
         <p className="catalog-card__description">{product.short_description}</p>
-        {dietaryBadges.length > 0 ? (
-          <ul className="catalog-card__badges" aria-label="Dietary badges">
-            {dietaryBadges.map((badge) => (
-              <li key={badge}>{badge}</li>
-            ))}
-          </ul>
-        ) : null}
         <div className="catalog-card__actions">
           <button
             aria-label={
@@ -85,7 +74,7 @@ export function CatalogCard({
             type="button"
             onClick={() => onSelectProduct(product.sku_id)}
           >
-            View details
+            Details
           </button>
         </div>
       </div>

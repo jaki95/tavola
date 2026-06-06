@@ -114,4 +114,29 @@ describe("CatalogFilters", () => {
 
     expect(props.onReset).toHaveBeenCalledOnce();
   });
+
+  test("keeps reset visible for committed filters after the draft search is cleared", () => {
+    const props = renderCatalogFilters({
+      hasActiveFilters: true,
+      searchText: "",
+      selectedCategoryId: null
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset filters" }));
+
+    expect(props.onReset).toHaveBeenCalledOnce();
+  });
+
+  test("hides toolbar reset when the parent provides the empty-state reset", () => {
+    renderCatalogFilters({
+      hasActiveFilters: true,
+      searchText: "pesto",
+      selectedCategoryId: null,
+      showResetAction: false
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "Reset filters" })
+    ).not.toBeInTheDocument();
+  });
 });
