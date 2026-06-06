@@ -8,6 +8,7 @@ from typing import Any, Protocol
 
 from tavola.infrastructure.codex_planner.timing import (
     PlannerTimingSink,
+    emit_lifecycle_timing,
     emit_timing,
 )
 
@@ -134,6 +135,11 @@ class PythonCodexSdkClient:
                 attributes={},
             )
             turn_started_at = time.perf_counter()
+            emit_lifecycle_timing(
+                timing_sink,
+                "planning",
+                started_at=turn_started_at,
+            )
             turn_result = thread.run(
                 prompt,
                 approval_mode=ApprovalMode.auto_review,

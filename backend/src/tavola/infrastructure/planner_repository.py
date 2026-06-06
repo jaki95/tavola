@@ -7,6 +7,7 @@ from tavola.domain.planner import (
     PlannerSession,
     PlannerSessionId,
     PlannerValidationError,
+    PlanningUpdate,
     ProposalStatus,
     ValidatedMenuProposal,
 )
@@ -50,3 +51,26 @@ class InMemoryPlannerSessionRepository:
     def save_session(self, session: PlannerSession) -> None:
         with self._lock:
             self._sessions_by_id[session.planner_session_id] = session
+
+    def append_planning_update(
+        self,
+        planner_session_id: PlannerSessionId,
+        update: PlanningUpdate,
+    ) -> PlannerSession | None:
+        with self._lock:
+            session = self._sessions_by_id.get(planner_session_id)
+            if session is None:
+                return None
+
+            updated = PlannerSession(
+                planner_session_id=session.planner_session_id,
+                customer_request=session.customer_request,
+                follow_up_answers=session.follow_up_answers,
+                status=session.status,
+                follow_up_question=session.follow_up_question,
+                menu_proposal=session.menu_proposal,
+                validation_errors=session.validation_errors,
+                planning_updates=(*session.planning_updates, update),
+            )
+            self._sessions_by_id[planner_session_id] = updated
+            return updated

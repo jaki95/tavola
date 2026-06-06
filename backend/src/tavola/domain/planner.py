@@ -37,6 +37,17 @@ class ProposalStatus(StrEnum):
     FAILED = "failed"
 
 
+class PlanningUpdateStage(StrEnum):
+    QUEUED = "queued"
+    STARTED = "started"
+    CONNECTING = "connecting"
+    PLANNING = "planning"
+    VALIDATING = "validating"
+    READY = "ready"
+    NEEDS_INPUT = "needs_input"
+    FAILED = "failed"
+
+
 class PlannerValidationErrorCode(StrEnum):
     UNKNOWN_SKU = "unknown_sku"
     UNAVAILABLE_SKU = "unavailable_sku"
@@ -185,6 +196,17 @@ class PlannerValidationError:
 
 
 @dataclass(frozen=True, slots=True)
+class PlanningUpdate:
+    stage: PlanningUpdateStage
+    message: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.stage, PlanningUpdateStage):
+            raise ValueError("planning_update.stage must be supported")
+        _require_text(self.message, "planning_update.message")
+
+
+@dataclass(frozen=True, slots=True)
 class PlannerSession:
     planner_session_id: PlannerSessionId
     customer_request: str
@@ -193,11 +215,15 @@ class PlannerSession:
     follow_up_question: FollowUpQuestion | None = None
     menu_proposal: ValidatedMenuProposal | None = None
     validation_errors: tuple[PlannerValidationError, ...] = ()
+    planning_updates: tuple[PlanningUpdate, ...] = ()
 
     def __post_init__(self) -> None:
         _require_text(self.customer_request, "customer_request")
         for answer in self.follow_up_answers:
             _require_text(answer, "follow_up_answer")
+        for update in self.planning_updates:
+            if not isinstance(update, PlanningUpdate):
+                raise ValueError("planning_updates must contain PlanningUpdate")
         if self.status == ProposalStatus.PLANNING:
             if self.follow_up_question is not None:
                 raise ValueError(

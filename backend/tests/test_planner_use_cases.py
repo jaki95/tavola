@@ -29,6 +29,7 @@ from tavola.domain.planner import (
     FollowUpQuestion,
     MenuProposal,
     PlannerValidationErrorCode,
+    PlanningUpdateStage,
     ProposalLine,
     ProposalStatus,
 )
@@ -704,6 +705,12 @@ def test_create_planning_session_saves_in_progress_state() -> None:
     assert session.status == ProposalStatus.PLANNING
     assert session.customer_request == "Dinner for two"
     assert session.menu_proposal is None
+    assert [(update.stage, update.message) for update in session.planning_updates] == [
+        (
+            PlanningUpdateStage.QUEUED,
+            "Tavola is getting your menu request ready.",
+        )
+    ]
     assert repository.get_session(session.planner_session_id) == session
 
 
@@ -723,6 +730,12 @@ def test_complete_planning_session_updates_same_session_to_ready_proposal() -> N
     assert updated.status == ProposalStatus.PROPOSAL_READY
     assert updated.menu_proposal is not None
     assert updated.menu_proposal.total.amount_minor == 850
+    assert [update.stage for update in updated.planning_updates] == [
+        PlanningUpdateStage.QUEUED,
+        PlanningUpdateStage.STARTED,
+        PlanningUpdateStage.VALIDATING,
+        PlanningUpdateStage.READY,
+    ]
     assert repository.get_session(session.planner_session_id) == updated
 
 
@@ -754,6 +767,11 @@ def test_complete_planning_session_maps_worker_exception_to_failed_session() -> 
     assert updated.validation_errors[0].message == (
         "Planner could not complete this request."
     )
+    assert [update.stage for update in updated.planning_updates] == [
+        PlanningUpdateStage.QUEUED,
+        PlanningUpdateStage.STARTED,
+        PlanningUpdateStage.FAILED,
+    ]
 
 
 def test_answer_follow_up_saves_answer_and_ready_proposal() -> None:
@@ -804,6 +822,9 @@ def test_submit_follow_up_saves_answer_and_returns_to_planning() -> None:
     assert updated.follow_up_answers == ("Four people",)
     assert updated.follow_up_question is None
     assert updated.menu_proposal is None
+    assert [update.stage for update in updated.planning_updates] == [
+        PlanningUpdateStage.QUEUED,
+    ]
 
 
 def test_answer_follow_up_rejects_missing_or_ready_session() -> None:

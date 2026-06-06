@@ -52,6 +52,10 @@ the existing polling flow remains unchanged.
 
 ### Task 1.1: Add Planning Updates To Sessions
 
+- **Status**: Completed 2026-06-07. Added closed Planning update stages,
+  immutable session update history, queued updates, follow-up queued updates,
+  and locked repository append behavior.
+
 - **Location**:
   - `backend/src/tavola/domain/planner.py`
   - `backend/src/tavola/application/planner.py`
@@ -74,6 +78,10 @@ the existing polling flow remains unchanged.
   - `cd backend && UV_CACHE_DIR=../.uv-cache uv run pytest tests/test_planner_domain.py tests/test_planner_repository.py tests/test_planner_use_cases.py`
 
 ### Task 1.2: Publish Updates During Background Planning
+
+- **Status**: Completed 2026-06-07. Background completion records started,
+  validating, and terminal updates; Codex lifecycle timing maps sanitized
+  connecting/planning events into session updates.
 
 - **Location**:
   - `backend/src/tavola/application/planner.py`
@@ -100,6 +108,9 @@ the existing polling flow remains unchanged.
   - `cd backend && UV_CACHE_DIR=../.uv-cache uv run pytest tests/test_planner_api.py tests/test_codex_planner_adapter.py tests/test_planner_use_cases.py`
 
 ### Task 1.3: Expose Updates Through The Planner API
+
+- **Status**: Completed 2026-06-07. Planner session responses now include
+  additive `planning_updates` for create and poll calls.
 
 - **Location**:
   - `backend/src/tavola/api/schemas/planner.py`

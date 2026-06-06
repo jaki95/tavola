@@ -10,6 +10,8 @@ from tavola.domain.planner import (
     PlannerSessionId,
     PlannerValidationError,
     PlannerValidationErrorCode,
+    PlanningUpdate,
+    PlanningUpdateStage,
     ProposalLine,
     ProposalStatus,
 )
@@ -263,6 +265,55 @@ def test_planner_session_can_represent_in_progress_planning() -> None:
     assert session.follow_up_question is None
     assert session.menu_proposal is None
     assert session.validation_errors == ()
+    assert session.planning_updates == ()
+
+
+def test_planning_update_stages_are_closed_for_backend_lifecycle() -> None:
+    assert tuple(stage.value for stage in PlanningUpdateStage) == (
+        "queued",
+        "started",
+        "connecting",
+        "planning",
+        "validating",
+        "ready",
+        "needs_input",
+        "failed",
+    )
+
+
+def test_planning_update_requires_customer_visible_message() -> None:
+    update = PlanningUpdate(
+        stage=PlanningUpdateStage.QUEUED,
+        message="We have added your request to the planning queue.",
+    )
+
+    assert update.stage == PlanningUpdateStage.QUEUED
+    assert update.message == "We have added your request to the planning queue."
+
+    with pytest.raises(ValueError, match="planning_update.message is required"):
+        PlanningUpdate(stage=PlanningUpdateStage.PLANNING, message=" ")
+    with pytest.raises(ValueError, match="planning_update.stage must be supported"):
+        PlanningUpdate(stage="queued", message="Queued.")  # type: ignore[arg-type]
+
+
+def test_planner_session_stores_ordered_planning_updates() -> None:
+    first = PlanningUpdate(
+        stage=PlanningUpdateStage.QUEUED,
+        message="We have added your request to the planning queue.",
+    )
+    second = PlanningUpdate(
+        stage=PlanningUpdateStage.STARTED,
+        message="We have started planning your menu.",
+    )
+
+    session = PlannerSession(
+        planner_session_id=PlannerSessionId("planner-1"),
+        customer_request="Dinner for friends",
+        status=ProposalStatus.PLANNING,
+        planning_updates=(first, second),
+    )
+
+    assert session.planning_updates == (first, second)
 
 
 def test_planner_session_enforces_status_payload_shape() -> None:

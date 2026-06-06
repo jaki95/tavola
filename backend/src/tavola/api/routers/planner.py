@@ -1,4 +1,5 @@
-from typing import Annotated
+from collections.abc import Callable
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -49,6 +50,8 @@ from tavola.domain.planner import (
     PlannerSession,
     PlannerSessionId,
     PlannerValidationError,
+    PlanningUpdate,
+    PlanningUpdateStage,
 )
 
 router = APIRouter(prefix="/planner", tags=["planner"])
@@ -88,10 +91,14 @@ def start_planner_session(
         session = CreatePlanningSession(
             planner_repository=planner_repository,
         )(message=request.message)
+        update_recorder = _planner_session_update_recorder(
+            planner_repository,
+            session.planner_session_id,
+        )
         background_runner.submit(
             lambda: CompletePlanningSession(
                 planner_repository=planner_repository,
-                agent=agent,
+                agent=_agent_with_planning_update_recorder(agent, update_recorder),
                 catalog_repository=catalog_repository,
             )(planner_session_id=session.planner_session_id.value)
         )
@@ -148,10 +155,14 @@ def answer_follow_up(
         session = SubmitPlannerFollowUp(
             planner_repository=planner_repository,
         )(planner_session_id=planner_session_id, message=request.message)
+        update_recorder = _planner_session_update_recorder(
+            planner_repository,
+            session.planner_session_id,
+        )
         background_runner.submit(
             lambda: CompletePlanningSession(
                 planner_repository=planner_repository,
-                agent=agent,
+                agent=_agent_with_planning_update_recorder(agent, update_recorder),
                 catalog_repository=catalog_repository,
             )(planner_session_id=session.planner_session_id.value)
         )
@@ -247,6 +258,54 @@ def _get_session_or_404(
 def _ensure_planner_available(runtime_status: PlannerRuntimeStatus) -> None:
     if not runtime_status.enabled:
         raise _planner_http_exception(PlannerUnavailable(runtime_status.message))
+
+
+def _planner_session_update_recorder(
+    repository: PlannerSessionRepository,
+    planner_session_id: PlannerSessionId,
+) -> Callable[[PlanningUpdateStage], None]:
+    def record(stage: PlanningUpdateStage) -> None:
+        repository.append_planning_update(
+            planner_session_id,
+            PlanningUpdate(
+                stage=stage,
+                message=_PLANNING_UPDATE_MESSAGES[stage],
+            ),
+        )
+
+    return record
+
+
+def _agent_with_planning_update_recorder(
+    agent: MenuPlannerAgent,
+    update_recorder: Callable[[PlanningUpdateStage], None],
+) -> MenuPlannerAgent:
+    with_timing_sink = getattr(agent, "with_timing_sink", None)
+    if not callable(with_timing_sink):
+        return agent
+    return with_timing_sink(_planner_timing_sink(update_recorder))
+
+
+def _planner_timing_sink(
+    update_recorder: Callable[[PlanningUpdateStage], None],
+) -> Callable[[Any], None]:
+    event_stage_by_name = {
+        "connecting": PlanningUpdateStage.CONNECTING,
+        "planning": PlanningUpdateStage.PLANNING,
+    }
+
+    def sink(event: Any) -> None:
+        stage = event_stage_by_name.get(getattr(event, "name", ""))
+        if stage is not None:
+            update_recorder(stage)
+
+    return sink
+
+
+_PLANNING_UPDATE_MESSAGES = {
+    PlanningUpdateStage.CONNECTING: "Connecting to Tavola's planner.",
+    PlanningUpdateStage.PLANNING: "Checking Tavola's catalog.",
+}
 
 
 def _planner_http_exception(

@@ -9,6 +9,7 @@ from tavola.domain.planner import (
     Course,
     PlannerSession,
     PlannerValidationError,
+    PlanningUpdate,
     ValidatedMenuProposal,
     ValidatedProposalLine,
 )
@@ -206,6 +207,15 @@ class PlannerValidationErrorResponse(BaseModel):
         )
 
 
+class PlanningUpdateResponse(BaseModel):
+    stage: str
+    message: str
+
+    @classmethod
+    def from_domain(cls, update: PlanningUpdate) -> "PlanningUpdateResponse":
+        return cls(stage=update.stage.value, message=update.message)
+
+
 class PlannerSessionResponse(BaseModel):
     planner_session_id: str
     status: str
@@ -214,6 +224,7 @@ class PlannerSessionResponse(BaseModel):
     follow_up_question: str | None
     menu_proposal: PlannerMenuProposalResponse | None
     validation_errors: list[PlannerValidationErrorResponse]
+    planning_updates: list[PlanningUpdateResponse]
 
     @classmethod
     def from_domain(cls, session: PlannerSession) -> "PlannerSessionResponse":
@@ -235,6 +246,10 @@ class PlannerSessionResponse(BaseModel):
             validation_errors=[
                 PlannerValidationErrorResponse.from_domain(error)
                 for error in session.validation_errors
+            ],
+            planning_updates=[
+                PlanningUpdateResponse.from_domain(update)
+                for update in session.planning_updates
             ],
         )
 

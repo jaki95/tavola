@@ -51,6 +51,8 @@ class CapturingCodexClient:
     reasoning_effort: str | None = None
     mcp_servers: tuple[CodexMcpServerConfig, ...] = ()
     timeout_seconds: float | None = None
+    observed_events: list[PlannerTimingEvent] | None = None
+    event_names_at_run: tuple[str, ...] = ()
 
     def run(
         self,
@@ -64,6 +66,10 @@ class CapturingCodexClient:
         timing_sink=None,
     ) -> CodexSdkRunResult:
         del timing_sink
+        if self.observed_events is not None:
+            self.event_names_at_run = tuple(
+                event.name for event in self.observed_events
+            )
         self.prompt = prompt
         self.model = model
         self.sandbox_mode = sandbox_mode
@@ -312,14 +318,16 @@ def test_codex_adapter_maps_follow_up_without_tools_to_needs_input() -> None:
 
 def test_codex_adapter_emits_sanitized_timing_events_for_success() -> None:
     events: list[PlannerTimingEvent] = []
+    client = CapturingCodexClient(
+        result=CodexSdkRunResult(
+            final_output=json.dumps(valid_raw_proposal()),
+            tool_names=required_tool_names(),
+        ),
+        observed_events=events,
+    )
     planner = PlanMenuFromRequest(
         agent=CodexMenuPlannerAgent(
-            client=CapturingCodexClient(
-                result=CodexSdkRunResult(
-                    final_output=json.dumps(valid_raw_proposal()),
-                    tool_names=required_tool_names(),
-                )
-            ),
+            client=client,
             model="codex-test-model",
             timing_sink=events.append,
         ),
@@ -329,12 +337,15 @@ def test_codex_adapter_emits_sanitized_timing_events_for_success() -> None:
     result = planner(customer_request="Vegetarian dinner for 2")
 
     assert result.status == ProposalStatus.PROPOSAL_READY
+    assert client.event_names_at_run == ("connecting",)
     assert [event.name for event in events] == [
+        "connecting",
         "parse_result",
         "total_elapsed",
     ]
-    assert events[0].attributes == {"result": "proposal_ready"}
-    assert events[1].attributes == {
+    assert events[0].attributes == {}
+    assert events[1].attributes == {"result": "proposal_ready"}
+    assert events[2].attributes == {
         "status": "proposal_ready",
         "repair_attempts": 0,
     }
@@ -368,8 +379,10 @@ def test_codex_adapter_emits_repair_attempt_timing_without_raw_output() -> None:
 
     assert result.status == ProposalStatus.PROPOSAL_READY
     assert [(event.name, event.attributes) for event in events] == [
+        ("connecting", {}),
         ("parse_result", {"result": "malformed_output"}),
         ("repair_attempt", {"repair_attempts": 1}),
+        ("connecting", {}),
         ("parse_result", {"result": "proposal_ready"}),
         ("total_elapsed", {"status": "proposal_ready", "repair_attempts": 1}),
     ]
@@ -476,9 +489,15 @@ def test_codex_adapter_stops_after_configured_repair_attempts() -> None:
 def test_python_codex_sdk_client_starts_thread_with_mcp_server_config() -> None:
     created_clients: list[FakeCodex] = []
     events: list[PlannerTimingEvent] = []
+    event_names_at_turn_run: list[tuple[str, ...]] = []
 
     def codex_factory(config):
-        client = FakeCodex(config)
+        client = FakeCodex(
+            config,
+            run_observer=lambda: event_names_at_turn_run.append(
+                tuple(event.name for event in events)
+            ),
+        )
         created_clients.append(client)
         return client
 
@@ -518,14 +537,19 @@ def test_python_codex_sdk_client_starts_thread_with_mcp_server_config() -> None:
     assert fake_codex.thread.ran_effort == "low"
     assert fake_codex.thread.ran_prompt == "Plan dinner"
     assert fake_codex.was_closed is True
+    assert event_names_at_turn_run == [
+        ("sdk_client_create", "sdk_thread_start", "planning")
+    ]
     assert [event.name for event in events] == [
         "sdk_client_create",
         "sdk_thread_start",
+        "planning",
         "sdk_turn_run",
         "tool_names_detected",
     ]
     assert events[0].attributes == {"mcp_server_count": 1}
-    assert events[3].attributes == {"tool_names": ("find_catalog_candidates",)}
+    assert events[2].attributes == {}
+    assert events[4].attributes == {"tool_names": ("find_catalog_candidates",)}
 
 
 def test_codex_adapter_maps_malformed_json_to_typed_failure() -> None:
@@ -636,9 +660,9 @@ def valid_raw_proposal(sku_id: str = "fresh-tagliatelle-250g") -> dict[str, obje
 
 
 class FakeCodex:
-    def __init__(self, config) -> None:
+    def __init__(self, config, run_observer=None) -> None:
         self.config = config
-        self.thread = FakeThread()
+        self.thread = FakeThread(run_observer=run_observer)
         self.started_model = None
         self.started_sandbox = None
         self.started_approval_mode = None
@@ -655,12 +679,15 @@ class FakeCodex:
 
 
 class FakeThread:
-    def __init__(self) -> None:
+    def __init__(self, run_observer=None) -> None:
         self.ran_prompt = None
         self.ran_approval_mode = None
         self.ran_effort = None
+        self._run_observer = run_observer
 
     def run(self, prompt, **kwargs):
+        if self._run_observer is not None:
+            self._run_observer()
         self.ran_prompt = prompt
         self.ran_approval_mode = kwargs["approval_mode"].value
         self.ran_effort = kwargs["effort"].value if kwargs["effort"] else None
