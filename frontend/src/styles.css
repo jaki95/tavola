@@ -399,8 +399,7 @@ h1 {
   min-width: 0;
 }
 
-.planner-composer__field > span,
-.planner-line__controls label span {
+.planner-composer__field > span {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -986,51 +985,75 @@ h1 {
 
 .planner-line__body {
   display: grid;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, max-content);
+  gap: 12px;
+  align-items: start;
   min-width: 0;
 }
 
-.planner-line__summary {
+.planner-line__copy {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) max-content;
-  gap: 10px;
-  align-items: start;
+  gap: 6px;
+  min-width: 0;
 }
 
 .planner-line h5 {
+  margin: 0;
   font-size: 1.08rem;
   line-height: 1.05;
+  overflow-wrap: anywhere;
 }
 
-.planner-line__summary p {
-  margin: 5px 0 0;
+.planner-line__copy > p {
+  margin: 0;
   color: var(--color-muted);
   font-size: 0.84rem;
   font-weight: 800;
 }
 
-.planner-line__summary strong {
+.planner-line__commerce {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+  min-width: 0;
+}
+
+.planner-line__commerce strong {
   color: var(--color-ink);
   font-weight: 900;
 }
 
 .planner-line__rationale {
+  max-width: 58ch;
   font-size: 0.88rem;
+  font-weight: 500;
 }
 
 .planner-line__controls {
-  display: grid;
-  grid-template-columns: 4.75rem minmax(8rem, max-content);
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  justify-content: flex-end;
 }
 
-.planner-line__controls input {
-  width: 4.75rem;
+.planner-workspace button.planner-line__remove {
+  justify-self: end;
   min-height: 2.3rem;
-  padding: 0 0.5rem;
-  font-weight: 900;
-  text-align: center;
+  padding: 6px 10px;
+  border-color: var(--color-hairline);
+  background: rgb(255 253 247 / 82%);
+  color: var(--color-muted);
+  box-shadow: inset 0 -2px 0 rgb(74 49 28 / 5%);
+}
+
+.planner-workspace button.planner-line__remove:hover {
+  border-color: rgb(157 47 34 / 30%);
+  background: var(--color-paper);
+  color: var(--color-tomato-dark);
+  box-shadow:
+    inset 0 -2px 0 rgb(74 49 28 / 6%),
+    0 8px 16px rgb(54 36 20 / 8%);
 }
 
 .planner-replace-confirmation {
@@ -1979,7 +2002,7 @@ h1 {
   justify-content: space-between;
 }
 
-.basket-line__quantity {
+.quantity-stepper {
   display: grid;
   grid-template-columns: 2.1rem 2.9rem 2.1rem;
   align-items: center;
@@ -1989,14 +2012,14 @@ h1 {
   background: rgb(255 253 247 / 86%);
 }
 
-.basket-line__quantity button,
-.basket-line__quantity input {
+.quantity-stepper button,
+.quantity-stepper input {
   width: 100%;
   min-width: 0;
   min-height: 2.3rem;
 }
 
-.basket-line__quantity button {
+.quantity-stepper button {
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -2004,14 +2027,14 @@ h1 {
   box-shadow: none;
 }
 
-.basket-line__quantity button:hover {
+.quantity-stepper button:hover {
   background: rgb(74 49 28 / 7%);
   color: var(--color-ink);
   box-shadow: none;
   transform: none;
 }
 
-.basket-line__quantity input {
+.quantity-stepper input {
   border: 0;
   border-inline: 1px solid var(--color-hairline);
   border-radius: 0;
@@ -2019,6 +2042,11 @@ h1 {
   color: var(--color-ink);
   font-weight: 900;
   text-align: center;
+}
+
+.quantity-stepper input:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
 }
 
 .basket-panel button.basket-line__remove {
