@@ -435,6 +435,7 @@ source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "openai-codex" },
+    { name = "python-dotenv" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -449,6 +450,7 @@ dev = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "openai-codex", specifier = ">=0.1.0b3" },
+    { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34.0" },
 ]
 

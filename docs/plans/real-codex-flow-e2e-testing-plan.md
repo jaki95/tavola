@@ -95,15 +95,20 @@ Model and SDK findings:
 
 MCP tool-use findings:
 
+- These findings are historical evidence from the 2026-06-04 live run, not the
+  current planner tool contract.
 - The original prompt required `list_package_templates`, `search_catalog`,
   `get_sku_detail`, and `validate_menu_proposal`.
 - `search_catalog` already returns product identity, name, category, unit label,
   price, short description, tags, dietary facets, availability, and image ID.
   Requiring `get_sku_detail` for every selected product caused avoidable tool
   calls for ordinary proposals.
-- The happy-path required tool contract was reduced to
-  `list_package_templates`, `search_catalog`, and `validate_menu_proposal`.
-  `get_sku_detail` remains available only when extra product detail is needed.
+- The happy-path required tool contract was later reduced to
+  `list_package_templates`, `search_catalog`, and `validate_menu_proposal`, then
+  superseded by the catalog-candidate MCP plan.
+- Current live planner proposal runs should use Tavola's bounded catalog
+  candidate finder plus proposal validation. They should not require
+  `search_catalog`, `list_package_templates`, or `get_sku_detail`.
 
 Timing findings from a sanitized live trace for
 `Vegetarian dinner for 4 around £50`:
@@ -124,6 +129,8 @@ non_tool_elapsed_ms 50479
   query `vegetarian`.
 - The measured latency came from the Codex model/app-server turn rather than
   Tavola MCP handlers.
+- Treat the listed tool names as historical trace labels; new smoke output
+  should show catalog candidate finding and proposal validation instead.
 
 Browser findings:
 
