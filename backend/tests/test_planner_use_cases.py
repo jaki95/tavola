@@ -6,6 +6,7 @@ from tavola.application.planner import (
     AnswerPlannerFollowUp,
     CompletePlanningSession,
     CreatePlanningSession,
+    MenuPlannerAgentResponse,
     PlanMenuFromRequest,
     PlannerInputInvalid,
     PlannerProposalInvalid,
@@ -110,6 +111,45 @@ def raw_proposal(
             },
         ),
     }
+
+
+class RepairingPlannerAgent:
+    def __init__(
+        self,
+        *,
+        first: dict[str, object],
+        repaired: dict[str, object],
+    ) -> None:
+        self._first = first
+        self._repaired = repaired
+        self.repair_requests: list[dict[str, object]] = []
+
+    def plan_menu(
+        self,
+        *,
+        customer_request: str,
+        follow_up_answers: tuple[str, ...] = (),
+    ) -> MenuPlannerAgentResponse:
+        del customer_request, follow_up_answers
+        return MenuPlannerAgentResponse(raw_proposal=self._first)
+
+    def repair_menu(
+        self,
+        *,
+        customer_request: str,
+        follow_up_answers: tuple[str, ...] = (),
+        raw_proposal: dict[str, object],
+        validation_errors: tuple[object, ...],
+    ) -> MenuPlannerAgentResponse:
+        self.repair_requests.append(
+            {
+                "customer_request": customer_request,
+                "follow_up_answers": follow_up_answers,
+                "raw_proposal": raw_proposal,
+                "validation_errors": validation_errors,
+            }
+        )
+        return MenuPlannerAgentResponse(raw_proposal=self._repaired)
 
 
 def test_validate_menu_proposal_resolves_products_and_recalculates_totals() -> None:
@@ -558,6 +598,51 @@ def test_plan_menu_from_request_maps_malformed_fake_agent_output_to_failed_state
     assert (
         result.validation_errors[0].code == PlannerValidationErrorCode.INVALID_PROPOSAL
     )
+
+
+def test_plan_menu_from_request_repairs_once_after_tavola_validation_failure() -> None:
+    agent = RepairingPlannerAgent(
+        first=raw_proposal(sku_id="missing-product", quantity=2),
+        repaired=raw_proposal(quantity=2),
+    )
+    planner = PlanMenuFromRequest(
+        agent=agent,
+        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+    )
+
+    result = planner(customer_request="Dinner for two")
+
+    assert result.status == ProposalStatus.PROPOSAL_READY
+    assert result.menu_proposal is not None
+    assert result.menu_proposal.total.amount_minor == 850
+    assert len(agent.repair_requests) == 1
+    repair_request = agent.repair_requests[0]
+    assert repair_request["customer_request"] == "Dinner for two"
+    assert repair_request["raw_proposal"]["courses"][0]["lines"][0]["sku_id"] == (
+        "missing-product"
+    )
+    assert repair_request["validation_errors"][0].code == (
+        PlannerValidationErrorCode.UNKNOWN_SKU
+    )
+
+
+def test_plan_menu_from_request_stops_after_one_invalid_tavola_repair() -> None:
+    agent = RepairingPlannerAgent(
+        first=raw_proposal(sku_id="missing-product", quantity=2),
+        repaired=raw_proposal(sku_id="still-missing", quantity=2),
+    )
+    planner = PlanMenuFromRequest(
+        agent=agent,
+        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+    )
+
+    result = planner(customer_request="Dinner for two")
+
+    assert result.status == ProposalStatus.FAILED
+    assert result.menu_proposal is None
+    assert len(agent.repair_requests) == 1
+    assert result.validation_errors[0].code == PlannerValidationErrorCode.UNKNOWN_SKU
+    assert result.validation_errors[0].sku_id == "still-missing"
 
 
 def test_start_planner_session_saves_validated_proposal() -> None:

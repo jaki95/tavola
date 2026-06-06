@@ -460,6 +460,37 @@ describe("usePlanner", () => {
     expect(result.current.state.status).toBe("proposal_ready");
   });
 
+  test("fails instead of spinning forever when a planning poll response is invalid", async () => {
+    vi.useFakeTimers();
+    const client = createPlannerClient({
+      createResults: [success(planningSession)],
+      fetchResults: [
+        {
+          ok: false,
+          error: {
+            kind: "invalid_response",
+            message: "The Tavola API returned an invalid planner response."
+          }
+        }
+      ]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Dinner with drinks for 6");
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+      await Promise.resolve();
+    });
+
+    expect(result.current.state.status).toBe("failed");
+    expect(result.current.state.message).toBe(
+      "The Tavola API returned an invalid planner response."
+    );
+    expect(result.current.planningElapsedMs).toBeNull();
+  });
+
   test("loads disabled planner status and blocks prompt submission", async () => {
     const client = createPlannerClient({
       statusResult: success({

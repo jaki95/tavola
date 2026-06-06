@@ -7,9 +7,9 @@
 
 Run Tavola's Planner through the real Codex path end to end, without adding a
 deterministic runtime planner. The test proves that a live Codex-backed backend
-session can use Tavola's bounded catalog and validation tools, return a
-customer-reviewable menu proposal, and let the customer accept that proposal
-into the basket through the existing storefront.
+session can use Tavola's catalog-only MCP tool, return a customer-reviewable
+menu proposal, pass deterministic Tavola validation, and let the customer accept
+that proposal into the basket through the existing storefront.
 
 A Platform API key is not strictly required. Tavola can use local Codex
 credentials if the backend process can access a valid local Codex login. The
@@ -106,9 +106,11 @@ MCP tool-use findings:
 - The happy-path required tool contract was later reduced to
   `list_package_templates`, `search_catalog`, and `validate_menu_proposal`, then
   superseded by the catalog-candidate MCP plan.
-- Current live planner proposal runs should use Tavola's bounded catalog
-  candidate finder plus proposal validation. They should not require
-  `search_catalog`, `list_package_templates`, or `get_sku_detail`.
+- Current live planner proposal runs should expose only Tavola's bounded catalog
+  candidate finder to Codex. Tavola validates the returned proposal after Codex
+  responds and may send one invalid proposal back to Codex for repair. Codex
+  should not require `search_catalog`, `list_package_templates`,
+  `get_sku_detail`, or `validate_menu_proposal`.
 
 Timing findings from a sanitized live trace for
 `Vegetarian dinner for 4 around £50`:
@@ -130,7 +132,8 @@ non_tool_elapsed_ms 50479
 - The measured latency came from the Codex model/app-server turn rather than
   Tavola MCP handlers.
 - Treat the listed tool names as historical trace labels; new smoke output
-  should show catalog candidate finding and proposal validation instead.
+  should show Codex using `find_catalog_candidates`, followed by Tavola
+  validating the returned proposal outside the Codex tool surface.
 
 Browser findings:
 
@@ -270,7 +273,7 @@ call out any material change to that split.
 ### Task 1.5: Run Follow-Up Smoke
 
 - **Location**: `backend/src/tavola/application/planner.py`,
-  `backend/src/tavola/infrastructure/codex_planner.py`
+  `backend/src/tavola/infrastructure/codex_planner/`
 - **Description**: Exercise an under-specified request that should ask for party
   size before returning a proposal.
 - **Dependencies**: Task 1.4.
@@ -473,10 +476,12 @@ call out any material change to that split.
   item names unless the prompt requires a product.
 - **Latency**: Real Codex may be slow. Verify loading states and avoid repeated
   browser submissions while one planner run is pending.
-- **Malformed output repair**: The live demo defaults to zero repair retries to
-  avoid doubling a slow customer wait. If retries are enabled for an experiment
-  and repair still fails, the correct outcome is a safe failed state, not a fake
-  proposal.
+- **Repair behavior**: The live demo defaults to zero malformed-output repair
+  retries to avoid doubling a slow customer wait after invalid JSON or a bad
+  final contract. Tavola validation repair is separate: when Codex returns an
+  invalid proposal, Tavola may send it back once for correction, then validates
+  the repaired result. If repair still fails, the correct outcome is a safe
+  failed state, not a fake proposal.
 - **Credential leakage**: Do not paste tokens, `auth.json`, SDK traces, or raw
   transcripts into docs, tickets, screenshots, or handoff notes.
 - **In-memory state reset**: Restarting the backend loses planner sessions and

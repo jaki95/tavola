@@ -1,6 +1,7 @@
 from tavola.domain.catalog import CatalogCategory, CatalogSku, DietaryFacets, Money
 from tavola.infrastructure.catalog_repository import StaticCatalogRepository
 from tavola.infrastructure.planner_mcp_server import (
+    create_catalog_candidate_tool_handlers,
     create_planner_tool_handlers,
     handle_mcp_message,
 )
@@ -91,6 +92,23 @@ def test_find_catalog_candidates_returns_candidate_summaries() -> None:
         ],
     }
     assert "detail_description" not in result["products"][0]
+
+
+def test_catalog_candidate_handlers_expose_only_catalog_lookup() -> None:
+    tools = create_catalog_candidate_tool_handlers(
+        StaticCatalogRepository([make_sku()])
+    )
+
+    result = tools.call("find_catalog_candidates", {"category_ids": ["primi"]})
+
+    assert tools.available_tool_names() == ("find_catalog_candidates",)
+    assert [tool["name"] for tool in tools.tool_descriptions()] == [
+        "find_catalog_candidates"
+    ]
+    assert result["recommended_next_action"] == (
+        "Build a draft menu proposal from these products; Tavola will validate "
+        "the returned proposal after the planner responds."
+    )
 
 
 def test_find_catalog_candidates_seed_finds_pantry_pesto_by_tag() -> None:

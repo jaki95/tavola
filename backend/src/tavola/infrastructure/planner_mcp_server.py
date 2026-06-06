@@ -108,6 +108,22 @@ def create_planner_tool_handlers(
     )
 
 
+def create_catalog_candidate_tool_handlers(
+    catalog_repository: CatalogRepository,
+) -> PlannerToolHandlers:
+    tag_vocabulary = ListAvailableCatalogTags(catalog_repository)().tags
+    return PlannerToolHandlers(
+        {
+            "find_catalog_candidates": _find_catalog_candidates_handler(
+                catalog_repository,
+                tag_vocabulary,
+                include_validation_next_action=False,
+            ),
+        },
+        (_tool_descriptions(tag_vocabulary)[0],),
+    )
+
+
 def _handle_tool_call(
     request_id: Any,
     message: JsonRpcMessage,
@@ -224,6 +240,8 @@ def _json_rpc_error(
 def _find_catalog_candidates_handler(
     catalog_repository: CatalogRepository,
     tag_vocabulary: tuple[str, ...],
+    *,
+    include_validation_next_action: bool = True,
 ) -> ToolHandler:
     candidate_finder = FindCatalogCandidates(catalog_repository)
 
@@ -233,7 +251,10 @@ def _find_catalog_candidates_handler(
         return {
             "result_count": result.result_count,
             "returned_count": len(products),
-            "recommended_next_action": _candidate_recommended_next_action(products),
+            "recommended_next_action": _candidate_recommended_next_action(
+                products,
+                include_validation_next_action=include_validation_next_action,
+            ),
             "products": [_sku_summary_payload(sku) for sku in products],
         }
 
@@ -381,11 +402,20 @@ def _validate_proposal_handler(catalog_repository: CatalogRepository) -> ToolHan
     return validate_proposal
 
 
-def _candidate_recommended_next_action(products: tuple[CatalogSku, ...]) -> str:
+def _candidate_recommended_next_action(
+    products: tuple[CatalogSku, ...],
+    *,
+    include_validation_next_action: bool = True,
+) -> str:
     if not products:
         return (
             "Broaden the catalog-native filters, then call "
             "find_catalog_candidates again."
+        )
+    if not include_validation_next_action:
+        return (
+            "Build a draft menu proposal from these products; Tavola will validate "
+            "the returned proposal after the planner responds."
         )
     return (
         "Build a draft menu proposal from these products, then call "
