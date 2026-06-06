@@ -9,13 +9,7 @@ import pytest
 from tavola.domain.catalog import CatalogSku
 from tavola.infrastructure.catalog_seed import SEED_CATALOG, _catalog_sku_from_row
 
-EXPECTED_CATEGORY_COUNTS = {
-    "antipasti": 5,
-    "primi": 6,
-    "desserts": 3,
-    "drinks": 3,
-    "pantry": 3,
-}
+EXPECTED_CATEGORY_IDS = {"antipasti", "primi", "desserts", "drinks", "pantry"}
 
 EXPECTED_CATEGORY_ORDER = {
     "antipasti": 1,
@@ -125,19 +119,20 @@ def test_seed_catalog_hard_constraint_facets_are_validation_truth() -> None:
     assert gluten_free_facet_sku_ids - _tagged_sku_ids("gluten-free")
 
 
-def test_seed_catalog_contains_twenty_unique_available_skus() -> None:
+def test_seed_catalog_contains_unique_available_skus() -> None:
     sku_ids = [sku.sku_id for sku in SEED_CATALOG]
 
-    assert len(SEED_CATALOG) == 20
-    assert len(set(sku_ids)) == 20
+    assert SEED_CATALOG
+    assert len(set(sku_ids)) == len(SEED_CATALOG)
     assert all(sku.is_available for sku in SEED_CATALOG)
     assert all(SLUG_PATTERN.fullmatch(sku_id) for sku_id in sku_ids)
 
 
-def test_seed_catalog_has_expected_category_distribution() -> None:
+def test_seed_catalog_uses_only_canonical_populated_categories() -> None:
     category_counts = Counter(sku.category.category_id for sku in SEED_CATALOG)
 
-    assert category_counts == EXPECTED_CATEGORY_COUNTS
+    assert set(category_counts) == EXPECTED_CATEGORY_IDS
+    assert all(count > 0 for count in category_counts.values())
 
 
 def test_seed_catalog_uses_backend_owned_display_order() -> None:
@@ -155,13 +150,232 @@ def test_seed_catalog_uses_backend_owned_display_order() -> None:
         display_orders_by_category[sku.category.category_id].append(sku.display_order)
 
     assert ordered_keys == sorted(ordered_keys)
-    assert display_orders_by_category == {
-        "antipasti": [1, 2, 3, 4, 5],
-        "primi": [1, 2, 3, 4, 5, 6],
-        "desserts": [1, 2, 3],
-        "drinks": [1, 2, 3],
-        "pantry": [1, 2, 3],
-    }
+    for display_orders in display_orders_by_category.values():
+        assert display_orders == list(range(1, len(display_orders) + 1))
+
+
+def test_seed_catalog_includes_pinot_grigio_delle_venezie() -> None:
+    sku = next(
+        (
+            sku
+            for sku in SEED_CATALOG
+            if sku.sku_id == "pinot-grigio-delle-venezie-750ml"
+        ),
+        None,
+    )
+
+    assert sku is not None
+    assert sku.name == "Pinot Grigio delle Venezie"
+    assert sku.category.category_id == "drinks"
+    assert sku.unit_label == "750ml"
+    assert sku.price.amount_minor == 1395
+    assert sku.short_description == (
+        "Crisp white wine with pear, citrus, and a clean mineral finish."
+    )
+    assert sku.tags == ("wine", "pinot-grigio", "white", "veneto", "aperitivo")
+    assert sku.facets.is_vegetarian
+    assert not sku.facets.is_vegan
+    assert sku.facets.is_gluten_free
+    assert sku.facets.contains_alcohol
+    assert sku.image_id == sku.sku_id
+    assert sku.display_order == 4
+
+
+def test_seed_catalog_uses_house_made_aranciata_and_limonata_names() -> None:
+    sku_ids = {sku.sku_id for sku in SEED_CATALOG}
+    aranciata = next(
+        (sku for sku in SEED_CATALOG if sku.sku_id == "aranciata-sparkling-330ml"),
+        None,
+    )
+    limonata = next(
+        (sku for sku in SEED_CATALOG if sku.sku_id == "limonata-sparkling-330ml"),
+        None,
+    )
+
+    assert "san-pellegrino-aranciata-330ml" not in sku_ids
+    assert aranciata is not None
+    assert aranciata.name == "Homemade Aranciata"
+    assert aranciata.category.category_id == "drinks"
+    assert aranciata.unit_label == "330ml"
+    assert aranciata.price.amount_minor == 225
+    assert aranciata.short_description == (
+        "Homemade sparkling aranciata with a gently bitter citrus finish."
+    )
+    assert aranciata.tags == (
+        "aranciata",
+        "orange",
+        "soft-drink",
+        "homemade",
+        "vegan",
+        "aperitivo",
+    )
+    assert aranciata.facets.is_vegetarian
+    assert aranciata.facets.is_vegan
+    assert aranciata.facets.is_gluten_free
+    assert not aranciata.facets.contains_alcohol
+    assert aranciata.image_id == aranciata.sku_id
+    assert aranciata.display_order == 1
+
+    assert limonata is not None
+    assert limonata.name == "Homemade Limonata"
+    assert "lemonade" not in limonata.short_description.casefold()
+    assert "lemonade" not in limonata.detail_description.casefold()
+
+
+def test_seed_catalog_replaces_polenta_cake_with_torta_della_nonna() -> None:
+    sku_ids = {sku.sku_id for sku in SEED_CATALOG}
+    sku = next(
+        (sku for sku in SEED_CATALOG if sku.sku_id == "torta-della-nonna-slice"),
+        None,
+    )
+
+    assert "lemon-polenta-cake-slice" not in sku_ids
+    assert sku is not None
+    assert sku.name == "Torta della Nonna"
+    assert sku.category.category_id == "desserts"
+    assert sku.unit_label == "slice"
+    assert sku.price.amount_minor == 475
+    assert sku.short_description == (
+        "Tuscan custard tart slice with pine nuts and a crisp pastry shell."
+    )
+    assert sku.tags == ("tart", "custard", "pine-nuts", "dessert", "tuscan")
+    assert sku.facets.is_vegetarian
+    assert not sku.facets.is_vegan
+    assert not sku.facets.is_gluten_free
+    assert not sku.facets.contains_alcohol
+    assert sku.image_id == sku.sku_id
+    assert sku.display_order == 3
+
+
+def test_seed_catalog_includes_ribollita_toscana() -> None:
+    sku = next(
+        (sku for sku in SEED_CATALOG if sku.sku_id == "ribollita-toscana-500g"),
+        None,
+    )
+
+    assert sku is not None
+    assert sku.name == "Ribollita Toscana"
+    assert sku.category.category_id == "primi"
+    assert sku.unit_label == "500g"
+    assert sku.price.amount_minor == 795
+    assert sku.short_description == (
+        "Hearty Tuscan vegetable and bread soup with cavolo nero and beans."
+    )
+    assert sku.tags == (
+        "soup",
+        "ribollita",
+        "tuscan",
+        "beans",
+        "vegetarian",
+        "vegan",
+        "primo",
+    )
+    assert sku.facets.is_vegetarian
+    assert sku.facets.is_vegan
+    assert not sku.facets.is_gluten_free
+    assert not sku.facets.contains_alcohol
+    assert sku.image_id == sku.sku_id
+    assert sku.display_order == 7
+
+
+def test_seed_catalog_includes_focaccia_pecorino_finocchiona_and_cantucci() -> None:
+    skus = {sku.sku_id: sku for sku in SEED_CATALOG}
+
+    focaccia = skus.get("rosemary-focaccia-piece")
+    pecorino = skus.get("pecorino-toscano-200g")
+    finocchiona = skus.get("finocchiona-salami-100g")
+    cantucci = skus.get("cantucci-biscotti-200g")
+
+    assert focaccia is not None
+    assert focaccia.name == "Rosemary Focaccia"
+    assert focaccia.category.category_id == "antipasti"
+    assert focaccia.unit_label == "piece"
+    assert focaccia.price.amount_minor == 495
+    assert focaccia.short_description == (
+        "Olive oil focaccia with rosemary, sea salt, and a soft open crumb."
+    )
+    assert focaccia.tags == (
+        "focaccia",
+        "bread",
+        "rosemary",
+        "sharing",
+        "vegan",
+        "antipasti",
+    )
+    assert focaccia.facets.is_vegetarian
+    assert focaccia.facets.is_vegan
+    assert not focaccia.facets.is_gluten_free
+    assert not focaccia.facets.contains_alcohol
+    assert focaccia.image_id == focaccia.sku_id
+    assert focaccia.display_order == 6
+
+    assert pecorino is not None
+    assert pecorino.name == "Pecorino Toscano"
+    assert pecorino.category.category_id == "pantry"
+    assert pecorino.unit_label == "200g"
+    assert pecorino.price.amount_minor == 750
+    assert pecorino.short_description == (
+        "Firm Tuscan sheep's cheese with a nutty savoury finish."
+    )
+    assert pecorino.tags == (
+        "cheese",
+        "pecorino",
+        "tuscan",
+        "pantry",
+        "pairing",
+    )
+    assert not pecorino.facets.is_vegetarian
+    assert not pecorino.facets.is_vegan
+    assert pecorino.facets.is_gluten_free
+    assert not pecorino.facets.contains_alcohol
+    assert pecorino.image_id == pecorino.sku_id
+    assert pecorino.display_order == 4
+
+    assert finocchiona is not None
+    assert finocchiona.name == "Finocchiona Salami"
+    assert finocchiona.category.category_id == "antipasti"
+    assert finocchiona.unit_label == "100g"
+    assert finocchiona.price.amount_minor == 695
+    assert finocchiona.short_description == (
+        "Tuscan fennel salami sliced for antipasti boards and aperitivo."
+    )
+    assert finocchiona.tags == (
+        "salami",
+        "fennel",
+        "tuscan",
+        "cured-meat",
+        "antipasti",
+        "aperitivo",
+    )
+    assert not finocchiona.facets.is_vegetarian
+    assert not finocchiona.facets.is_vegan
+    assert finocchiona.facets.is_gluten_free
+    assert not finocchiona.facets.contains_alcohol
+    assert finocchiona.image_id == finocchiona.sku_id
+    assert finocchiona.display_order == 7
+
+    assert cantucci is not None
+    assert cantucci.name == "Cantucci Biscotti"
+    assert cantucci.category.category_id == "desserts"
+    assert cantucci.unit_label == "200g"
+    assert cantucci.price.amount_minor == 525
+    assert cantucci.short_description == (
+        "Crunchy almond biscotti for coffee, dessert plates, and gifting."
+    )
+    assert cantucci.tags == (
+        "biscotti",
+        "cantucci",
+        "almond",
+        "dessert",
+        "tuscan",
+        "coffee",
+    )
+    assert cantucci.facets.is_vegetarian
+    assert not cantucci.facets.is_vegan
+    assert not cantucci.facets.is_gluten_free
+    assert not cantucci.facets.contains_alcohol
+    assert cantucci.image_id == cantucci.sku_id
+    assert cantucci.display_order == 4
 
 
 def test_seed_catalog_has_valid_price_and_tag_shape() -> None:
@@ -186,7 +400,7 @@ def test_seed_catalog_has_customer_ready_copy() -> None:
         assert "sample" not in sku.detail_description.lower()
 
 
-def test_seed_catalog_has_useful_dietary_facets_in_each_category() -> None:
+def test_seed_catalog_has_useful_dietary_facets() -> None:
     categories_with_vegetarian_sku = {
         sku.category.category_id for sku in SEED_CATALOG if sku.facets.is_vegetarian
     }
@@ -194,10 +408,8 @@ def test_seed_catalog_has_useful_dietary_facets_in_each_category() -> None:
         sku.category.category_id for sku in SEED_CATALOG if sku.facets.is_gluten_free
     }
 
-    assert categories_with_vegetarian_sku == set(EXPECTED_CATEGORY_COUNTS)
-    assert {"antipasti", "desserts", "drinks", "pantry"}.issubset(
-        categories_with_gluten_free_sku
-    )
+    assert categories_with_vegetarian_sku == EXPECTED_CATEGORY_IDS
+    assert {"antipasti", "drinks", "pantry"}.issubset(categories_with_gluten_free_sku)
     assert any(sku.facets.is_vegan for sku in SEED_CATALOG)
     assert any(sku.facets.contains_alcohol for sku in SEED_CATALOG)
 
@@ -205,5 +417,5 @@ def test_seed_catalog_has_useful_dietary_facets_in_each_category() -> None:
 def test_seed_catalog_image_ids_match_stable_sku_id() -> None:
     image_ids = [sku.image_id for sku in SEED_CATALOG]
 
-    assert len(set(image_ids)) == 20
+    assert len(set(image_ids)) == len(SEED_CATALOG)
     assert image_ids == [sku.sku_id for sku in SEED_CATALOG]

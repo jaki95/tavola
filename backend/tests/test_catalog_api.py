@@ -49,7 +49,7 @@ def test_catalog_route_returns_seed_catalog_with_ordered_categories() -> None:
         {"category_id": "drinks", "label": "Drinks"},
         {"category_id": "pantry", "label": "Pantry"},
     ]
-    assert len(body["products"]) == 20
+    assert body["products"]
     assert body["products"][0] == {
         "sku_id": "burrata-pugliese-125g",
         "name": "Burrata Pugliese",
@@ -69,6 +69,10 @@ def test_catalog_route_returns_seed_catalog_with_ordered_categories() -> None:
     }
     assert "tags" not in body["products"][0]
     assert "is_available" not in body["products"][0]
+    assert any(
+        product["sku_id"] == "pinot-grigio-delle-venezie-750ml"
+        for product in body["products"]
+    )
 
 
 def test_catalog_route_filters_by_case_insensitive_category_and_query() -> None:

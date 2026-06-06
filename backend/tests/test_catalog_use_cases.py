@@ -134,16 +134,18 @@ def make_candidate_repository() -> StaticCatalogRepository:
 def test_browse_catalog_returns_available_seed_skus_in_display_order() -> None:
     result = BrowseCatalog(StaticCatalogRepository.from_seed())()
 
-    assert len(result.products) == 20
+    assert result.products
     assert result.products[0].sku_id == "burrata-pugliese-125g"
-    assert result.products[-1].sku_id == "extra-virgin-olive-oil-500ml"
+    assert result.products[-1].sku_id == "pecorino-toscano-200g"
+    assert "pinot-grigio-delle-venezie-750ml" in {sku.sku_id for sku in result.products}
     assert all(sku.is_available for sku in result.products)
 
 
 def test_browse_catalog_filters_by_category_id() -> None:
     result = BrowseCatalog(StaticCatalogRepository.from_seed())(category_id="primi")
 
-    assert [sku.category.category_id for sku in result.products] == ["primi"] * 6
+    assert result.products
+    assert {sku.category.category_id for sku in result.products} == {"primi"}
     assert result.products[0].sku_id == "fresh-tagliatelle-250g"
 
 

@@ -136,8 +136,8 @@ Out unless explicit:
 
 - Backend serves small static seed catalog. It is product data, not throwaway
   mock data.
-- Exactly 20 SKUs: 5 Antipasti, 6 Primi, 3 Desserts, 3 Drinks, 3 Pantry.
-- All 20 available in first catalog slice.
+- Small curated SKU set with each canonical category populated.
+- All seed catalog SKUs are available in the first catalog slice.
 - Each item needs: deli-style name, stable SKU slug, primary category, unit
   label, GBP price, one-sentence short desc, one/two-sentence detail desc, at
   least two tags, dietary facets, image ID, display order.

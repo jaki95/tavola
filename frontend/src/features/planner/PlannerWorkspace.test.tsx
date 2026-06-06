@@ -105,16 +105,16 @@ const pairedAntipastoProposal: MenuProposal = {
           lines: [
             ...course.lines,
             {
-              sku_id: "focaccia-genovese-slab",
+              sku_id: "focaccia-genovese-piece",
               name: "Focaccia Genovese",
               category_id: "antipasti",
               category_label: "Antipasti",
-              unit_label: "slab",
+              unit_label: "piece",
               quantity: 1,
               unit_price_minor: 650,
               line_total_minor: 650,
               currency: "GBP",
-              image_id: "focaccia-genovese-slab",
+              image_id: "focaccia-genovese-piece",
               rationale: "Soft bread rounds out the antipasto plate."
             }
           ]

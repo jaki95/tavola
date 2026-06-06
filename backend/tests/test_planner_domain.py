@@ -145,7 +145,7 @@ def test_menu_proposal_accepts_appended_drinks_without_changing_template() -> No
                 course=Course.DRINKS,
                 lines=(
                     ProposalLine(
-                        sku_id="san-pellegrino-limonata-4x330ml",
+                        sku_id="limonata-sparkling-330ml",
                         quantity=1,
                         rationale="Bright drinks for the meal.",
                     ),
