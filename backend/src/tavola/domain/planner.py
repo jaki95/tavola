@@ -150,12 +150,7 @@ class MenuProposal:
         if not self.courses:
             raise ValueError("menu proposal requires at least one course")
 
-        template = PackageTemplate.by_id(self.package_template_id)
-        if not _matches_template_courses(
-            tuple(course.course for course in self.courses),
-            template.courses,
-        ):
-            raise ValueError("courses must match package template")
+        PackageTemplate.by_id(self.package_template_id)
 
     @property
     def template(self) -> PackageTemplate:
@@ -278,15 +273,6 @@ def _validate_positive_integer(quantity: int, *, field_name: str) -> None:
         raise ValueError(f"{field_name} must be an integer")
     if quantity <= 0:
         raise ValueError(f"{field_name} must be positive")
-
-
-def _matches_template_courses(
-    proposal_courses: tuple[Course, ...],
-    required_courses: tuple[Course, ...],
-) -> bool:
-    if proposal_courses == required_courses:
-        return True
-    return proposal_courses == (*required_courses, Course.DRINKS)
 
 
 def zero_money() -> Money:

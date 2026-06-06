@@ -189,7 +189,7 @@ describe("planner API client", () => {
         {
           note_type: "evidence",
           source: "tavola",
-          message: "Validated by Tavola for SKU validity and template fit."
+          message: "Validated by Tavola for SKU validity."
         }
       ],
       courses: [
@@ -218,10 +218,10 @@ describe("planner API client", () => {
     }
     const mappedProposal = result.data.menu_proposal!;
     expect(mappedProposal.explanation).toBe(
-      "A validated product-backed dinner plan using this menu structure."
+      "A validated product-backed dinner plan using this menu plan."
     );
     expect(mappedProposal.planner_notes[0]!.message).toBe(
-      "Validated by Tavola for product validity and menu structure fit."
+      "Validated by Tavola for product validity."
     );
     expect(mappedProposal.courses[0]!.lines[0]!.rationale).toBe(
       "This product anchors the main course."

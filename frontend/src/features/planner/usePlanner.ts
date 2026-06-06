@@ -250,10 +250,15 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
         return;
       }
 
+      if (state.session?.status === "planning") {
+        setState({ status: "planning", session: state.session, message: null });
+        return;
+      }
+
       stopPlanningTimer();
       setState({
-        status: "failed",
-        session: state.session,
+	        status: "failed",
+	        session: state.session,
         message: result.error.message
       });
     }
@@ -387,7 +392,7 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
 
   const removeLine = useCallback((skuId: string) => {
     setDraftProposal((proposal) =>
-      proposal ? recalculateProposal(removeProposalLineIfCourseRemains(proposal, skuId)) : proposal
+      proposal ? recalculateProposal(removeProposalLine(proposal, skuId)) : proposal
     );
   }, []);
 
@@ -469,6 +474,18 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
     [client, currentSession, draftProposal, state.status, stopPlanningTimer]
   );
 
+  const reset = useCallback(() => {
+    if (isPlanningActive(state)) {
+      return false;
+    }
+
+    requestGenerationRef.current += 1;
+    stopPlanningTimer();
+    setDraftProposal(null);
+    setState({ status: "empty", session: null, message: null });
+    return true;
+  }, [state, stopPlanningTimer]);
+
   const hasProposalLines = useMemo(
     () => Boolean(draftProposal && draftProposal.line_count > 0),
     [draftProposal]
@@ -485,8 +502,13 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
     setLineQuantity,
     removeLine,
     validateProposal: validateDraftProposal,
-    acceptProposal: acceptDraftProposal
+    acceptProposal: acceptDraftProposal,
+    reset
   };
+}
+
+function isPlanningActive(state: PlannerUiState): boolean {
+  return state.status === "planning" || state.session?.status === "planning";
 }
 
 function plannerAvailabilityFromResponse(
@@ -551,17 +573,7 @@ function updateProposalLineQuantity(
   };
 }
 
-function removeProposalLineIfCourseRemains(
-  proposal: MenuProposal,
-  skuId: string
-): MenuProposal {
-  const targetCourse = proposal.courses.find((course) =>
-    course.lines.some((line) => line.sku_id === skuId)
-  );
-  if (!targetCourse || targetCourse.lines.length <= 1) {
-    return proposal;
-  }
-
+function removeProposalLine(proposal: MenuProposal, skuId: string): MenuProposal {
   return {
     ...proposal,
     courses: proposal.courses

@@ -421,7 +421,7 @@ def _build_planner_prompt(
             "with only category_ids, dietary_facets, tags, tag_match, alcohol, "
             "and max_results; call validate_menu_proposal; return final JSON only "
             "after validation succeeds.",
-            "Do not pass party size, budget, occasion, or menu structure as "
+            "Do not pass party size, budget, occasion, or chosen course set as "
             "search text or candidate filters. Use candidate summaries for names, "
             "units, prices, availability, dietary facets, tags, and short "
             "descriptions.",
@@ -434,7 +434,7 @@ def _build_planner_prompt(
             "drinks are the main or firm requirement.",
             "Do not invent products or prices; validation owns SKU "
             "validity, availability, quantities, and totals.",
-            "Say menu structure or course structure; do not mention templates.",
+            "Say menu or courses; do not mention templates.",
             "Treat vegetarian, vegan, gluten-free, and no-alcohol requests as hard "
             "constraints. Explain unsupported constraints.",
             "For a whole-menu vegetarian request, every selected line must be "
