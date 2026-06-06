@@ -36,6 +36,8 @@ export function CatalogBrowser({
     catalog.status === "loading"
       ? "Loading products"
       : `${productCount} ${productCount === 1 ? "product" : "products"}`;
+  const isResetDisabled =
+    selectedCategoryId === null && !draftSearch.trim() && !committedSearch;
 
   return (
     <section className="catalog-browser" aria-labelledby="catalog-title">
@@ -52,6 +54,7 @@ export function CatalogBrowser({
         {catalog.status === "error" ? null : (
           <CatalogFilters
             categories={catalog.categories}
+            isResetDisabled={isResetDisabled}
             onCategorySelect={selectCategory}
             onReset={resetFilters}
             onSearchSubmit={submitSearch}
