@@ -4,6 +4,7 @@ import type { CatalogCategory, CatalogCategoryId } from "../../types/catalog";
 
 export type CatalogFiltersProps = {
   categories: CatalogCategory[];
+  isResetDisabled?: boolean;
   selectedCategoryId: CatalogCategoryId | null;
   searchText: string;
   onCategorySelect: (categoryId: CatalogCategoryId | null) => void;
@@ -14,6 +15,7 @@ export type CatalogFiltersProps = {
 
 export function CatalogFilters({
   categories,
+  isResetDisabled = false,
   selectedCategoryId,
   searchText,
   onCategorySelect,
@@ -91,6 +93,7 @@ export function CatalogFilters({
         </button>
         <button
           className="catalog-filters__action catalog-filters__action--secondary"
+          disabled={isResetDisabled}
           onClick={onReset}
           type="button"
         >
