@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Tavola">
+  <rect width="64" height="64" rx="12" fill="#f8f1e7" />
+  <circle cx="32" cy="32" r="22" fill="#b13f2a" />
+  <circle cx="32" cy="32" r="16" fill="#f8f1e7" />
+  <text
+    x="32"
+    y="33"
+    fill="#2d6544"
+    font-family="Fraunces, 'Iowan Old Style', 'Palatino Linotype', Georgia, serif"
+    font-size="27"
+    font-weight="800"
+    text-anchor="middle"
+    dominant-baseline="central"
+  >T</text>
+</svg>
