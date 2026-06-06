@@ -209,3 +209,10 @@ When preparing a PR or handoff, summarize:
 - Any API contract changes.
 - Any database or infrastructure changes.
 - Tests run and any remaining gaps.
+
+## GitHub CLI Notes
+
+`gh` may require unsandboxed execution in Codex because authentication is stored in
+the macOS keyring and network access is restricted in the sandbox. If `gh auth
+status` reports an invalid token or GitHub API commands fail inside the sandbox,
+retry the same command with escalation before asking the user to reauthenticate.
