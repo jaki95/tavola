@@ -312,7 +312,7 @@ function planningProgress(elapsedMs: number | null): {
   if (elapsed >= 30_000) {
     return {
       activeIndex: 3,
-      message: "Still planning. Tavola is checking the proposal before review."
+      message: "Tavola is checking the proposal before review."
     };
   }
 
@@ -357,12 +357,54 @@ function ProposalReview({
   onRemoveLine: (skuId: string) => void;
   onSetLineQuantity: (skuId: string, quantity: number) => void;
 }) {
+  const [isReceiptExpanded, setIsReceiptExpanded] = useState(false);
   const total = formatBasketMoney({
     amount_minor: proposal.total_minor,
     currency: proposal.currency
   });
   const basketHasLines = Boolean(basket && basket.lines.length > 0);
   const actionsDisabled = isAcceptPending || isAccepted;
+  const overlapNote = getBasketOverlapNote(basket, proposal);
+  const proposalDetails = (
+    <ProposalDetails
+      actionsDisabled={actionsDisabled}
+      proposal={proposal}
+      isReadOnly={isAccepted}
+      onRemoveLine={onRemoveLine}
+      onSetLineQuantity={onSetLineQuantity}
+    />
+  );
+
+  if (isAccepted) {
+    return (
+      <div
+        className="planner-proposal planner-proposal--accepted"
+        aria-label="Menu proposal receipt"
+      >
+        <div className="planner-proposal-receipt">
+          <div className="planner-proposal-receipt__copy">
+            <span>Basket updated</span>
+            <h3>{customerPlannerText(proposal.title)}</h3>
+            <p>
+              {total} · {proposal.item_count}{" "}
+              {proposal.item_count === 1 ? "item" : "items"} moved to Basket.
+              Continue from Basket when ready.
+            </p>
+          </div>
+          <button
+            aria-expanded={isReceiptExpanded}
+            className="planner-action--secondary"
+            onClick={() => setIsReceiptExpanded((isExpanded) => !isExpanded)}
+            type="button"
+          >
+            {isReceiptExpanded ? "Hide proposal" : "View proposal"}
+          </button>
+        </div>
+
+        {isReceiptExpanded ? proposalDetails : null}
+      </div>
+    );
+  }
 
   return (
     <div className="planner-proposal" aria-label="Menu proposal">
@@ -383,73 +425,19 @@ function ProposalReview({
         </div>
       </div>
 
-      {proposal.warnings.length > 0 ? (
-        <div className="planner-warnings" role="note">
-          {proposal.warnings.map((warning) => (
-            <p key={warning}>{customerPlannerText(warning)}</p>
-          ))}
-        </div>
-      ) : null}
+      <ProposalActionStrip
+        actionsDisabled={actionsDisabled}
+        basket={basket}
+        isAcceptPending={isAcceptPending}
+        isConfirmingReplace={isConfirmingReplace}
+        onAccept={onAccept}
+        onCancelReplace={onCancelReplace}
+        overlapNote={overlapNote}
+        proposal={proposal}
+        total={total}
+      />
 
-      <div className="planner-courses" aria-label="Proposal courses">
-        {proposal.courses.map((course) => (
-          <section
-            aria-label={course.course_label}
-            className="planner-course"
-            key={course.course}
-          >
-            <h4>{customerPlannerText(course.course_label)}</h4>
-            <ul className="planner-course__lines">
-              {course.lines.map((line) => (
-                <ProposalLineItem
-                  isDisabled={actionsDisabled}
-                  key={line.sku_id}
-                  line={line}
-                  onRemoveLine={onRemoveLine}
-                  onSetLineQuantity={onSetLineQuantity}
-                />
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
-
-      <div className="planner-notes" aria-label="Planner notes">
-        <div>
-          <h4>Validation notes</h4>
-          <p>Tavola checked catalog items, labels, and prices.</p>
-        </div>
-        <ul>
-          {proposal.planner_notes.map((note) => (
-            <li key={`${note.note_type}-${note.message}`}>
-              {customerPlannerText(note.message)}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {isConfirmingReplace ? (
-        <div className="planner-replace-confirmation" role="alert">
-          <p>This will replace the current basket.</p>
-          <div>
-            <button
-              disabled={actionsDisabled}
-              onClick={() => onAccept("replace")}
-              type="button"
-            >
-              Confirm replace basket
-            </button>
-            <button
-              className="planner-action--secondary"
-              disabled={actionsDisabled}
-              onClick={onCancelReplace}
-              type="button"
-            >
-              Keep current basket
-            </button>
-          </div>
-        </div>
-      ) : null}
+      {proposalDetails}
 
       <div className="planner-proposal__actions" aria-label="Menu proposal actions">
         <button
@@ -477,14 +465,171 @@ function ProposalReview({
   );
 }
 
+function ProposalDetails({
+  actionsDisabled,
+  proposal,
+  isReadOnly,
+  onRemoveLine,
+  onSetLineQuantity
+}: {
+  actionsDisabled: boolean;
+  proposal: MenuProposal;
+  isReadOnly: boolean;
+  onRemoveLine: (skuId: string) => void;
+  onSetLineQuantity: (skuId: string, quantity: number) => void;
+}) {
+  return (
+    <>
+      {proposal.warnings.length > 0 ? (
+        <div className="planner-warnings" role="note">
+          {proposal.warnings.map((warning) => (
+            <p key={warning}>{customerPlannerText(warning)}</p>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="planner-courses" aria-label="Proposal courses">
+        {proposal.courses.map((course) => (
+          <section
+            aria-label={course.course_label}
+            className="planner-course"
+            key={course.course}
+          >
+            <h4>{customerPlannerText(course.course_label)}</h4>
+            <ul className="planner-course__lines">
+              {course.lines.map((line) => (
+                <ProposalLineItem
+                  isDisabled={actionsDisabled}
+                  isReadOnly={isReadOnly}
+                  key={line.sku_id}
+                  line={line}
+                  onRemoveLine={onRemoveLine}
+                  onSetLineQuantity={onSetLineQuantity}
+                />
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+
+      <div className="planner-notes" aria-label="Planner notes">
+        <div>
+          <h4>Validation notes</h4>
+          <p>Tavola checked catalog items, labels, and prices.</p>
+        </div>
+        <ul>
+          {proposal.planner_notes.map((note) => (
+            <li key={`${note.note_type}-${note.message}`}>
+              {customerPlannerText(note.message)}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </>
+  );
+}
+
+function ProposalActionStrip({
+  actionsDisabled,
+  basket,
+  isAcceptPending,
+  isConfirmingReplace,
+  onAccept,
+  onCancelReplace,
+  overlapNote,
+  proposal,
+  total
+}: {
+  actionsDisabled: boolean;
+  basket: Basket | null;
+  isAcceptPending: boolean;
+  isConfirmingReplace: boolean;
+  onAccept: (mode: AcceptMenuProposalMode) => void;
+  onCancelReplace: () => void;
+  overlapNote: string;
+  proposal: MenuProposal;
+  total: string;
+}) {
+  const itemLabel = proposal.item_count === 1 ? "item" : "items";
+  const canAccept = !actionsDisabled && proposal.line_count > 0 && Boolean(basket);
+
+  return (
+    <div
+      className="planner-proposal-action-strip"
+      aria-label="Proposal basket actions"
+    >
+      <div className="planner-proposal-action-strip__details">
+        <div>
+          <span>Total</span>
+          <strong>{total}</strong>
+        </div>
+        <div>
+          <span>Items</span>
+          <strong>
+            {proposal.item_count} {itemLabel}
+          </strong>
+        </div>
+        <p>{overlapNote}</p>
+      </div>
+      {isConfirmingReplace ? (
+        <div
+          className="planner-proposal-action-strip__confirmation"
+          role="alert"
+        >
+          <p>This will replace the current Basket.</p>
+          <div className="planner-proposal-action-strip__actions">
+            <button
+              disabled={actionsDisabled}
+              onClick={() => onAccept("replace")}
+              type="button"
+            >
+              Confirm replace basket
+            </button>
+            <button
+              className="planner-action--secondary"
+              disabled={actionsDisabled}
+              onClick={onCancelReplace}
+              type="button"
+            >
+              Keep current basket
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="planner-proposal-action-strip__actions">
+          <button
+            aria-label="Add proposal to basket"
+            disabled={!canAccept}
+            onClick={() => onAccept("append")}
+            type="button"
+          >
+            {isAcceptPending ? "Adding" : "Add to basket"}
+          </button>
+          <button
+            aria-label="Replace basket with proposal"
+            className="planner-action--secondary"
+            disabled={!canAccept}
+            onClick={() => onAccept("replace")}
+            type="button"
+          >
+            Replace basket
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProposalLineItem({
   line,
   isDisabled,
+  isReadOnly = false,
   onRemoveLine,
   onSetLineQuantity
 }: {
   line: MenuProposalLine;
   isDisabled: boolean;
+  isReadOnly?: boolean;
   onRemoveLine: (skuId: string) => void;
   onSetLineQuantity: (skuId: string, quantity: number) => void;
 }) {
@@ -521,29 +666,31 @@ function ProposalLineItem({
         </div>
         <div className="planner-line__commerce">
           <strong>{lineTotal}</strong>
-          <div className="planner-line__controls">
-            <QuantityStepper
-              className="planner-line__quantity"
-              decreaseLabel={`Decrease ${lineName} quantity`}
-              disabled={isDisabled}
-              groupLabel={`${lineName} quantity`}
-              increaseLabel={`Increase ${lineName} quantity`}
-              inputLabel={`Quantity for ${lineName}`}
-              quantity={line.quantity}
-              onQuantityChange={(quantity) =>
-                onSetLineQuantity(line.sku_id, quantity)
-              }
-            />
-            <button
-              aria-label={`Remove ${lineName} from proposal`}
-              className="planner-action--secondary planner-line__remove"
-              disabled={isDisabled}
-              onClick={() => onRemoveLine(line.sku_id)}
-              type="button"
-            >
-              Remove
-            </button>
-          </div>
+          {isReadOnly ? null : (
+            <div className="planner-line__controls">
+              <QuantityStepper
+                className="planner-line__quantity"
+                decreaseLabel={`Decrease ${lineName} quantity`}
+                disabled={isDisabled}
+                groupLabel={`${lineName} quantity`}
+                increaseLabel={`Increase ${lineName} quantity`}
+                inputLabel={`Quantity for ${lineName}`}
+                quantity={line.quantity}
+                onQuantityChange={(quantity) =>
+                  onSetLineQuantity(line.sku_id, quantity)
+                }
+              />
+              <button
+                aria-label={`Remove ${lineName} from proposal`}
+                className="planner-action--secondary planner-line__remove"
+                disabled={isDisabled}
+                onClick={() => onRemoveLine(line.sku_id)}
+                type="button"
+              >
+                Remove
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </li>
@@ -562,4 +709,32 @@ function customerPlannerText(value: string): string {
     .replace(/\bsku ids\b/gi, "products")
     .replace(/\bskus\b/gi, "products")
     .replace(/\bsku\b/gi, "product");
+}
+
+function getBasketOverlapNote(
+  basket: Basket | null,
+  proposal: MenuProposal
+): string {
+  if (!basket) {
+    return "Basket unavailable.";
+  }
+
+  if (basket.lines.length === 0) {
+    return "Basket empty. Add or replace starts from this proposal.";
+  }
+
+  const proposalSkuIds = new Set(
+    proposal.courses.flatMap((course) => course.lines.map((line) => line.sku_id))
+  );
+  const overlapCount = basket.lines.filter((line) =>
+    proposalSkuIds.has(line.sku_id)
+  ).length;
+
+  if (overlapCount > 0) {
+    const productLabel = overlapCount === 1 ? "Product" : "Products";
+    return `${overlapCount} ${productLabel} already in Basket. Add increases quantities; Replace swaps Basket.`;
+  }
+
+  const itemLabel = basket.item_count === 1 ? "item" : "items";
+  return `Basket has ${basket.item_count} ${itemLabel}. Add keeps them; Replace swaps Basket.`;
 }
