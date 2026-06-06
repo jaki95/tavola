@@ -195,7 +195,7 @@ describe("CatalogGrid", () => {
     });
 
     expect(within(addButton).getByText("Add")).toBeInTheDocument();
-    expect(within(addButton).getByText("2 in basket")).toBeInTheDocument();
+    expect(within(productCard).getByTitle("2 in basket")).toHaveTextContent("2");
   });
 
   test("disables add actions while a basket mutation is pending", () => {
