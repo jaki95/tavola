@@ -44,7 +44,8 @@ const plannerCourseIdSet = new Set<string>([
   "antipasto",
   "primo",
   "dessert",
-  "aperitivo"
+  "aperitivo",
+  "drinks"
 ]);
 const plannerPackageTemplateIdSet = new Set<string>([
   "antipasto-primo-dessert",

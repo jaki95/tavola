@@ -250,15 +250,18 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
         return;
       }
 
-      if (state.session?.status === "planning") {
+      if (
+        state.session?.status === "planning" &&
+        result.error.kind !== "invalid_response"
+      ) {
         setState({ status: "planning", session: state.session, message: null });
         return;
       }
 
       stopPlanningTimer();
       setState({
-	        status: "failed",
-	        session: state.session,
+        status: "failed",
+        session: state.session,
         message: result.error.message
       });
     }

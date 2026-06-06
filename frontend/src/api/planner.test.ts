@@ -178,6 +178,50 @@ describe("planner API client", () => {
     );
   });
 
+  test("accepts a proposal-ready planner session with a drinks course", async () => {
+    const { fetchPlannerSession } = await loadPlannerClient();
+    const plannerSessionWithDrinks = {
+      ...plannerSession,
+      menu_proposal: {
+        ...proposal,
+        courses: [
+          ...proposal.courses,
+          {
+            course: "drinks",
+            course_label: "Drinks",
+            lines: [
+              {
+                sku_id: "chianti-classico-750ml",
+                name: "Chianti Classico",
+                category_id: "drinks",
+                category_label: "Drinks",
+                unit_label: "750ml",
+                quantity: 2,
+                unit_price_minor: 1595,
+                line_total_minor: 3190,
+                currency: "GBP",
+                image_id: "chianti-classico-750ml",
+                rationale: "Chianti pairs well with the dinner."
+              }
+            ]
+          }
+        ],
+        total_minor: 4040,
+        item_count: 4,
+        line_count: 2
+      }
+    };
+    stubJsonResponse(plannerSessionWithDrinks);
+
+    const result = await fetchPlannerSession("planner-1");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.data.menu_proposal?.courses.at(-1)?.course).toBe("drinks");
+  });
+
   test("maps internal SKU wording out of customer-facing proposal copy", async () => {
     const { fetchPlannerSession } = await loadPlannerClient();
     const firstCourse = proposal.courses[0]!;

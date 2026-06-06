@@ -16,7 +16,12 @@ export type PlannerStatusResponse = {
   message: string;
 };
 
-export type PlannerCourseId = "antipasto" | "primo" | "dessert" | "aperitivo";
+export type PlannerCourseId =
+  | "antipasto"
+  | "primo"
+  | "dessert"
+  | "aperitivo"
+  | "drinks";
 
 export type PlannerPackageTemplateId =
   | "antipasto-primo-dessert"
