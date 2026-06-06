@@ -53,7 +53,11 @@ frontend/
     types/
 ```
 
-Plans live in `docs/plans/`.
+Planning docs live under `docs/plans/`:
+
+- In-progress plans belong in `docs/plans/in_progress/`.
+- Completed plans belong in `docs/plans/completed/`.
+- Shared plan assets belong in `docs/plans/assets/`.
 
 ## Commands
 

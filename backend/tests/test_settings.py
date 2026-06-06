@@ -1,11 +1,38 @@
+import os
+
 import pytest
 
 from tavola.api.dependencies import get_menu_planner_agent
+from tavola.config import settings as settings_module
 from tavola.config.settings import MissingPlannerCodexCredentialsError, Settings
 from tavola.infrastructure.codex_planner import (
     CodexMenuPlannerAgent,
     FakeMenuPlannerAgent,
 )
+
+PLANNER_ENV_KEYS = (
+    "OPENAI_API_KEY",
+    "TAVOLA_PLANNER_CODEX_ENABLED",
+    "TAVOLA_PLANNER_CODEX_MODEL",
+    "TAVOLA_PLANNER_CODEX_TIMEOUT_SECONDS",
+    "TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED",
+)
+
+
+@pytest.fixture(autouse=True)
+def reset_dotenv_state():
+    original_env = {env_key: os.environ.get(env_key) for env_key in PLANNER_ENV_KEYS}
+    original_dotenv_loaded = settings_module._DOTENV_LOADED
+    for env_key in PLANNER_ENV_KEYS:
+        os.environ.pop(env_key, None)
+    settings_module._DOTENV_LOADED = False
+    yield
+    settings_module._DOTENV_LOADED = original_dotenv_loaded
+    for env_key in PLANNER_ENV_KEYS:
+        os.environ.pop(env_key, None)
+    for env_key, env_value in original_env.items():
+        if env_value is not None:
+            os.environ[env_key] = env_value
 
 
 def test_settings_defaults_are_local_development_friendly() -> None:
@@ -56,6 +83,49 @@ def test_planner_codex_settings_can_be_configured_from_environment(
     assert settings.planner_codex_missing_credentials == "error"
     assert settings.planner_codex_credentials_configured is True
     assert settings.use_real_codex_planner() is True
+
+
+def test_planner_codex_settings_load_discovered_dotenv(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    dotenv_path = tmp_path / ".env"
+    dotenv_path.write_text(
+        "\n".join(
+            [
+                "TAVOLA_PLANNER_CODEX_ENABLED=true",
+                "TAVOLA_PLANNER_CODEX_MODEL=dotenv-codex-model",
+                "TAVOLA_PLANNER_CODEX_TIMEOUT_SECONDS=300",
+                "TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED=true",
+            ]
+        )
+    )
+    monkeypatch.delenv("TAVOLA_PLANNER_CODEX_ENABLED", raising=False)
+    monkeypatch.delenv("TAVOLA_PLANNER_CODEX_MODEL", raising=False)
+    monkeypatch.delenv("TAVOLA_PLANNER_CODEX_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED", raising=False)
+    monkeypatch.setattr(settings_module, "find_dotenv", lambda: str(dotenv_path))
+
+    settings = Settings()
+
+    assert settings.planner_codex_enabled is True
+    assert settings.planner_codex_model == "dotenv-codex-model"
+    assert settings.planner_codex_timeout_seconds == 300
+    assert settings.planner_codex_credentials_configured is True
+
+
+def test_environment_values_override_discovered_dotenv(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    dotenv_path = tmp_path / ".env"
+    dotenv_path.write_text("TAVOLA_PLANNER_CODEX_MODEL=dotenv-codex-model\n")
+    monkeypatch.setenv("TAVOLA_PLANNER_CODEX_MODEL", "explicit-codex-model")
+    monkeypatch.setattr(settings_module, "find_dotenv", lambda: str(dotenv_path))
+
+    settings = Settings()
+
+    assert settings.planner_codex_model == "explicit-codex-model"
 
 
 def test_existing_codex_login_can_be_declared_without_committing_credentials(

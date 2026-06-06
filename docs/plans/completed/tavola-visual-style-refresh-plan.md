@@ -377,7 +377,7 @@ should guide future planner UI work.
 
 ### Task 5.2: Add Visual Style Notes For Future Planner Work
 
-- **Location**: `docs/plans/codex-menu-to-basket-planner-plan.md`,
+- **Location**: `docs/plans/completed/codex-menu-to-basket-planner-plan.md`,
   `docs/plans/completed/tavola-visual-style-refresh-plan.md`
 - **Description**: Add or preserve a short note that the Codex planner can later
   use the refreshed visual language, but the planner implementation remains a
@@ -410,7 +410,7 @@ should guide future planner UI work.
   component tests but were too brief to capture manually in-browser on the local
   dev server; no unchecked functional state remains outside that browser timing
   limitation.
-- `docs/plans/codex-menu-to-basket-planner-plan.md` now references this visual
+- `docs/plans/completed/codex-menu-to-basket-planner-plan.md` now references this visual
   direction for future planner composition while keeping the planner
   implementation separate from this visual refresh.
 

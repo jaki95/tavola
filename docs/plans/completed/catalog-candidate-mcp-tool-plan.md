@@ -356,12 +356,19 @@ guardrails use the smaller candidate-plus-validation contract.
 - Optional live smoke can prove the real Codex flow if credentials are available
   and the operator approves it.
 
+**Implementation note**: Sprint 3 is implemented. Active demo and backend smoke
+docs now describe bounded catalog candidate filtering in Tavola language, active
+runbook references to the old generic catalog search flow are marked historical
+or superseded, focused backend regressions passed, and the full backend pytest
+suite passed. The optional live Codex smoke was not run because it requires
+operator approval and live credentials.
+
 ### Task 3.1: Update planner docs and historical plan references
 
 - **Location**:
   - `docs/demo-codex-planner.md`
   - `backend/README.md`
-  - `docs/plans/real-codex-flow-e2e-testing-plan.md` if it remains active
+  - `docs/plans/in_progress/real-codex-flow-e2e-testing-plan.md` if it remains active
 - **Description**: Update active docs that mention required `search_catalog`
   calls or old prompt flow. Avoid rewriting completed historical plans unless
   they are used as live runbooks.

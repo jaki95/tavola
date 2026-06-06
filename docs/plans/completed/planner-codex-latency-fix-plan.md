@@ -234,14 +234,14 @@ tool-use, and deterministic validation contract.
   - `backend/tests/test_planner_mcp_tools.py`
 - **Description**: Reduce model search/refinement time by making tool outputs
   easier to act on. Consider adding compact template guidance, limiting
-  `search_catalog` results, adding category/template hints, and returning a
+  catalog discovery results, adding category/template hints, and returning a
   short "recommended_next_action" string that points Codex directly to
   validation. Keep full product data only where needed for proposal construction.
 - **Dependencies**: Task 2.3.
 - **Acceptance Criteria**:
   - Tool payloads are smaller or more structured for the same customer request.
-  - `search_catalog` still returns enough fields to avoid routine
-    `get_sku_detail` calls.
+  - Catalog discovery still returns enough fields to avoid routine detail-tool
+    calls.
   - Validation still calculates authoritative totals.
   - Tool tests prove result limits and payload shape.
 - **Validation**:
@@ -302,11 +302,12 @@ tool-use, and deterministic validation contract.
   installed `openai-codex` 0.1.0b3 exposes a typed `Thread.run(effort=...)`
   hook. `sdk-default` omits the effort argument for benchmark comparisons.
 - Compressed the planner prompt into a short contract that still requires
-  package templates, catalog search, validation, party-size follow-up handling,
+  menu structures, catalog discovery, validation, party-size follow-up handling,
   no invented products or prices, and final JSON only.
-- Made MCP tool outputs more decisive with bounded `search_catalog` results,
+- Made MCP tool outputs more decisive with bounded catalog discovery results,
   result counts, and `recommended_next_action` guidance while preserving
-  Tavola's authoritative validation totals.
+  Tavola's authoritative validation totals. The later catalog-candidate MCP plan
+  superseded this with `find_catalog_candidates`.
 - Set the live demo retry default to
   `TAVOLA_PLANNER_CODEX_MAX_RETRIES=0`; repair tests opt in with
   `max_retries=1`.
@@ -504,7 +505,7 @@ and desktop browser approval.
 
 - **Location**:
   - `docs/demo-codex-planner.md`
-  - `docs/plans/real-codex-flow-e2e-testing-plan.md`
+  - `docs/plans/in_progress/real-codex-flow-e2e-testing-plan.md`
   - `backend/README.md`
 - **Description**: Document the benchmark personas, command, thresholds, and
   handoff format. Include the known finding that MCP tools were effectively
@@ -594,7 +595,7 @@ and desktop browser approval.
 
 - Added the real-Codex latency benchmark checklist, thresholds, safe handoff
   format, and prior MCP timing finding to `docs/demo-codex-planner.md`,
-  `docs/plans/real-codex-flow-e2e-testing-plan.md`, and `backend/README.md`.
+  `docs/plans/in_progress/real-codex-flow-e2e-testing-plan.md`, and `backend/README.md`.
 - Reconciled the real-flow plan's malformed-output note with the current live
   demo default of zero repair retries.
 - Backend focused planner/settings checks passed:

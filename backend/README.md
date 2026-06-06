@@ -19,6 +19,9 @@ uv run uvicorn tavola.api.main:app --reload
 The API is available at `http://localhost:8000` by default. The scaffold health
 endpoint is `GET /api/health`.
 
+Runtime settings load the nearest discovered `.env` file before reading
+environment variables. Values already present in the shell take precedence.
+
 Validate the package layout:
 
 ```sh
@@ -82,7 +85,10 @@ Use `OPENAI_API_KEY` instead of
 `TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED=true` when authenticating with an
 API key. The smoke command starts one Codex-backed planner run with Tavola's
 bounded MCP tool server and prints the validated JSON proposal, or a structured
-failure if Codex output cannot be validated.
+failure if Codex output cannot be validated. Proposal runs should use Tavola's
+catalog candidate finder and proposal validator; missing-tool failures should
+name `find_catalog_candidates` or `validate_menu_proposal`, not the removed
+generic catalog search tools.
 
 Run an opt-in benchmark smoke to collect paste-safe timing evidence without
 printing the proposal by default:
