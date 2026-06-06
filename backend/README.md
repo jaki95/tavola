@@ -59,7 +59,7 @@ Configure real runs with:
   the effort argument when comparing against the SDK's implicit default in
   opt-in benchmarks. Other supported values are `none`, `minimal`, `medium`,
   `high`, and `xhigh`.
-- `TAVOLA_PLANNER_CODEX_TIMEOUT_SECONDS`: planner run timeout, default `60`.
+- `TAVOLA_PLANNER_CODEX_TIMEOUT_SECONDS`: planner run timeout, default `120`.
 - `TAVOLA_PLANNER_CODEX_MAX_RETRIES`: malformed or contract-invalid Codex output
   retry count, default `0`. Repair retries are configurable for experiments,
   but the live demo default avoids doubling a slow customer wait after malformed

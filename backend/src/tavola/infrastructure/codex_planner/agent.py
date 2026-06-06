@@ -41,7 +41,7 @@ class CodexMenuPlannerAgent:
         model: str,
         sandbox_mode: str = "read-only",
         reasoning_effort: str | None = None,
-        timeout_seconds: float = 60.0,
+        timeout_seconds: float = 120.0,
         max_retries: int = 0,
         timing_sink: PlannerTimingSink | None = None,
         mcp_server_command: tuple[str, ...] = (

@@ -778,6 +778,9 @@ describe("PlannerWorkspace", () => {
         expect.objectContaining({ mode: "replace" })
       );
     });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Menu proposal replaced your basket."
+    );
   });
 
   test("renders planner errors with product language", async () => {
