@@ -361,7 +361,7 @@ guardrails use the smaller candidate-plus-validation contract.
 - **Location**:
   - `docs/demo-codex-planner.md`
   - `backend/README.md`
-  - `docs/plans/real-codex-flow-e2e-testing-plan.md` if it remains active
+  - `docs/plans/in_progress/real-codex-flow-e2e-testing-plan.md` if it remains active
 - **Description**: Update active docs that mention required `search_catalog`
   calls or old prompt flow. Avoid rewriting completed historical plans unless
   they are used as live runbooks.

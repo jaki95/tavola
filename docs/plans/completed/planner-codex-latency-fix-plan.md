@@ -504,7 +504,7 @@ and desktop browser approval.
 
 - **Location**:
   - `docs/demo-codex-planner.md`
-  - `docs/plans/real-codex-flow-e2e-testing-plan.md`
+  - `docs/plans/in_progress/real-codex-flow-e2e-testing-plan.md`
   - `backend/README.md`
 - **Description**: Document the benchmark personas, command, thresholds, and
   handoff format. Include the known finding that MCP tools were effectively
@@ -594,7 +594,7 @@ and desktop browser approval.
 
 - Added the real-Codex latency benchmark checklist, thresholds, safe handoff
   format, and prior MCP timing finding to `docs/demo-codex-planner.md`,
-  `docs/plans/real-codex-flow-e2e-testing-plan.md`, and `backend/README.md`.
+  `docs/plans/in_progress/real-codex-flow-e2e-testing-plan.md`, and `backend/README.md`.
 - Reconciled the real-flow plan's malformed-output note with the current live
   demo default of zero repair retries.
 - Backend focused planner/settings checks passed:
