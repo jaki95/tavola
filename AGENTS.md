@@ -83,6 +83,12 @@ Backend:
 - Run linting: `cd backend && uv run ruff check .`
 - Apply lint fixes: `cd backend && uv run ruff check . --fix`
 
+When running backend `uv` commands in the Codex sandbox, use a workspace-local
+cache by default: `UV_CACHE_DIR=../.uv-cache`. For example,
+`cd backend && UV_CACHE_DIR=../.uv-cache uv run pytest`. Request escalation only
+if the workspace-local cache cannot complete because the command needs network
+access, authentication, or another resource outside the sandbox.
+
 Frontend:
 
 - Install dependencies: `cd frontend && npm install`
@@ -194,6 +200,9 @@ After scaffold or cross-service workflow changes, run the checklist in
   explicitly asked.
 - Prefer `rg`/`rg --files` for searching.
 - Prefer `uv` for backend dependency and command execution.
+- In Codex, run backend scanners, tests, and lint commands from `backend/` with
+  `UV_CACHE_DIR=../.uv-cache` by default instead of relying on the global uv
+  cache.
 - Prefer `npm` for frontend dependency and script execution.
 - Use structured parsers and framework APIs instead of ad hoc string processing
   when practical.
