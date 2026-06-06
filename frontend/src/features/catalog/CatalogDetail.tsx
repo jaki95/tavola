@@ -9,6 +9,7 @@ type CatalogDetailProps = {
   detail: CatalogDetailState;
   basketQuantity?: number;
   isAddPending?: boolean;
+  showAddAction?: boolean;
   onAddProduct?: (skuId: string, quantity: number) => void;
   onClose: () => void;
 };
@@ -17,6 +18,7 @@ export function CatalogDetail({
   detail,
   basketQuantity = 0,
   isAddPending = false,
+  showAddAction = true,
   onAddProduct = () => {},
   onClose
 }: CatalogDetailProps) {
@@ -83,6 +85,7 @@ export function CatalogDetail({
             isAddPending={isAddPending}
             onAddProduct={onAddProduct}
             product={detail.product}
+            showAddAction={showAddAction}
           />
         ) : null}
       </section>
@@ -170,11 +173,13 @@ function PopulatedDetail({
   product,
   basketQuantity,
   isAddPending,
+  showAddAction,
   onAddProduct
 }: {
   product: CatalogProductDetail;
   basketQuantity: number;
   isAddPending: boolean;
+  showAddAction: boolean;
   onAddProduct: (skuId: string, quantity: number) => void;
 }) {
   const facetLabels = formatDietaryFacetBadges(product);
@@ -207,26 +212,28 @@ function PopulatedDetail({
             ))}
           </ul>
         ) : null}
-        <button
-          aria-label={
-            isAddPending
-              ? `Adding ${product.name} to basket`
-              : `${isInBasket ? "Add another" : "Add"} ${product.name} to basket${
-                  isInBasket ? `, ${basketQuantityLabel}` : ""
-                }`
-          }
-          className="catalog-detail__add catalog-add-button"
-          disabled={isAddPending}
-          onClick={() => onAddProduct(product.sku_id, 1)}
-          type="button"
-        >
-          <span>
-            {isAddPending ? "Adding" : isInBasket ? "Add another" : "Add to basket"}
-          </span>
-          {isInBasket && !isAddPending ? (
-            <span className="catalog-add-button__state">{basketQuantityLabel}</span>
-          ) : null}
-        </button>
+        {showAddAction ? (
+          <button
+            aria-label={
+              isAddPending
+                ? `Adding ${product.name} to basket`
+                : `${isInBasket ? "Add another" : "Add"} ${product.name} to basket${
+                    isInBasket ? `, ${basketQuantityLabel}` : ""
+                  }`
+            }
+            className="catalog-detail__add catalog-add-button"
+            disabled={isAddPending}
+            onClick={() => onAddProduct(product.sku_id, 1)}
+            type="button"
+          >
+            <span>
+              {isAddPending ? "Adding" : isInBasket ? "Add another" : "Add to basket"}
+            </span>
+            {isInBasket && !isAddPending ? (
+              <span className="catalog-add-button__state">{basketQuantityLabel}</span>
+            ) : null}
+          </button>
+        ) : null}
       </div>
     </article>
   );

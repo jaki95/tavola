@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ApiResult } from "../../api/client";
 import type { Basket } from "../../types/basket";
+import type { CatalogProductDetail } from "../../types/catalog";
 import type {
   AcceptMenuProposalResponse,
   MenuProposal,
@@ -189,6 +190,24 @@ const populatedBasket: Basket = {
   total_minor: 425,
   item_count: 1,
   line_count: 1
+};
+
+const tagliatelleDetail: CatalogProductDetail = {
+  sku_id: "fresh-tagliatelle-250g",
+  name: "Fresh Tagliatelle",
+  category_id: "primi",
+  category_label: "Primi",
+  unit_label: "250g",
+  unit_price_minor: 425,
+  currency: "GBP",
+  short_description: "Egg pasta ribbons cut fresh for quick suppers.",
+  detail_description:
+    "Fresh egg tagliatelle cut into ribbons for ragu, mushrooms, or butter.",
+  image_id: "fresh-tagliatelle-250g",
+  is_vegetarian: true,
+  is_vegan: false,
+  is_gluten_free: false,
+  contains_alcohol: false
 };
 
 const mealPlanGrouping = {
@@ -629,6 +648,49 @@ describe("PlannerWorkspace", () => {
     expect(screen.getAllByText("£32.70")).toHaveLength(2);
   });
 
+  test("opens catalog product details from a planned menu line", async () => {
+    const client = createPlannerClient({
+      createResults: [success(readySession)]
+    });
+    const catalogClient = createCatalogClient({
+      detailResults: [success(tagliatelleDetail)]
+    });
+
+    renderPlannerWorkspace({ catalogClient, client });
+    submitReadyPrompt();
+
+    const tagliatelleLine = await screen.findByRole("listitem", {
+      name: /fresh tagliatelle/i
+    });
+    fireEvent.click(
+      within(tagliatelleLine).getByRole("button", {
+        name: "View details for Fresh Tagliatelle"
+      })
+    );
+
+    await waitFor(() => {
+      expect(catalogClient.getCatalogProduct).toHaveBeenCalledWith(
+        "fresh-tagliatelle-250g"
+      );
+    });
+
+    const dialog = await screen.findByRole("dialog", { name: "Product detail" });
+
+    expect(
+      within(dialog).getByRole("heading", { level: 2, name: "Fresh Tagliatelle" })
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        "Fresh egg tagliatelle cut into ribbons for ragu, mushrooms, or butter."
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", {
+        name: "Add Fresh Tagliatelle to basket"
+      })
+    ).not.toBeInTheDocument();
+  });
+
   test("removes the final item from a package course", async () => {
     const client = createPlannerClient({
       createResults: [success(readySession)]
@@ -810,16 +872,19 @@ describe("PlannerWorkspace", () => {
 
 function renderPlannerWorkspace({
   basket = emptyBasket,
+  catalogClient,
   client,
   onBasketAccepted = vi.fn()
 }: {
   basket?: Basket | null;
+  catalogClient?: { getCatalogProduct: (skuId: string) => Promise<ApiResult<CatalogProductDetail>> };
   client: PlannerClient;
   onBasketAccepted?: (basket: Basket) => void;
 }) {
   return render(
     <PlannerWorkspace
       basket={basket}
+      catalogClient={catalogClient}
       client={client}
       onBasketAccepted={onBasketAccepted}
     />
@@ -867,6 +932,20 @@ function createPlannerClient({
     fetchSession: vi.fn(async () => await shiftResult(fetchResults, "fetch")),
     validateProposal: vi.fn(),
     acceptProposal: vi.fn(async () => await shiftResult(acceptResults, "accept"))
+  };
+}
+
+function createCatalogClient({
+  detailResults = []
+}: {
+  detailResults?: Array<
+    ApiResult<CatalogProductDetail> | Promise<ApiResult<CatalogProductDetail>>
+  >;
+}) {
+  return {
+    getCatalogProduct: vi.fn(
+      async () => await shiftResult(detailResults, "catalog detail")
+    )
   };
 }
 

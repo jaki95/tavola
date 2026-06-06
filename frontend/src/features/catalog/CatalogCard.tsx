@@ -51,31 +51,40 @@ export function CatalogCard({
         <p className="catalog-card__description">{product.short_description}</p>
         <div className="catalog-card__actions">
           <button
-            aria-label={
-              isAddPending
-                ? `Adding ${product.name} to basket`
-                : `${isInBasket ? "Add another" : "Add"} ${product.name} to basket${
-                    isInBasket ? `, ${basketQuantityLabel}` : ""
-                  }`
-            }
-            className="catalog-card__add catalog-add-button"
-            disabled={isAddPending}
-            type="button"
-            onClick={() => onAddProduct(product.sku_id, 1)}
-          >
-            <span>{isAddPending ? "Adding" : "Add"}</span>
-            {isInBasket && !isAddPending ? (
-              <span className="catalog-add-button__state">{basketQuantityLabel}</span>
-            ) : null}
-          </button>
-          <button
             aria-label={`View details for ${product.name}`}
             className="catalog-card__detail-action"
+            title={`View details for ${product.name}`}
             type="button"
             onClick={() => onSelectProduct(product.sku_id)}
           >
-            Details
+            <span aria-hidden="true">i</span>
           </button>
+          <div className="catalog-card__basket-action">
+            {isInBasket && !isAddPending ? (
+              <span
+                aria-live="polite"
+                className="catalog-card__basket-quantity"
+                title={basketQuantityLabel}
+              >
+                {basketQuantity}
+              </span>
+            ) : null}
+            <button
+              aria-label={
+                isAddPending
+                  ? `Adding ${product.name} to basket`
+                  : `${isInBasket ? "Add another" : "Add"} ${product.name} to basket${
+                      isInBasket ? `, ${basketQuantityLabel}` : ""
+                    }`
+              }
+              className="catalog-card__add catalog-add-button"
+              disabled={isAddPending}
+              type="button"
+              onClick={() => onAddProduct(product.sku_id, 1)}
+            >
+              <span>{isAddPending ? "Adding" : "Add"}</span>
+            </button>
+          </div>
         </div>
       </div>
     </article>
