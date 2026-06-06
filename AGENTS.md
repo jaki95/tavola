@@ -1,46 +1,34 @@
 # Tavola Agent Guide
 
-Before making product architecture or scope decisions, read `CONTEXT.md`.
-`AGENTS.md` defines how to work in this repository. `CONTEXT.md` defines what the
-product is and why it exists.
+Before product architecture/scope decisions, read `CONTEXT.md`. This file says
+how to work here; `CONTEXT.md` says what Tavola is and why.
 
-## Project Overview
+## Project
 
-Tavola is an e-commerce web application with a Python backend and a React frontend.
-The codebase should be shaped around domain-driven architecture, with clear
-boundaries between API concerns, application/business orchestration, domain logic,
-and infrastructure.
+Tavola = lightweight Italian deli e-commerce demonstrator: Python backend,
+React frontend, DDD boundaries. Keep scope focused on current flow; no advanced
+commerce unless explicit. Prefer small vertical changes, easy reasoning/tests.
 
-This is a lightweight demonstrator app, not a fully fledged commerce platform.
-Keep the domain model focused on the features needed to demonstrate the
-architecture and current user flow. Do not add advanced commerce capabilities
-unless explicitly requested.
-
-Future agents should preserve these boundaries when adding features, fixing bugs,
-or refactoring. Prefer small, vertical changes that keep behavior easy to reason
-about and test.
-
-## Technology Choices
+## Stack
 
 Backend:
 
 - Python 3.12+
-- FastAPI for HTTP APIs
-- Pydantic for backend request/response schemas and boundary validation where
-  useful
-- uv for dependency management and Python task execution
-- pytest for tests
-- Ruff for linting and formatting
+- FastAPI
+- Pydantic for boundary validation where useful
+- uv
+- pytest
+- Ruff
 
 Frontend:
 
 - React
 - TypeScript
-- npm for dependency management and scripts
+- npm
 
-## Repository Structure
+## Structure
 
-Expected backend structure:
+Expected backend:
 
 ```text
 backend/
@@ -53,7 +41,7 @@ backend/
   tests/
 ```
 
-Expected frontend structure:
+Expected frontend:
 
 ```text
 frontend/
@@ -65,7 +53,7 @@ frontend/
     types/
 ```
 
-Planning documents should live under `docs/plans/`:
+Planning docs live under `docs/plans/`:
 
 - In-progress plans belong in `docs/plans/in_progress/`.
 - Completed plans belong in `docs/plans/completed/`.
@@ -73,159 +61,134 @@ Planning documents should live under `docs/plans/`:
 
 ## Commands
 
-These commands may change as the repository evolves. Keep this section updated
-when tooling, scripts, or project layout changes.
+Keep current when tooling/layout changes.
 
 Backend:
 
-- Install dependencies: `cd backend && uv sync`
-- Run development server:
-  `cd backend && uv run uvicorn tavola.api.main:app --reload`
-- Run tests: `cd backend && uv run pytest`
-- Run formatting: `cd backend && uv run ruff format .`
-- Check formatting: `cd backend && uv run ruff format --check .`
-- Run linting: `cd backend && uv run ruff check .`
-- Apply lint fixes: `cd backend && uv run ruff check . --fix`
+- Install deps: `cd backend && uv sync`
+- Dev server: `cd backend && uv run uvicorn tavola.api.main:app --reload`
+- Tests: `cd backend && uv run pytest`
+- Format: `cd backend && uv run ruff format .`
+- Format check: `cd backend && uv run ruff format --check .`
+- Lint: `cd backend && uv run ruff check .`
+- Lint fix: `cd backend && uv run ruff check . --fix`
 
-When running backend `uv` commands in the Codex sandbox, use a workspace-local
-cache by default: `UV_CACHE_DIR=../.uv-cache`. For example,
+Codex backend `uv` commands: use workspace cache:
+`UV_CACHE_DIR=../.uv-cache`. Example:
 `cd backend && UV_CACHE_DIR=../.uv-cache uv run pytest`. Request escalation only
-if the workspace-local cache cannot complete because the command needs network
-access, authentication, or another resource outside the sandbox.
+if local cache cannot complete due network/auth/external resource.
 
 Frontend:
 
-- Install dependencies: `cd frontend && npm install`
-- Run development server: `cd frontend && npm run dev`
-- Run tests: `cd frontend && npm test`
-- Run linting: `cd frontend && npm run lint`
-- Run production build: `cd frontend && npm run build`
-- Preview production build: `cd frontend && npm run preview`
+- Install deps: `cd frontend && npm install`
+- Dev server: `cd frontend && npm run dev`
+- Tests: `cd frontend && npm test`
+- Lint: `cd frontend && npm run lint`
+- Build: `cd frontend && npm run build`
+- Preview: `cd frontend && npm run preview`
 
-## Architecture Principles
+## Architecture
 
-### Backend Layering
+Backend layers:
 
-Keep backend responsibilities separated by layer:
+- API: HTTP only: routing, request validation, response models.
+- Application: use cases/workflows.
+- Domain: rules/invariants; no framework/infrastructure deps.
+- Infrastructure: persistence/external adapters.
 
-- API: HTTP concerns only.
-- Application: use cases and workflow coordination.
-- Domain: business rules and invariants, with no framework or infrastructure
-  dependencies.
-- Infrastructure: persistence and external system adapters.
+Domain owns commerce invariants. Application coordinates; does not own domain
+rules.
 
-Domain rules should stay in the domain layer, even when triggered by API calls.
-Application code may coordinate behavior, but should not own domain invariants.
+Frontend layers:
 
-### Frontend Layering
-
-Keep React code organized around the user workflow in the feature slice currently
-being implemented.
-
-Prefer:
-
-- Components for rendering and local interaction.
-- Hooks or client services for API calls and reusable UI behavior.
-- Route/page modules for screen composition.
-- Shared UI primitives only when they are reused in multiple places.
+- Components: rendering/local interaction.
+- Hooks/client services: API calls + reusable UI behavior.
+- Pages/routes: screen composition.
+- Shared UI primitives only when reused.
 - Explicit state ownership for interactive flows.
 
-Avoid coupling presentational components directly to backend transport details
-when a small client/service abstraction would keep the UI easier to change.
+Avoid presentational components coupled directly to backend transport; map API
+responses near client/service layer.
 
 ## Backend Guidance
 
-- Use FastAPI idioms for routing, dependency injection, request validation, and
-  response models in the API layer.
-- Prefer Pydantic models for structured type validation at API, DTO, settings,
-  and external-data boundaries where they reduce ambiguity or boilerplate.
-- Keep Pydantic validation focused on data shape and boundary constraints;
-  enforce commerce invariants in the domain layer.
-- Keep framework-specific imports out of the domain layer.
-- Define repository or gateway interfaces at the application/domain boundary when
-  use cases need persistence or external systems.
-- Put concrete database, payment, email, storage, and queue implementations in
-  infrastructure.
-- Validate transport shape at the API boundary; validate business invariants in
-  the domain.
-- Keep application use cases deterministic where possible and pass time, identity,
-  and external effects through explicit collaborators.
-- Prefer typed Python and clear DTO/schema boundaries for API inputs and outputs.
-- Add tests at the layer where behavior lives: domain tests for invariants,
-  application tests for workflows, API tests for routing and serialization.
+- Use FastAPI idioms for routes/DI/validation/responses.
+- Use Pydantic at API, DTO, settings, external-data boundaries when it reduces
+  ambiguity/boilerplate.
+- Keep Pydantic to data shape/boundary constraints; enforce commerce invariants
+  in domain.
+- Keep framework imports out of domain.
+- Define repo/gateway interfaces at app/domain boundary when persistence/external
+  systems needed.
+- Put concrete DB/payment/email/storage/queue impl in infrastructure.
+- Validate transport shape at API boundary; business invariants in domain.
+- Keep use cases deterministic when possible; pass time/identity/effects through
+  explicit collaborators.
+- Prefer typed Python + clear DTO/schema boundaries.
+- Test where behavior lives: domain invariants, app workflows, API
+  routing/serialization.
 
 ## Frontend Guidance
 
-- Write frontend code in TypeScript.
-- Treat Tavola as a desktop-first demonstrator. Do not design or test
-  mobile-specific layouts, breakpoints, or interactions unless explicitly
-  requested.
-- Keep user workflows efficient and easy to scan.
-- Make loading, empty, error, and success states explicit for user-facing flows.
-- Do not hide critical user-facing state inside purely visual components.
-- Prefer accessible controls, semantic HTML, and keyboard-friendly interactions.
-- Keep API response mapping close to the frontend client/service layer rather than
-  scattering transport assumptions across components.
+- TypeScript.
+- Desktop-first demonstrator. No mobile-specific layout/breakpoints/interactions
+  unless explicit.
+- Workflows efficient/scannable.
+- Loading/empty/error/success states explicit.
+- Do not hide critical user state in purely visual components.
+- Prefer accessible controls, semantic HTML, keyboard-friendly interactions.
+- Keep API response mapping close to frontend client/service.
 
-## Testing Expectations
+## Testing
 
-For meaningful changes, add or update focused tests.
+For meaningful changes, add/update focused tests.
 
-- Domain behavior: fast unit tests with no database or network dependency.
-- Application use cases: tests around workflow outcomes and collaborator calls.
-- API behavior: request/response tests for status codes, validation, auth, and
-  serialization.
-- Infrastructure: integration tests when persistence, external adapters, or
-  migrations are involved.
-- Frontend: component or user-flow tests for interactive behavior in the current
-  feature slice.
+- Domain: fast unit tests, no DB/network.
+- Application: workflow outcomes + collaborator calls.
+- API: req/res status, validation, auth, serialization.
+- Infrastructure: integration tests for persistence/adapters/migrations.
+- Frontend: component/user-flow tests for current feature slice.
 
-For any change under `frontend/` or any user-facing browser workflow, run the
-frontend browser approval check in `docs/frontend-browser-approval-check.md`
-before handoff. Use the Codex in-app Browser when available. Verify the changed
-flow at the supported desktop viewport, including the loading, empty, error, and
-success states touched by the change. If the change depends on backend APIs, run
-the backend and frontend together and verify the flow through the Vite proxy.
-Report the browser checks run and any unchecked items.
+Frontend/user-facing browser workflow changes: run
+`docs/frontend-browser-approval-check.md` before handoff. Use Codex in-app
+Browser when available. Verify supported desktop viewport plus touched
+loading/empty/error/success states. If backend API needed, run backend +
+frontend through Vite proxy. Report checks run + unchecked items.
 
-If tests cannot be run, explain exactly what was not run and why.
+If tests cannot run, say exactly what and why.
 
-After scaffold or cross-service workflow changes, run the checklist in
-`docs/scaffold-smoke-check.md` and report any unchecked items.
+After scaffold/cross-service workflow changes, run
+`docs/scaffold-smoke-check.md`; report unchecked items.
 
-## Agent Workflow
+## Workflow
 
-- Read the relevant files before changing code.
-- Respect existing naming, formatting, and module boundaries.
-- Keep edits scoped to the requested change.
-- Do not introduce new frameworks, service containers, state libraries, or build
-  tools without a strong reason.
-- Preserve user changes in the working tree. Never revert unrelated changes unless
-  explicitly asked.
-- Prefer `rg`/`rg --files` for searching.
-- Prefer `uv` for backend dependency and command execution.
-- In Codex, run backend scanners, tests, and lint commands from `backend/` with
-  `UV_CACHE_DIR=../.uv-cache` by default instead of relying on the global uv
-  cache.
-- Prefer `npm` for frontend dependency and script execution.
-- Use structured parsers and framework APIs instead of ad hoc string processing
-  when practical.
-- Run the narrowest useful tests first, then broader checks when the change has
-  wider impact.
+- Read relevant files before edits.
+- Respect naming, formatting, module boundaries.
+- Scope edits to request.
+- No new frameworks/service containers/state libs/build tools without strong
+  reason.
+- Preserve user changes. Never revert unrelated changes unless explicit.
+- Prefer `rg` / `rg --files`.
+- Prefer `uv` for backend deps/commands.
+- In Codex, run backend scanners/tests/lint from `backend/` with
+  `UV_CACHE_DIR=../.uv-cache`.
+- Prefer `npm` for frontend deps/scripts.
+- Prefer structured parsers/framework APIs over ad hoc string handling.
+- Run narrow useful tests first, then broader checks when impact wider.
 
-## Pull Request Notes
+## PR/Handoff Notes
 
-When preparing a PR or handoff, summarize:
+Summarize:
 
-- The user-facing behavior changed.
-- The domain/application concepts touched.
-- Any API contract changes.
-- Any database or infrastructure changes.
-- Tests run and any remaining gaps.
+- User-facing behavior changed.
+- Domain/application concepts touched.
+- API contract changes.
+- DB/infrastructure changes.
+- Tests run + gaps.
 
-## GitHub CLI Notes
+## GitHub CLI
 
-`gh` may require unsandboxed execution in Codex because authentication is stored in
-the macOS keyring and network access is restricted in the sandbox. If `gh auth
-status` reports an invalid token or GitHub API commands fail inside the sandbox,
-retry the same command with escalation before asking the user to reauthenticate.
+`gh` may need unsandboxed execution because auth lives in macOS keyring/network
+may be restricted. If `gh auth status` says invalid token or GitHub API commands
+fail in sandbox, retry same command with escalation before asking user to
+reauthenticate.
