@@ -941,9 +941,24 @@ h1 {
   gap: 8px;
 }
 
+.planner-proposal-action-strip__confirmation {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.planner-proposal-action-strip__confirmation p {
+  margin: 0;
+  color: var(--color-tomato-dark);
+  font-size: 0.84rem;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
 .planner-notes,
-.planner-warnings,
-.planner-replace-confirmation {
+.planner-warnings {
   padding: 12px;
   border: 1px solid var(--color-hairline);
   border-radius: 8px;
@@ -1141,20 +1156,6 @@ h1 {
   text-align: center;
 }
 
-.planner-replace-confirmation {
-  display: grid;
-  gap: 10px;
-  border-color: rgb(157 47 34 / 26%);
-  background: rgb(157 47 34 / 7%);
-}
-
-.planner-replace-confirmation p {
-  margin: 0;
-  color: var(--color-tomato-dark);
-  font-weight: 850;
-}
-
-.planner-replace-confirmation div,
 .planner-proposal__actions {
   display: flex;
   align-items: center;
@@ -1495,8 +1496,7 @@ h1 {
 .planner-composer > button,
 .planner-follow-up__form > button,
 .planner-proposal-action-strip__actions > button:first-child,
-.planner-proposal__actions > button:first-child,
-.planner-replace-confirmation button:first-child {
+.planner-proposal__actions > button:first-child {
   border-color: var(--color-tomato-dark);
   background:
     linear-gradient(180deg, rgb(255 255 255 / 10%), transparent 48%),
@@ -1512,8 +1512,7 @@ h1 {
 .planner-composer > button:hover,
 .planner-follow-up__form > button:hover,
 .planner-proposal-action-strip__actions > button:first-child:hover,
-.planner-proposal__actions > button:first-child:hover,
-.planner-replace-confirmation button:first-child:hover {
+.planner-proposal__actions > button:first-child:hover {
   border-color: var(--color-tomato-dark);
   background:
     linear-gradient(180deg, rgb(255 255 255 / 8%), transparent 48%),

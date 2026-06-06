@@ -430,35 +430,13 @@ function ProposalReview({
         isAcceptPending={isAcceptPending}
         isConfirmingReplace={isConfirmingReplace}
         onAccept={onAccept}
+        onCancelReplace={onCancelReplace}
         overlapNote={overlapNote}
         proposal={proposal}
         total={total}
       />
 
       {proposalDetails}
-
-      {isConfirmingReplace ? (
-        <div className="planner-replace-confirmation" role="alert">
-          <p>This will replace the current basket.</p>
-          <div>
-            <button
-              disabled={actionsDisabled}
-              onClick={() => onAccept("replace")}
-              type="button"
-            >
-              Confirm replace basket
-            </button>
-            <button
-              className="planner-action--secondary"
-              disabled={actionsDisabled}
-              onClick={onCancelReplace}
-              type="button"
-            >
-              Keep current basket
-            </button>
-          </div>
-        </div>
-      ) : null}
 
       <div className="planner-proposal__actions" aria-label="Menu proposal actions">
         <button
@@ -556,6 +534,7 @@ function ProposalActionStrip({
   isAcceptPending,
   isConfirmingReplace,
   onAccept,
+  onCancelReplace,
   overlapNote,
   proposal,
   total
@@ -565,6 +544,7 @@ function ProposalActionStrip({
   isAcceptPending: boolean;
   isConfirmingReplace: boolean;
   onAccept: (mode: AcceptMenuProposalMode) => void;
+  onCancelReplace: () => void;
   overlapNote: string;
   proposal: MenuProposal;
   total: string;
@@ -590,25 +570,51 @@ function ProposalActionStrip({
         </div>
         <p>{overlapNote}</p>
       </div>
-      <div className="planner-proposal-action-strip__actions">
-        <button
-          aria-label="Add proposal to basket"
-          disabled={!canAccept}
-          onClick={() => onAccept("append")}
-          type="button"
+      {isConfirmingReplace ? (
+        <div
+          className="planner-proposal-action-strip__confirmation"
+          role="alert"
         >
-          {isAcceptPending ? "Adding" : "Add to basket"}
-        </button>
-        <button
-          aria-label="Replace basket with proposal"
-          className="planner-action--secondary"
-          disabled={!canAccept || isConfirmingReplace}
-          onClick={() => onAccept("replace")}
-          type="button"
-        >
-          Replace basket
-        </button>
-      </div>
+          <p>This will replace the current Basket.</p>
+          <div className="planner-proposal-action-strip__actions">
+            <button
+              disabled={actionsDisabled}
+              onClick={() => onAccept("replace")}
+              type="button"
+            >
+              Confirm replace basket
+            </button>
+            <button
+              className="planner-action--secondary"
+              disabled={actionsDisabled}
+              onClick={onCancelReplace}
+              type="button"
+            >
+              Keep current basket
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="planner-proposal-action-strip__actions">
+          <button
+            aria-label="Add proposal to basket"
+            disabled={!canAccept}
+            onClick={() => onAccept("append")}
+            type="button"
+          >
+            {isAcceptPending ? "Adding" : "Add to basket"}
+          </button>
+          <button
+            aria-label="Replace basket with proposal"
+            className="planner-action--secondary"
+            disabled={!canAccept}
+            onClick={() => onAccept("replace")}
+            type="button"
+          >
+            Replace basket
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -676,6 +676,30 @@ describe("PlannerWorkspace", () => {
         name: "Replace basket with proposal"
       })
     ).toHaveTextContent("Replace basket");
+
+    fireEvent.click(
+      within(actionStrip).getByRole("button", {
+        name: "Replace basket with proposal"
+      })
+    );
+
+    expect(actionStrip).toHaveTextContent("This will replace the current Basket.");
+    expect(
+      within(actionStrip).getByRole("button", { name: "Confirm replace basket" })
+    ).toBeInTheDocument();
+    expect(
+      within(actionStrip).getByRole("button", { name: "Keep current basket" })
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      within(actionStrip).getByRole("button", { name: "Keep current basket" })
+    );
+
+    expect(
+      within(actionStrip).getByRole("button", {
+        name: "Replace basket with proposal"
+      })
+    ).toHaveTextContent("Replace basket");
   });
 
   test("accepts a proposal by appending it to the basket", async () => {
@@ -743,7 +767,7 @@ describe("PlannerWorkspace", () => {
 
     expect(client.acceptProposal).not.toHaveBeenCalled();
     expect(
-      screen.getByText("This will replace the current basket.")
+      screen.getByText("This will replace the current Basket.")
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Confirm replace basket" }));
