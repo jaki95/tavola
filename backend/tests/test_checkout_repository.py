@@ -1,3 +1,8 @@
+import json
+from importlib.resources import files
+
+import pytest
+
 from tavola.application.checkout import OrderRepository, PickupWindowRepository
 from tavola.domain.basket import BasketId
 from tavola.domain.catalog import Money
@@ -11,7 +16,17 @@ from tavola.domain.checkout import (
 from tavola.infrastructure.checkout_repository import (
     InMemoryOrderRepository,
     StaticPickupWindowRepository,
+    _pickup_window_from_row,
 )
+
+
+def _pickup_window_seed_rows() -> list[dict[str, object]]:
+    raw = json.loads(
+        files("tavola.infrastructure.data").joinpath("pickup_windows.json").read_text()
+    )
+
+    assert isinstance(raw, list)
+    return raw
 
 
 def make_order(order_id: str = "order-1") -> Order:
@@ -88,6 +103,26 @@ def test_static_pickup_window_repository_can_be_backed_by_seed_windows() -> None
         window.display_order for window in pickup_windows
     )
     assert len(pickup_windows) >= 3
+
+
+def test_seed_pickup_windows_are_backed_by_json_data_file() -> None:
+    rows = _pickup_window_seed_rows()
+    pickup_windows = StaticPickupWindowRepository.from_seed().list_pickup_windows()
+
+    assert [row["pickup_window_id"] for row in rows] == [
+        window.pickup_window_id for window in pickup_windows
+    ]
+
+
+def test_seed_pickup_window_loader_rejects_boolean_integer_fields() -> None:
+    row = dict(_pickup_window_seed_rows()[0])
+    row["display_order"] = True
+
+    with pytest.raises(
+        ValueError,
+        match="pickup window seed field display_order must be an integer",
+    ):
+        _pickup_window_from_row(row)
 
 
 def test_static_pickup_window_repository_satisfies_application_protocol() -> None:

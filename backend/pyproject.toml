@@ -27,6 +27,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "tavola.infrastructure.codex_planner" = ["*.md"]
+"tavola.infrastructure.data" = ["*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
