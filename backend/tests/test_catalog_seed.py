@@ -1,9 +1,13 @@
+import json
 import re
 from collections import Counter, defaultdict
 from collections.abc import Callable
+from importlib.resources import files
+
+import pytest
 
 from tavola.domain.catalog import CatalogSku
-from tavola.infrastructure.catalog_seed import SEED_CATALOG
+from tavola.infrastructure.catalog_seed import SEED_CATALOG, _catalog_sku_from_row
 
 EXPECTED_CATEGORY_COUNTS = {
     "antipasti": 5,
@@ -28,6 +32,15 @@ ALCOHOL_RELATED_TERM_PATTERN = re.compile(
 )
 
 
+def _catalog_seed_rows() -> list[dict[str, object]]:
+    raw = json.loads(
+        files("tavola.infrastructure.data").joinpath("catalog.json").read_text()
+    )
+
+    assert isinstance(raw, list)
+    return raw
+
+
 def _planner_discovery_text(sku: CatalogSku) -> str:
     return " ".join(
         (
@@ -41,6 +54,25 @@ def _planner_discovery_text(sku: CatalogSku) -> str:
 
 def _tagged_sku_ids(tag: str) -> set[str]:
     return {sku.sku_id for sku in SEED_CATALOG if tag in sku.tags}
+
+
+def test_seed_catalog_is_backed_by_json_data_file() -> None:
+    rows = _catalog_seed_rows()
+
+    assert len(rows) == len(SEED_CATALOG)
+    assert [row["sku_id"] for row in rows] == [sku.sku_id for sku in SEED_CATALOG]
+    assert all("category_id" in row for row in rows)
+
+
+def test_seed_catalog_loader_rejects_boolean_integer_fields() -> None:
+    row = dict(_catalog_seed_rows()[0])
+    row["unit_price_minor"] = True
+
+    with pytest.raises(
+        ValueError,
+        match="catalog seed field unit_price_minor must be an integer",
+    ):
+        _catalog_sku_from_row(row)
 
 
 def test_seed_catalog_dietary_tags_require_matching_structured_facets() -> None:

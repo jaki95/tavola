@@ -64,7 +64,9 @@ Current Tavola constraints to check before drafting:
 
 5. Implement the catalog change test-first.
    - Update backend seed catalog data in
-     `backend/src/tavola/infrastructure/catalog_seed.py`.
+     `backend/src/tavola/infrastructure/data/catalog.json`.
+   - Keep `backend/src/tavola/infrastructure/catalog_seed.py` as loader/mapping
+     code unless the JSON shape changes.
    - Update backend seed tests for counts, category distribution, ordering,
      pricing, tags, descriptions, facets, and image IDs.
    - Update `frontend/src/features/catalog/catalogImages.ts`.

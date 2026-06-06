@@ -1,4 +1,7 @@
+import json
 from collections.abc import Callable, Iterable
+from importlib.resources import files
+from typing import Any
 from uuid import uuid4
 
 from tavola.domain.basket import BasketId
@@ -10,23 +13,48 @@ from tavola.domain.checkout import (
     PickupWindow,
 )
 
-SEED_PICKUP_WINDOWS: tuple[PickupWindow, ...] = (
-    PickupWindow(
-        pickup_window_id="friday-afternoon",
-        label="Friday afternoon collection",
-        display_order=1,
-    ),
-    PickupWindow(
-        pickup_window_id="saturday-midday",
-        label="Saturday midday collection",
-        display_order=2,
-    ),
-    PickupWindow(
-        pickup_window_id="sunday-morning",
-        label="Sunday morning collection",
-        display_order=3,
-    ),
-)
+_DATA_PACKAGE = "tavola.infrastructure.data"
+_PICKUP_WINDOWS_RESOURCE = "pickup_windows.json"
+
+
+def load_seed_pickup_windows() -> tuple[PickupWindow, ...]:
+    raw = json.loads(
+        files(_DATA_PACKAGE)
+        .joinpath(_PICKUP_WINDOWS_RESOURCE)
+        .read_text(encoding="utf-8")
+    )
+    if not isinstance(raw, list):
+        raise ValueError("pickup window seed must be a list")
+
+    return tuple(_pickup_window_from_row(row) for row in raw)
+
+
+def _pickup_window_from_row(row: object) -> PickupWindow:
+    if not isinstance(row, dict):
+        raise ValueError("pickup window seed rows must be objects")
+
+    return PickupWindow(
+        pickup_window_id=_string_field(row, "pickup_window_id"),
+        label=_string_field(row, "label"),
+        display_order=_int_field(row, "display_order"),
+    )
+
+
+def _string_field(row: dict[str, Any], field_name: str) -> str:
+    value = row.get(field_name)
+    if not isinstance(value, str):
+        raise ValueError(f"pickup window seed field {field_name} must be a string")
+    return value
+
+
+def _int_field(row: dict[str, Any], field_name: str) -> int:
+    value = row.get(field_name)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"pickup window seed field {field_name} must be an integer")
+    return value
+
+
+SEED_PICKUP_WINDOWS: tuple[PickupWindow, ...] = load_seed_pickup_windows()
 
 
 class StaticPickupWindowRepository:

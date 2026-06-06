@@ -24,8 +24,9 @@ The backend is a FastAPI application organized around domain-driven boundaries:
 - `backend/src/tavola/domain`: entities and value objects that own business
   rules and invariants with no framework or infrastructure dependencies.
 - `backend/src/tavola/infrastructure`: concrete implementations behind the
-  application ports, including static seed data, in-memory repositories, the
-  Codex Planner adapter, the Planner MCP server, and background execution.
+  application ports, including JSON-backed static seed data, in-memory
+  repositories, the Codex Planner adapter, the Planner MCP server, and
+  background execution.
 - `backend/src/tavola/config`: environment-backed settings and Planner runtime
   status.
 
@@ -47,9 +48,9 @@ for the ports.
 
 | Concept | Domain | Application | Infrastructure | Boundary rule |
 | --- | --- | --- | --- | --- |
-| Catalog | `CatalogSku`, `CatalogCategory`, `Money`, and `DietaryFacets` define sellable product identity | `BrowseCatalog`, `GetCatalogSkuDetail`, `ListAvailableCatalogTags`, and `FindCatalogCandidates` use the `CatalogRepository` port | `catalog_seed.py` and `StaticCatalogRepository` provide static inventory in display order | Catalog owns SKU identity, availability, pricing, categories, tags, and dietary facets |
+| Catalog | `CatalogSku`, `CatalogCategory`, `Money`, and `DietaryFacets` define sellable product identity | `BrowseCatalog`, `GetCatalogSkuDetail`, `ListAvailableCatalogTags`, and `FindCatalogCandidates` use the `CatalogRepository` port | `data/catalog.json`, `catalog_seed.py`, and `StaticCatalogRepository` provide static inventory in display order | Catalog owns SKU identity, availability, pricing, categories, tags, and dietary facets |
 | Basket | `Basket` enforces unique SKU lines, positive integer quantities, max quantity 10, and server totals | `CreateBasket`, `GetBasket`, `AddBasketLine`, `SetBasketLineQuantity`, and `RemoveBasketLine` coordinate basket mutations | `InMemoryBasketRepository` stores basket state | Backend-owned basket is the checkout source of truth; frontend state does not own pricing or quantity rules |
-| Checkout | Pickup windows, contact details, order lines, and orders model mock pickup checkout | `ListPickupWindows` and `CreateCheckoutOrder` validate pickup/contact details, recheck SKU availability, create order lines, and empty the basket | `StaticPickupWindowRepository` and `InMemoryOrderRepository` provide pickup windows and mock orders | Checkout demonstrates order creation without payment, fulfillment, shipping, or accounts |
+| Checkout | Pickup windows, contact details, order lines, and orders model mock pickup checkout | `ListPickupWindows` and `CreateCheckoutOrder` validate pickup/contact details, recheck SKU availability, create order lines, and empty the basket | `data/pickup_windows.json`, `StaticPickupWindowRepository`, and `InMemoryOrderRepository` provide pickup windows and mock orders | Checkout demonstrates order creation without payment, fulfillment, shipping, or accounts |
 | Planner | Planner sessions, proposal statuses, package templates, courses, proposal lines, validation errors, and validated proposals define AI-assisted planning | Planner use cases create sessions, continue planning, validate/revalidate proposals, and accept proposals into baskets through ports | Codex/fake planner agents, background runner, in-memory sessions, and `planner_mcp_server.py` provide the runtime | Codex can suggest; catalog and basket validation must approve real SKUs before basket mutation |
 
 ## API Routes
@@ -107,7 +108,7 @@ response shape before returning data to feature hooks.
 
 | Flow | Starts | Frontend | Backend | Rule/source of truth |
 | --- | --- | --- | --- | --- |
-| Catalog browsing | `CatalogBrowser` and `useCatalogBrowser` | `getCatalog` and `getCatalogProduct` call `/api/catalog` | Catalog routes delegate to `BrowseCatalog` and `GetCatalogSkuDetail` | `StaticCatalogRepository` exposes seed catalog SKUs; search matches names, categories, descriptions, tags, and positive dietary facets |
+| Catalog browsing | `CatalogBrowser` and `useCatalogBrowser` | `getCatalog` and `getCatalogProduct` call `/api/catalog` | Catalog routes delegate to `BrowseCatalog` and `GetCatalogSkuDetail` | `StaticCatalogRepository` exposes JSON-backed seed catalog SKUs; search matches names, categories, descriptions, tags, and positive dietary facets |
 | Basket editing | `useBasket` | Creates or reloads a basket, stores the basket id locally, and sends add/update/remove mutations through `frontend/src/api/basket.ts` | Basket routes invoke create, load, add, set quantity, and remove use cases | Use cases check catalog existence and availability; `Basket` owns quantity and total invariants |
 | Checkout | `HomePage` opens `CheckoutPanel` | `useCheckout` loads pickup windows, blocks empty baskets, and submits contact details plus basket id | `CreateCheckoutOrder` validates pickup/contact details, rechecks SKU availability, creates order lines, persists an order, and empties the basket | Checkout is mock pickup checkout; order lines and basket state remain backend-owned |
 | Planner | `PlannerWorkspace` and `usePlanner` | Checks runtime status, creates sessions, polls, handles follow-up answers, edits/revalidates proposal lines, and accepts proposals | Planner routes coordinate session use cases, background completion, proposal validation, and acceptance | Raw Codex output is validated through catalog and basket rules before any basket mutation |
@@ -116,7 +117,7 @@ response shape before returning data to feature hooks.
 
 Backend tests live in `backend/tests` and cover domain rules, application use
 cases, API routes, infrastructure repositories, Planner MCP tools, Codex Planner
-adapter behavior, settings, package layout, and seed catalog data. Frontend tests
+adapter behavior, settings, package layout, and JSON seed catalog data. Frontend tests
 live beside source files under `frontend/src` and cover API clients, feature
 hooks, workflow components, formatting helpers, image mapping, and app
 composition.

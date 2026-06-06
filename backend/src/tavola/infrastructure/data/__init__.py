@@ -1,0 +1,1 @@
+"""Static demonstrator data resources."""
