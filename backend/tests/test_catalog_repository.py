@@ -68,8 +68,9 @@ def test_static_catalog_repository_can_be_backed_by_seed_catalog() -> None:
 
     skus = repository.list_skus()
 
-    assert len(skus) == 20
+    assert skus
     assert repository.get_sku("fresh-tagliatelle-250g") is not None
+    assert repository.get_sku("pinot-grigio-delle-venezie-750ml") is not None
 
 
 def test_static_catalog_repository_satisfies_application_protocol() -> None:

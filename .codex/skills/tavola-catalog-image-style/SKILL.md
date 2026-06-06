@@ -23,6 +23,28 @@ does not perform runtime image generation.
 - Avoid: text overlays, logos, watermarks, people, hands, price tags, readable
   labels, unrelated props, clutter, or dark atmospheric backgrounds.
 
+## Reference Alignment
+
+Before generating or accepting an image, inspect one or two existing committed
+assets under `frontend/src/assets/catalog/` from the same category or nearest
+visual family. Use those assets as the background/composition reference in the
+prompt and review:
+
+- Match the reference's counter color, plate/crockery shape, linen placement,
+  terracotta prop scale, lighting direction, camera angle, product scale, and
+  amount of negative space.
+- Prefer replacing only the product subject while keeping the category set's
+  background rhythm stable.
+- If the generated image uses a noticeably different prop type, crop, texture,
+  saturation, shadow weight, or background layout, reject it and retry with the
+  reference background described explicitly.
+
+For dessert slices, use `torta-della-nonna-slice.jpg`,
+`cannoli-siciliani-two-pack.jpg`, and/or `tiramisu-cup-single.jpg` as the
+primary reference: warm stone counter, sage linen entering from the
+upper-left/left edge, shallow terracotta dish cropped in the upper-right,
+off-white ceramic plate centered slightly low, and soft natural shadows.
+
 ## Prompt Shape
 
 For one SKU:

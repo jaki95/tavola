@@ -63,13 +63,13 @@ def make_sku(
 
 
 def make_drinks_sku(
-    sku_id: str = "san-pellegrino-limonata-4x330ml",
+    sku_id: str = "limonata-sparkling-330ml",
     *,
     amount_minor: int = 600,
 ) -> CatalogSku:
     return make_sku(
         sku_id,
-        name="San Pellegrino Limonata",
+        name="Homemade Limonata",
         category=CatalogCategory("drinks", "Drinks", 4),
         amount_minor=amount_minor,
     )
@@ -383,7 +383,7 @@ def test_validate_menu_proposal_prices_appended_drinks_course() -> None:
                 course=Course.DRINKS,
                 lines=(
                     ProposalLine(
-                        sku_id="san-pellegrino-limonata-4x330ml",
+                        sku_id="limonata-sparkling-330ml",
                         quantity=1,
                         rationale="Bright drink pairing.",
                     ),
@@ -419,7 +419,7 @@ def test_validate_menu_proposal_rejects_drink_product_in_required_course() -> No
                 course=Course.APERITIVO,
                 lines=(
                     ProposalLine(
-                        sku_id="san-pellegrino-limonata-4x330ml",
+                        sku_id="limonata-sparkling-330ml",
                         quantity=1,
                         rationale="Drink should be separate from food.",
                     ),
@@ -434,7 +434,7 @@ def test_validate_menu_proposal_rejects_drink_product_in_required_course() -> No
     assert (
         result.validation_errors[0].code == PlannerValidationErrorCode.INVALID_PROPOSAL
     )
-    assert result.validation_errors[0].sku_id == "san-pellegrino-limonata-4x330ml"
+    assert result.validation_errors[0].sku_id == "limonata-sparkling-330ml"
     assert result.validation_errors[0].course == Course.APERITIVO
 
 

@@ -16,8 +16,8 @@ work.
 
 Current Tavola constraints to check before drafting:
 
-- The first seed catalog is intentionally small and currently has exactly 20
-  SKUs.
+- The seed catalog is intentionally small and curated, but it no longer has a
+  fixed SKU count.
 - Each product has exactly one SKU in the first catalog.
 - Customer-facing categories are `Antipasti`, `Primi`, `Desserts`, `Drinks`,
   and `Pantry`.
@@ -29,8 +29,8 @@ Current Tavola constraints to check before drafting:
 1. Clarify the catalog operation.
    - If the user did not say, ask whether this is replacing an existing SKU,
      revising an existing SKU, or intentionally expanding the catalog.
-   - If expanding beyond 20 SKUs, call out the `CONTEXT.md` seed-catalog
-     constraint and ask whether to update that product constraint too.
+   - If expanding the catalog, confirm that the addition keeps the seed catalog
+     small and curated.
 
 2. Draft a complete SKU proposal from the user's intent.
    Include:
@@ -84,7 +84,7 @@ Current Tavola constraints to check before drafting:
 7. Finish.
    Report:
    - The SKU added, replaced, or revised.
-   - Whether the catalog remains at 20 SKUs or the product constraint changed.
+   - Whether the catalog was expanded, replaced, or revised.
    - Image asset path.
    - Backend and frontend files touched.
    - Tests run and any unchecked browser/image review gaps.
