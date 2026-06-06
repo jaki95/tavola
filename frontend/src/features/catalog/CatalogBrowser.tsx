@@ -50,15 +50,31 @@ export function CatalogBrowser({
         </div>
 
         {catalog.status === "error" ? null : (
-          <CatalogFilters
-            categories={catalog.categories}
-            onCategorySelect={selectCategory}
-            onReset={resetFilters}
-            onSearchSubmit={submitSearch}
-            onSearchTextChange={updateDraftSearch}
-            searchText={draftSearch}
-            selectedCategoryId={selectedCategoryId}
-          />
+          <div className="catalog-browser__browse-panel">
+            <CatalogFilters
+              categories={catalog.categories}
+              hasActiveFilters={
+                selectedCategoryId !== null || committedSearch.trim() !== ""
+              }
+              onCategorySelect={selectCategory}
+              onReset={resetFilters}
+              onSearchSubmit={submitSearch}
+              onSearchTextChange={updateDraftSearch}
+              searchText={draftSearch}
+              selectedCategoryId={selectedCategoryId}
+              showResetAction={catalog.products.length > 0}
+            />
+            <div className="catalog-browser__results-bar">
+              <p className="catalog-browser__summary" aria-live="polite">
+                {productCountLabel}
+              </p>
+              {committedSearch ? (
+                <p className="catalog-browser__active-query">
+                  Matches for <strong>{committedSearch}</strong>
+                </p>
+              ) : null}
+            </div>
+          </div>
         )}
       </div>
 
@@ -77,17 +93,6 @@ export function CatalogBrowser({
               Loading catalog products.
             </div>
           ) : null}
-
-          <div className="catalog-browser__results-bar">
-            <p className="catalog-browser__summary" aria-live="polite">
-              {productCountLabel}
-            </p>
-            {committedSearch ? (
-              <p className="catalog-browser__active-query">
-                Showing matches for <strong>{committedSearch}</strong>
-              </p>
-            ) : null}
-          </div>
 
           <div className="catalog-browser__workspace">
             <CatalogGrid

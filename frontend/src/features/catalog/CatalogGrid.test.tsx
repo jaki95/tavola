@@ -45,7 +45,7 @@ describe("CatalogGrid", () => {
     expect(
       within(item).getByText("Fresh egg pasta cut into ribbons for a quick supper.")
     ).toBeInTheDocument();
-    expect(within(item).getByText("Vegetarian")).toBeInTheDocument();
+    expect(within(item).queryByText("Vegetarian")).not.toBeInTheDocument();
     expect(
       within(item).getByRole("img", { name: "Fresh Tagliatelle product image" })
     ).toBeInTheDocument();
