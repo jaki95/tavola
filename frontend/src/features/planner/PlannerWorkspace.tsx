@@ -311,7 +311,7 @@ function planningProgress(elapsedMs: number | null): {
   if (elapsed >= 30_000) {
     return {
       activeIndex: 3,
-      message: "Still planning. Tavola is checking the proposal before review."
+      message: "Tavola is checking the proposal before review."
     };
   }
 

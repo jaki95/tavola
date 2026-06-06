@@ -377,8 +377,9 @@ describe("PlannerWorkspace", () => {
 
     const statusCopy = screen.getByRole("status").textContent ?? "";
     expect(statusCopy).toContain(
-      "Still planning. Tavola is checking the proposal before review."
+      "Tavola is checking the proposal before review."
     );
+    expect(statusCopy).not.toContain("Still planning.");
     expect(statusCopy).not.toMatch(/\d+s elapsed/i);
     expect(screen.getByLabelText("Planning progress")).toHaveTextContent(
       "CatalogMenu shapePricesReview"
