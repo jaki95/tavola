@@ -19,9 +19,9 @@ type PlannerWorkspaceProps = {
 };
 
 const examplePrompts = [
-  "Classic Italian dinner for 2",
-  "Weekend lunch for 6",
-  "Antipasti spread for a party"
+  "Vegetarian dinner for 4 around £50",
+  "Aperitivo for 6 with drinks",
+  "Help me plan Sunday lunch"
 ];
 
 export function PlannerWorkspace({
@@ -130,7 +130,7 @@ export function PlannerWorkspace({
                   disabled={isPlannerUnavailable}
                   name="meal-request"
                   onChange={(event) => setPrompt(event.target.value)}
-                  placeholder="Vegetarian dinner for 4 around £50"
+                  placeholder="What are you planning?"
                   rows={2}
                   value={prompt}
                 />
