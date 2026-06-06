@@ -581,7 +581,7 @@ describe("App", () => {
     expect(
       await within(checkoutPanel).findByRole("heading", {
         level: 3,
-        name: "Order confirmed. Thank you for shopping with us."
+        name: "Your deli pickup is arranged."
       })
     ).toBeInTheDocument();
     await waitFor(() => {

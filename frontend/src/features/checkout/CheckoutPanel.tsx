@@ -41,6 +41,13 @@ export function CheckoutPanel({
   const visibleBasket = basket.basket;
   const isBasketEmpty = !visibleBasket || visibleBasket.lines.length === 0;
   const isPending = submission.status === "pending";
+  const selectedPickupWindow =
+    pickupWindows.pickupWindows.find(
+      (window) => window.pickup_window_id === formValues.pickupWindowId
+    ) ??
+    (pickupWindows.status === "success"
+      ? pickupWindows.pickupWindows[0]
+      : undefined);
   const canSubmit =
     !isBasketEmpty &&
     !isBasketUpdating &&
@@ -236,9 +243,27 @@ export function CheckoutPanel({
                   </p>
                 ) : null}
 
-                <button disabled={!canSubmit} type="submit">
-                  {isPending ? "Creating order" : "Create pickup order"}
-                </button>
+                <div className="checkout-form__submit-area">
+                  {selectedPickupWindow ? (
+                    <p
+                      className="checkout-form__reassurance"
+                      id="checkout-submit-note"
+                    >
+                      This creates a mock pickup order. No payment is collected.
+                      Pickup: {selectedPickupWindow.label}. Basket can still be
+                      changed with Back to basket.
+                    </p>
+                  ) : null}
+                  <button
+                    aria-describedby={
+                      selectedPickupWindow ? "checkout-submit-note" : undefined
+                    }
+                    disabled={!canSubmit}
+                    type="submit"
+                  >
+                    {isPending ? "Creating order" : "Create pickup order"}
+                  </button>
+                </div>
               </form>
             </>
           )}
@@ -387,7 +412,7 @@ function CheckoutConfirmation({
 
   return (
     <div className="checkout-confirmation" role="status">
-      <h3>Order confirmed. Thank you for shopping with us.</h3>
+      <h3>Your deli pickup is arranged.</h3>
       <dl>
         <div>
           <dt>Order</dt>
