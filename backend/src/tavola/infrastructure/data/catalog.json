@@ -125,6 +125,60 @@
     "is_available": true
   },
   {
+    "sku_id": "rosemary-focaccia-piece",
+    "name": "Rosemary Focaccia",
+    "category_id": "antipasti",
+    "unit_label": "piece",
+    "unit_price_minor": 495,
+    "currency": "GBP",
+    "short_description": "Olive oil focaccia with rosemary, sea salt, and a soft open crumb.",
+    "detail_description": "House focaccia baked with extra virgin olive oil, rosemary, and flaky salt. Serve warm with burrata, olives, caponata, or dipping oil.",
+    "tags": [
+      "focaccia",
+      "bread",
+      "rosemary",
+      "sharing",
+      "vegan",
+      "antipasti"
+    ],
+    "facets": {
+      "is_vegetarian": true,
+      "is_vegan": true,
+      "is_gluten_free": false,
+      "contains_alcohol": false
+    },
+    "image_id": "rosemary-focaccia-piece",
+    "display_order": 6,
+    "is_available": true
+  },
+  {
+    "sku_id": "finocchiona-salami-100g",
+    "name": "Finocchiona Salami",
+    "category_id": "antipasti",
+    "unit_label": "100g",
+    "unit_price_minor": 695,
+    "currency": "GBP",
+    "short_description": "Tuscan fennel salami sliced for antipasti boards and aperitivo.",
+    "detail_description": "A fragrant cured salami seasoned with fennel seed and black pepper. Layer it with focaccia, pecorino, olives, and house-made drinks.",
+    "tags": [
+      "salami",
+      "fennel",
+      "tuscan",
+      "cured-meat",
+      "antipasti",
+      "aperitivo"
+    ],
+    "facets": {
+      "is_vegetarian": false,
+      "is_vegan": false,
+      "is_gluten_free": true,
+      "contains_alcohol": false
+    },
+    "image_id": "finocchiona-salami-100g",
+    "display_order": 7,
+    "is_available": true
+  },
+  {
     "sku_id": "fresh-tagliatelle-250g",
     "name": "Fresh Tagliatelle",
     "category_id": "primi",
@@ -275,6 +329,34 @@
     "is_available": true
   },
   {
+    "sku_id": "ribollita-toscana-500g",
+    "name": "Ribollita Toscana",
+    "category_id": "primi",
+    "unit_label": "500g",
+    "unit_price_minor": 795,
+    "currency": "GBP",
+    "short_description": "Hearty Tuscan vegetable and bread soup with cavolo nero and beans.",
+    "detail_description": "A rustic ribollita made with cannellini beans, cavolo nero, tomato, vegetables, and torn bread for body. Warm gently and finish with olive oil for a comforting primo.",
+    "tags": [
+      "soup",
+      "ribollita",
+      "tuscan",
+      "beans",
+      "vegetarian",
+      "vegan",
+      "primo"
+    ],
+    "facets": {
+      "is_vegetarian": true,
+      "is_vegan": true,
+      "is_gluten_free": false,
+      "contains_alcohol": false
+    },
+    "image_id": "ribollita-toscana-500g",
+    "display_order": 7,
+    "is_available": true
+  },
+  {
     "sku_id": "tiramisu-cup-single",
     "name": "Tiramisu Cup",
     "category_id": "desserts",
@@ -325,43 +407,73 @@
     "is_available": true
   },
   {
-    "sku_id": "lemon-polenta-cake-slice",
-    "name": "Lemon Polenta Cake",
+    "sku_id": "torta-della-nonna-slice",
+    "name": "Torta della Nonna",
     "category_id": "desserts",
     "unit_label": "slice",
-    "unit_price_minor": 395,
+    "unit_price_minor": 475,
     "currency": "GBP",
-    "short_description": "Moist lemon polenta cake with almond and citrus syrup.",
-    "detail_description": "A bright cake slice made with polenta, almond, lemon zest, and syrup. It is naturally gluten-free and ideal with espresso.",
+    "short_description": "Tuscan custard tart slice with pine nuts and a crisp pastry shell.",
+    "detail_description": "A classic torta della nonna with vanilla-scented pastry cream, buttery shortcrust, and toasted pine nuts. Serve with espresso or alongside after-dinner drinks.",
     "tags": [
-      "cake",
-      "lemon",
-      "almond",
-      "gluten-free"
+      "tart",
+      "custard",
+      "pine-nuts",
+      "dessert",
+      "tuscan"
     ],
     "facets": {
       "is_vegetarian": true,
       "is_vegan": false,
-      "is_gluten_free": true,
+      "is_gluten_free": false,
       "contains_alcohol": false
     },
-    "image_id": "lemon-polenta-cake-slice",
+    "image_id": "torta-della-nonna-slice",
     "display_order": 3,
     "is_available": true
   },
   {
-    "sku_id": "san-pellegrino-aranciata-330ml",
-    "name": "San Pellegrino Aranciata",
+    "sku_id": "cantucci-biscotti-200g",
+    "name": "Cantucci Biscotti",
+    "category_id": "desserts",
+    "unit_label": "200g",
+    "unit_price_minor": 525,
+    "currency": "GBP",
+    "short_description": "Crunchy almond biscotti for coffee, dessert plates, and gifting.",
+    "detail_description": "Classic Tuscan cantucci baked crisp with toasted almonds and a gentle citrus note. Serve with espresso or alongside gelato-style desserts.",
+    "tags": [
+      "biscotti",
+      "cantucci",
+      "almond",
+      "dessert",
+      "tuscan",
+      "coffee"
+    ],
+    "facets": {
+      "is_vegetarian": true,
+      "is_vegan": false,
+      "is_gluten_free": false,
+      "contains_alcohol": false
+    },
+    "image_id": "cantucci-biscotti-200g",
+    "display_order": 4,
+    "is_available": true
+  },
+  {
+    "sku_id": "aranciata-sparkling-330ml",
+    "name": "Homemade Aranciata",
     "category_id": "drinks",
     "unit_label": "330ml",
     "unit_price_minor": 225,
     "currency": "GBP",
-    "short_description": "Sparkling orange soda with a gently bitter citrus finish.",
-    "detail_description": "A chilled Italian aranciata with bright orange flavour and fine bubbles. Pair it with salty antipasti or a casual lunch.",
+    "short_description": "Homemade sparkling aranciata with a gently bitter citrus finish.",
+    "detail_description": "A chilled house-made aranciata with bright orange flavour and fine bubbles. Serve cold with salty antipasti or a casual lunch.",
     "tags": [
       "aranciata",
       "orange",
       "soft-drink",
+      "homemade",
+      "vegan",
       "aperitivo"
     ],
     "facets": {
@@ -370,18 +482,18 @@
       "is_gluten_free": true,
       "contains_alcohol": false
     },
-    "image_id": "san-pellegrino-aranciata-330ml",
+    "image_id": "aranciata-sparkling-330ml",
     "display_order": 1,
     "is_available": true
   },
   {
     "sku_id": "limonata-sparkling-330ml",
-    "name": "Limonata Sparkling Lemonade",
+    "name": "Homemade Limonata",
     "category_id": "drinks",
     "unit_label": "330ml",
     "unit_price_minor": 225,
     "currency": "GBP",
-    "short_description": "Crisp sparkling lemonade with sharp Sicilian lemon character.",
+    "short_description": "Crisp sparkling limonata with sharp Sicilian lemon character.",
     "detail_description": "A refreshing lemon soda with lively acidity and a clean finish. Serve cold with pastries, picnic food, or a light antipasto.",
     "tags": [
       "limonata",
@@ -422,6 +534,32 @@
     },
     "image_id": "chianti-classico-750ml",
     "display_order": 3,
+    "is_available": true
+  },
+  {
+    "sku_id": "pinot-grigio-delle-venezie-750ml",
+    "name": "Pinot Grigio delle Venezie",
+    "category_id": "drinks",
+    "unit_label": "750ml",
+    "unit_price_minor": 1395,
+    "currency": "GBP",
+    "short_description": "Crisp white wine with pear, citrus, and a clean mineral finish.",
+    "detail_description": "A dry Pinot Grigio from the Veneto with bright orchard fruit and gentle acidity. Serve chilled with antipasti, seafood-style primi, or picnic dishes.",
+    "tags": [
+      "wine",
+      "pinot-grigio",
+      "white",
+      "veneto",
+      "aperitivo"
+    ],
+    "facets": {
+      "is_vegetarian": true,
+      "is_vegan": false,
+      "is_gluten_free": true,
+      "contains_alcohol": true
+    },
+    "image_id": "pinot-grigio-delle-venezie-750ml",
+    "display_order": 4,
     "is_available": true
   },
   {
@@ -499,6 +637,32 @@
     },
     "image_id": "extra-virgin-olive-oil-500ml",
     "display_order": 3,
+    "is_available": true
+  },
+  {
+    "sku_id": "pecorino-toscano-200g",
+    "name": "Pecorino Toscano",
+    "category_id": "pantry",
+    "unit_label": "200g",
+    "unit_price_minor": 750,
+    "currency": "GBP",
+    "short_description": "Firm Tuscan sheep's cheese with a nutty savoury finish.",
+    "detail_description": "A wedge of Pecorino Toscano for shaving over pasta, serving with salumi, or pairing with honey and fruit. It brings a salty, nutty note to boards and pantry suppers.",
+    "tags": [
+      "cheese",
+      "pecorino",
+      "tuscan",
+      "pantry",
+      "pairing"
+    ],
+    "facets": {
+      "is_vegetarian": false,
+      "is_vegan": false,
+      "is_gluten_free": true,
+      "contains_alcohol": false
+    },
+    "image_id": "pecorino-toscano-200g",
+    "display_order": 4,
     "is_available": true
   }
 ]

@@ -60,6 +60,9 @@ Out unless explicit:
 - Proposal-ready indicator may appear on Plan tab when proposal becomes ready
   while user is in Shop. It clears when Plan opens. Banner must not become status
   dashboard.
+- Planning updates may appear inside the Planner surface only. They must come
+  from Tavola's backend lifecycle, not elapsed-time guesses, and must not turn
+  the top banner into a status dashboard.
 - Planner input state stays compact; proposal review may expand.
 - After proposal acceptance, stay in Planner and visibly update Basket.
 - Opening desktop screen: no separate masthead between top bar and commerce flow.
@@ -99,6 +102,9 @@ Out unless explicit:
 - **Planner session**: bounded AI-assisted workflow.
 - **Planning**: in-progress live session. Avoid "processing", "job", "run",
   "Codex run" in customer/domain language.
+- **Planning update**: customer-visible progress entry emitted during Planning.
+  Distinct from session status and runtime availability; avoid "status update",
+  "progress phase", "Codex step".
 - **Menu proposal**: suggested meal plan under review, after validation and
   before basket acceptance.
 - **Planner note**: customer-facing explainability: evidence, constraints,
@@ -136,8 +142,8 @@ Out unless explicit:
 
 - Backend serves small static seed catalog. It is product data, not throwaway
   mock data.
-- Exactly 20 SKUs: 5 Antipasti, 6 Primi, 3 Desserts, 3 Drinks, 3 Pantry.
-- All 20 available in first catalog slice.
+- Small curated SKU set with each canonical category populated.
+- All seed catalog SKUs are available in the first catalog slice.
 - Each item needs: deli-style name, stable SKU slug, primary category, unit
   label, GBP price, one-sentence short desc, one/two-sentence detail desc, at
   least two tags, dietary facets, image ID, display order.

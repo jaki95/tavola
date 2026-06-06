@@ -8,21 +8,27 @@ const seedCatalogImageIds = [
   "caponata-siciliana-300g",
   "prosciutto-di-parma-100g",
   "grilled-artichokes-200g",
+  "rosemary-focaccia-piece",
+  "finocchiona-salami-100g",
   "fresh-tagliatelle-250g",
   "ricotta-spinach-ravioli-300g",
   "beef-ragu-lasagne-serves-2",
   "parmigiana-melanzane-serves-2",
   "potato-gnocchi-500g",
   "pumpkin-sage-tortelloni-300g",
+  "ribollita-toscana-500g",
   "tiramisu-cup-single",
   "cannoli-siciliani-two-pack",
-  "lemon-polenta-cake-slice",
-  "san-pellegrino-aranciata-330ml",
+  "torta-della-nonna-slice",
+  "cantucci-biscotti-200g",
+  "aranciata-sparkling-330ml",
   "limonata-sparkling-330ml",
   "chianti-classico-750ml",
+  "pinot-grigio-delle-venezie-750ml",
   "sugo-pomodoro-500g",
   "pesto-genovese-180g",
-  "extra-virgin-olive-oil-500ml"
+  "extra-virgin-olive-oil-500ml",
+  "pecorino-toscano-200g"
 ];
 
 describe("catalogImages", () => {

@@ -1,9 +1,14 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { QuantityStepper } from "../../components/QuantityStepper";
+import { getCatalogProduct } from "../../api/catalog";
+import type { ApiResult } from "../../api/client";
 import { formatBasketMoney } from "../basket/basketFormat";
+import { CatalogDetail } from "../catalog/CatalogDetail";
 import { getCatalogImageAsset } from "../catalog/catalogImages";
+import type { CatalogDetailState } from "../catalog/useCatalogBrowser";
 import type { Basket } from "../../types/basket";
+import type { CatalogProductDetail } from "../../types/catalog";
 import type {
   AcceptMenuProposalMode,
   MenuProposal,
@@ -11,30 +16,40 @@ import type {
 } from "../../types/planner";
 import { usePlanner, type PlannerClient } from "./usePlanner";
 
+type PlannerCatalogClient = {
+  getCatalogProduct: typeof getCatalogProduct;
+};
+
 type PlannerWorkspaceProps = {
   basket: Basket | null;
   onBasketAccepted: (basket: Basket) => void;
   onProposalReadyChange?: (isProposalReady: boolean) => void;
   client?: PlannerClient;
+  catalogClient?: PlannerCatalogClient;
 };
 
 const examplePrompts = [
-  "Classic Italian dinner for 2",
-  "Weekend lunch for 6",
-  "Antipasti spread for a party"
+  "Vegetarian dinner for 4 around £50",
+  "Aperitivo for 6 with drinks",
+  "Help me plan Sunday lunch"
 ];
 
 export function PlannerWorkspace({
   basket,
   onBasketAccepted,
   onProposalReadyChange,
-  client
+  client,
+  catalogClient = { getCatalogProduct }
 }: PlannerWorkspaceProps) {
   const planner = usePlanner({ client });
   const [prompt, setPrompt] = useState("");
   const [followUpAnswer, setFollowUpAnswer] = useState("");
   const [isComposerOpen, setIsComposerOpen] = useState(true);
   const [isConfirmingReplace, setIsConfirmingReplace] = useState(false);
+  const [productDetail, setProductDetail] = useState<CatalogDetailState>({
+    status: "closed"
+  });
+  const detailRequestId = useRef(0);
   const isPlanning =
     planner.state.status === "planning" ||
     planner.state.session?.status === "planning";
@@ -98,6 +113,29 @@ export function PlannerWorkspace({
     setIsComposerOpen(true);
   }
 
+  function closeProductDetail() {
+    detailRequestId.current += 1;
+    setProductDetail({ status: "closed" });
+  }
+
+  function openProductDetail(skuId: string) {
+    const requestId = detailRequestId.current + 1;
+    detailRequestId.current = requestId;
+    setProductDetail({ status: "loading", skuId });
+
+    async function loadProductDetail() {
+      const result = await catalogClient.getCatalogProduct(skuId);
+
+      if (detailRequestId.current !== requestId) {
+        return;
+      }
+
+      setProductDetail(mapPlannerProductDetailResult(skuId, result));
+    }
+
+    void loadProductDetail();
+  }
+
   return (
     <section
       aria-labelledby="planner-workspace-title"
@@ -130,7 +168,7 @@ export function PlannerWorkspace({
                   disabled={isPlannerUnavailable}
                   name="meal-request"
                   onChange={(event) => setPrompt(event.target.value)}
-                  placeholder="Vegetarian dinner for 4 around £50"
+                  placeholder="What are you planning?"
                   rows={2}
                   value={prompt}
                 />
@@ -243,10 +281,17 @@ export function PlannerWorkspace({
           proposal={planner.draftProposal}
           onAccept={acceptProposal}
           onCancelReplace={() => setIsConfirmingReplace(false)}
+          onOpenProductDetail={openProductDetail}
           onRemoveLine={planner.removeLine}
           onSetLineQuantity={planner.setLineQuantity}
         />
       ) : null}
+
+      <CatalogDetail
+        detail={productDetail}
+        onClose={closeProductDetail}
+        showAddAction={false}
+      />
     </section>
   );
 }
@@ -263,6 +308,25 @@ function PlannerTrust() {
       </ul>
     </aside>
   );
+}
+
+function mapPlannerProductDetailResult(
+  skuId: string,
+  result: ApiResult<CatalogProductDetail>
+): CatalogDetailState {
+  if (!result.ok) {
+    return {
+      status: "error",
+      skuId,
+      message: result.error.message
+    };
+  }
+
+  return {
+    status: "success",
+    skuId,
+    product: result.data
+  };
 }
 
 function PlanningStatus({ elapsedMs }: { elapsedMs: number | null }) {
@@ -344,6 +408,7 @@ function ProposalReview({
   isConfirmingReplace,
   onAccept,
   onCancelReplace,
+  onOpenProductDetail,
   onRemoveLine,
   onSetLineQuantity
 }: {
@@ -354,6 +419,7 @@ function ProposalReview({
   isConfirmingReplace: boolean;
   onAccept: (mode: AcceptMenuProposalMode) => void;
   onCancelReplace: () => void;
+  onOpenProductDetail: (skuId: string) => void;
   onRemoveLine: (skuId: string) => void;
   onSetLineQuantity: (skuId: string, quantity: number) => void;
 }) {
@@ -370,6 +436,7 @@ function ProposalReview({
       actionsDisabled={actionsDisabled}
       proposal={proposal}
       isReadOnly={isAccepted}
+      onOpenProductDetail={onOpenProductDetail}
       onRemoveLine={onRemoveLine}
       onSetLineQuantity={onSetLineQuantity}
     />
@@ -469,12 +536,14 @@ function ProposalDetails({
   actionsDisabled,
   proposal,
   isReadOnly,
+  onOpenProductDetail,
   onRemoveLine,
   onSetLineQuantity
 }: {
   actionsDisabled: boolean;
   proposal: MenuProposal;
   isReadOnly: boolean;
+  onOpenProductDetail: (skuId: string) => void;
   onRemoveLine: (skuId: string) => void;
   onSetLineQuantity: (skuId: string, quantity: number) => void;
 }) {
@@ -503,6 +572,7 @@ function ProposalDetails({
                   isReadOnly={isReadOnly}
                   key={line.sku_id}
                   line={line}
+                  onOpenProductDetail={onOpenProductDetail}
                   onRemoveLine={onRemoveLine}
                   onSetLineQuantity={onSetLineQuantity}
                 />
@@ -624,12 +694,14 @@ function ProposalLineItem({
   line,
   isDisabled,
   isReadOnly = false,
+  onOpenProductDetail,
   onRemoveLine,
   onSetLineQuantity
 }: {
   line: MenuProposalLine;
   isDisabled: boolean;
   isReadOnly?: boolean;
+  onOpenProductDetail: (skuId: string) => void;
   onRemoveLine: (skuId: string) => void;
   onSetLineQuantity: (skuId: string, quantity: number) => void;
 }) {
@@ -656,7 +728,18 @@ function ProposalLineItem({
       />
       <div className="planner-line__body">
         <div className="planner-line__copy">
-          <h5>{lineName}</h5>
+          <div className="planner-line__title-row">
+            <h5>{lineName}</h5>
+            <button
+              aria-label={`View details for ${lineName}`}
+              className="planner-line__detail-action"
+              onClick={() => onOpenProductDetail(line.sku_id)}
+              title={`View details for ${lineName}`}
+              type="button"
+            >
+              <span aria-hidden="true">i</span>
+            </button>
+          </div>
           <p>
             {line.unit_label} · {unitPrice} each
           </p>

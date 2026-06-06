@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ApiResult } from "../../api/client";
 import type { Basket } from "../../types/basket";
+import type { CatalogProductDetail } from "../../types/catalog";
 import type {
   AcceptMenuProposalResponse,
   MenuProposal,
@@ -105,16 +106,16 @@ const pairedAntipastoProposal: MenuProposal = {
           lines: [
             ...course.lines,
             {
-              sku_id: "focaccia-genovese-slab",
+              sku_id: "focaccia-genovese-piece",
               name: "Focaccia Genovese",
               category_id: "antipasti",
               category_label: "Antipasti",
-              unit_label: "slab",
+              unit_label: "piece",
               quantity: 1,
               unit_price_minor: 650,
               line_total_minor: 650,
               currency: "GBP",
-              image_id: "focaccia-genovese-slab",
+              image_id: "focaccia-genovese-piece",
               rationale: "Soft bread rounds out the antipasto plate."
             }
           ]
@@ -191,6 +192,24 @@ const populatedBasket: Basket = {
   line_count: 1
 };
 
+const tagliatelleDetail: CatalogProductDetail = {
+  sku_id: "fresh-tagliatelle-250g",
+  name: "Fresh Tagliatelle",
+  category_id: "primi",
+  category_label: "Primi",
+  unit_label: "250g",
+  unit_price_minor: 425,
+  currency: "GBP",
+  short_description: "Egg pasta ribbons cut fresh for quick suppers.",
+  detail_description:
+    "Fresh egg tagliatelle cut into ribbons for ragu, mushrooms, or butter.",
+  image_id: "fresh-tagliatelle-250g",
+  is_vegetarian: true,
+  is_vegan: false,
+  is_gluten_free: false,
+  contains_alcohol: false
+};
+
 const mealPlanGrouping = {
   title: "Vegetarian dinner for four",
   party_size: 4,
@@ -233,6 +252,26 @@ describe("PlannerWorkspace", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("powered by Codex")).toBeInTheDocument();
     expect(container.querySelector(".planner-workspace__icon")).toBeNull();
+  });
+
+  test("shows persona examples and a neutral request prompt", () => {
+    const client = createPlannerClient({});
+
+    renderPlannerWorkspace({ client });
+
+    expect(screen.getByPlaceholderText("What are you planning?")).toBeInTheDocument();
+    expect(
+      screen.queryByPlaceholderText("Vegetarian dinner for 4 around £50")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Vegetarian dinner for 4 around £50" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Aperitivo for 6 with drinks" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Help me plan Sunday lunch" })
+    ).toBeInTheDocument();
   });
 
   test("submits a meal prompt and renders a reviewable proposal", async () => {
@@ -445,7 +484,7 @@ describe("PlannerWorkspace", () => {
     expect(screen.getByLabelText("Meal request")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Plan menu" })).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "Classic Italian dinner for 2" })
+      screen.getByRole("button", { name: "Aperitivo for 6 with drinks" })
     ).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText("Meal request"), {
@@ -627,6 +666,49 @@ describe("PlannerWorkspace", () => {
 
     expect(screen.queryByText("Focaccia Genovese")).not.toBeInTheDocument();
     expect(screen.getAllByText("£32.70")).toHaveLength(2);
+  });
+
+  test("opens catalog product details from a planned menu line", async () => {
+    const client = createPlannerClient({
+      createResults: [success(readySession)]
+    });
+    const catalogClient = createCatalogClient({
+      detailResults: [success(tagliatelleDetail)]
+    });
+
+    renderPlannerWorkspace({ catalogClient, client });
+    submitReadyPrompt();
+
+    const tagliatelleLine = await screen.findByRole("listitem", {
+      name: /fresh tagliatelle/i
+    });
+    fireEvent.click(
+      within(tagliatelleLine).getByRole("button", {
+        name: "View details for Fresh Tagliatelle"
+      })
+    );
+
+    await waitFor(() => {
+      expect(catalogClient.getCatalogProduct).toHaveBeenCalledWith(
+        "fresh-tagliatelle-250g"
+      );
+    });
+
+    const dialog = await screen.findByRole("dialog", { name: "Product detail" });
+
+    expect(
+      within(dialog).getByRole("heading", { level: 2, name: "Fresh Tagliatelle" })
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        "Fresh egg tagliatelle cut into ribbons for ragu, mushrooms, or butter."
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", {
+        name: "Add Fresh Tagliatelle to basket"
+      })
+    ).not.toBeInTheDocument();
   });
 
   test("removes the final item from a package course", async () => {
@@ -813,16 +895,19 @@ describe("PlannerWorkspace", () => {
 
 function renderPlannerWorkspace({
   basket = emptyBasket,
+  catalogClient,
   client,
   onBasketAccepted = vi.fn()
 }: {
   basket?: Basket | null;
+  catalogClient?: { getCatalogProduct: (skuId: string) => Promise<ApiResult<CatalogProductDetail>> };
   client: PlannerClient;
   onBasketAccepted?: (basket: Basket) => void;
 }) {
   return render(
     <PlannerWorkspace
       basket={basket}
+      catalogClient={catalogClient}
       client={client}
       onBasketAccepted={onBasketAccepted}
     />
@@ -870,6 +955,20 @@ function createPlannerClient({
     fetchSession: vi.fn(async () => await shiftResult(fetchResults, "fetch")),
     validateProposal: vi.fn(),
     acceptProposal: vi.fn(async () => await shiftResult(acceptResults, "accept"))
+  };
+}
+
+function createCatalogClient({
+  detailResults = []
+}: {
+  detailResults?: Array<
+    ApiResult<CatalogProductDetail> | Promise<ApiResult<CatalogProductDetail>>
+  >;
+}) {
+  return {
+    getCatalogProduct: vi.fn(
+      async () => await shiftResult(detailResults, "catalog detail")
+    )
   };
 }
 
