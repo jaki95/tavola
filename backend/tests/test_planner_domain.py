@@ -159,34 +159,31 @@ def test_menu_proposal_accepts_appended_drinks_without_changing_template() -> No
 
 
 @pytest.mark.parametrize(
-    ("courses", "match"),
+    "courses",
     [
-        ((Course.PRIMO,), "courses must match package template"),
-        ((Course.DRINKS,), "courses must match package template"),
-        ((Course.DRINKS, Course.PRIMO), "courses must match package template"),
-        ((Course.PRIMO, Course.DRINKS, Course.DESSERT), "courses must match"),
-        (
-            (Course.PRIMO, Course.DESSERT, Course.DRINKS, Course.DRINKS),
-            "courses must match",
-        ),
+        (Course.PRIMO,),
+        (Course.DRINKS,),
+        (Course.DRINKS, Course.PRIMO),
+        (Course.PRIMO, Course.DRINKS, Course.DESSERT),
+        (Course.PRIMO, Course.DESSERT, Course.DRINKS, Course.DRINKS),
     ],
 )
-def test_menu_proposal_rejects_missing_misplaced_or_duplicate_drinks(
+def test_menu_proposal_allows_course_edits_after_template_selection(
     courses: tuple[Course, ...],
-    match: str,
 ) -> None:
-    with pytest.raises(ValueError, match=match):
-        MenuProposal(
-            title="Invalid Drinks Placement",
-            explanation="The course structure is invalid.",
-            planner_notes=("Template checked.",),
-            party_size=2,
-            package_template_id="primo-dessert",
-            courses=tuple(
-                course_proposal(course, f"line-{index}")
-                for index, course in enumerate(courses, start=1)
-            ),
-        )
+    proposal = MenuProposal(
+        title="Edited Dinner",
+        explanation="The course set was adjusted during review.",
+        planner_notes=("Catalog and prices checked.",),
+        party_size=2,
+        package_template_id="primo-dessert",
+        courses=tuple(
+            course_proposal(course, f"line-{index}")
+            for index, course in enumerate(courses, start=1)
+        ),
+    )
+
+    assert tuple(course.course for course in proposal.courses) == courses
 
 
 def test_course_proposal_rejects_empty_courses() -> None:
@@ -218,27 +215,28 @@ def test_menu_proposal_party_size_is_not_capped_by_basket_line_quantity() -> Non
     assert proposal.party_size == 12
 
 
-def test_menu_proposal_rejects_unsupported_course_for_template() -> None:
-    with pytest.raises(ValueError, match="courses must match package template"):
-        MenuProposal(
-            title="Confused Dinner",
-            explanation="Dessert does not belong in this template.",
-            planner_notes=("Template checked.",),
-            party_size=2,
-            package_template_id="primo-only",
-            courses=(
-                CourseProposal(
-                    course=Course.DESSERT,
-                    lines=(
-                        ProposalLine(
-                            sku_id="tiramisu-cup-single",
-                            quantity=2,
-                            rationale="Dessert line.",
-                        ),
+def test_menu_proposal_allows_courses_outside_initial_template() -> None:
+    proposal = MenuProposal(
+        title="Edited Dinner",
+        explanation="Dessert was kept after review.",
+        planner_notes=("Catalog and prices checked.",),
+        party_size=2,
+        package_template_id="primo-only",
+        courses=(
+            CourseProposal(
+                course=Course.DESSERT,
+                lines=(
+                    ProposalLine(
+                        sku_id="tiramisu-cup-single",
+                        quantity=2,
+                        rationale="Dessert line.",
                     ),
                 ),
             ),
-        )
+        ),
+    )
+
+    assert proposal.courses[0].course == Course.DESSERT
 
 
 def test_planner_session_can_represent_follow_up_without_product_lines() -> None:

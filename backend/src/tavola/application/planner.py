@@ -981,6 +981,6 @@ def _validation_error_from_value_error(error: Exception) -> PlannerValidationErr
         code = PlannerValidationErrorCode.INVALID_QUANTITY
     if "cannot exceed" in message:
         code = PlannerValidationErrorCode.QUANTITY_EXCEEDS_MAX
-    if message == "courses must match package template" or "not a valid" in message:
+    if "not a valid" in message:
         code = PlannerValidationErrorCode.UNSUPPORTED_COURSE
     return PlannerValidationError(code=code, message=message)

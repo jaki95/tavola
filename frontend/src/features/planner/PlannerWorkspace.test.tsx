@@ -287,7 +287,7 @@ describe("PlannerWorkspace", () => {
         {
           note_type: "evidence",
           source: "tavola",
-          message: "Validated by Tavola for SKU validity and template fit."
+          message: "Validated by Tavola for SKU validity."
         }
       ],
       courses: [
@@ -325,10 +325,10 @@ describe("PlannerWorkspace", () => {
 
     expect(screen.getByRole("heading", { name: "product-backed dinner" })).toBeInTheDocument();
     expect(
-      screen.getByText("A validated product proposal using a menu structure.")
+      screen.getByText("A validated product proposal using a menu plan.")
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Validated by Tavola for product validity and menu structure fit.")
+      screen.getByText("Validated by Tavola for product validity.")
     ).toBeInTheDocument();
     expect(
       screen.getByText("This product works well for the course.")
@@ -376,12 +376,22 @@ describe("PlannerWorkspace", () => {
     });
 
     const statusCopy = screen.getByRole("status").textContent ?? "";
-    expect(statusCopy).toBe("Still planning.");
+    expect(statusCopy).toContain(
+      "Still planning. Tavola is checking the proposal before review."
+    );
+    expect(statusCopy).not.toMatch(/\d+s elapsed/i);
+    expect(screen.getByLabelText("Planning progress")).toHaveTextContent(
+      "CatalogMenu shapePricesReview"
+    );
     expect(statusCopy).not.toMatch(
       /codex|sdk|tool|thread|model|retry|token|credential/i
     );
-    expect(screen.getByLabelText("Meal request")).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Plan menu" })).toBeEnabled();
+    expect(screen.queryByLabelText("Meal request")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Plan menu" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Current planner request")).toHaveTextContent(
+      "Vegetarian dinner for 4 around £50"
+    );
+    expect(screen.getByRole("button", { name: "New request" })).toBeDisabled();
   });
 
   test("keeps planner availability out of the primary composer when available", async () => {
@@ -445,7 +455,7 @@ describe("PlannerWorkspace", () => {
     expect(client.createSession).not.toHaveBeenCalled();
   });
 
-  test("answers a required follow-up while preserving the original request", async () => {
+  test("answers a required follow-up after locking the submitted request", async () => {
     vi.useFakeTimers();
     const planningAfterFollowUp: PlannerSessionResponse = {
       ...planningSession,
@@ -469,7 +479,10 @@ describe("PlannerWorkspace", () => {
       await Promise.resolve();
     });
 
-    expect(screen.getAllByText("Plan a dinner")).toHaveLength(2);
+    expect(screen.getAllByText("Plan a dinner")).toHaveLength(1);
+    expect(
+      screen.getByText("Planner needs one choice before review.")
+    ).toBeInTheDocument();
     expect(screen.getByText("How many people are you serving?")).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Follow-up answer"), {
@@ -492,6 +505,97 @@ describe("PlannerWorkspace", () => {
     });
 
     expect(screen.getByText("Vegetarian dinner for four")).toBeInTheDocument();
+  });
+
+  test("keeps new request blocked while planning remains in progress", async () => {
+    vi.useFakeTimers();
+    const client = createPlannerClient({
+      createResults: [success(planningSession)],
+      fetchResults: [success(readySession)]
+    });
+
+    renderPlannerWorkspace({ client });
+    submitReadyPrompt();
+
+    expect(screen.queryByLabelText("Meal request")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Current planner request")).toHaveTextContent(
+      "Vegetarian dinner for 4 around £50"
+    );
+
+    const newRequestButton = screen.getByRole("button", { name: "New request" });
+    expect(newRequestButton).toBeDisabled();
+    fireEvent.click(newRequestButton);
+
+    expect(screen.queryByLabelText("Meal request")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Current planner request")).toHaveTextContent(
+      "Vegetarian dinner for 4 around £50"
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Tavola is planning your menu."
+    );
+    expect(client.createSession).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText("Vegetarian dinner for four")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New request" })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "New request" }));
+
+    expect(screen.getByLabelText("Meal request")).toBeEnabled();
+    expect(screen.getByLabelText("Meal request")).toHaveValue("");
+  });
+
+  test("keeps new request blocked when planning status temporarily fails", async () => {
+    vi.useFakeTimers();
+    const client = createPlannerClient({
+      createResults: [success(planningSession)],
+      fetchResults: [
+        {
+          ok: false,
+          error: {
+            kind: "http",
+            status: 502,
+            message: "Planner status is temporarily unavailable."
+          }
+        },
+        success(readySession)
+      ]
+    });
+
+    renderPlannerWorkspace({ client });
+    submitReadyPrompt();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+      await Promise.resolve();
+    });
+
+    const newRequestButton = screen.getByRole("button", { name: "New request" });
+    expect(newRequestButton).toBeDisabled();
+    fireEvent.click(newRequestButton);
+
+    expect(screen.queryByLabelText("Meal request")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Tavola is planning your menu."
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText("Vegetarian dinner for four")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New request" })).toBeEnabled();
   });
 
   test("edits quantities and removes proposal lines before acceptance", async () => {
@@ -524,7 +628,7 @@ describe("PlannerWorkspace", () => {
     expect(screen.getByText("£32.70")).toBeInTheDocument();
   });
 
-  test("does not allow removing the final item from a package course", async () => {
+  test("removes the final item from a package course", async () => {
     const client = createPlannerClient({
       createResults: [success(readySession)]
     });
@@ -532,11 +636,17 @@ describe("PlannerWorkspace", () => {
     renderPlannerWorkspace({ client });
     submitReadyPrompt();
 
-    expect(
-      await screen.findByRole("button", {
-        name: "Remove Tiramisu Cup from proposal"
-      })
-    ).toBeDisabled();
+    const removeDessert = await screen.findByRole("button", {
+      name: "Remove Tiramisu Cup from proposal"
+    });
+
+    expect(removeDessert).toBeEnabled();
+    fireEvent.click(removeDessert);
+
+    expect(screen.queryByText("Tiramisu Cup")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dessert")).not.toBeInTheDocument();
+    expect(screen.getByText("£13.45")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
   });
 
   test("accepts a proposal by appending it to the basket", async () => {

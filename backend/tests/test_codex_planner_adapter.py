@@ -168,9 +168,8 @@ def test_codex_adapter_configures_bounded_tools_and_validates_final_json() -> No
     assert "tag_match" in client.prompt
     assert "alcohol" in client.prompt
     assert "validate_menu_proposal" in client.prompt
-    assert (
-        "Do not pass party size, budget, occasion, or menu structure" in client.prompt
-    )
+    assert "Do not pass party size, budget, occasion" in client.prompt
+    assert "chosen course set" in client.prompt
     assert "Drinks course" in client.prompt
     assert "ask one follow-up question" in client.prompt
     assert "party size" in client.prompt

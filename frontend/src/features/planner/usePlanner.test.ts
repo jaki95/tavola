@@ -390,6 +390,76 @@ describe("usePlanner", () => {
     expect(result.current.state.session?.planner_session_id).toBe("planner-1");
   });
 
+  test("does not reset an in-progress planner session", async () => {
+    vi.useFakeTimers();
+    const client = createPlannerClient({
+      createResults: [success(planningSession)],
+      fetchResults: [success(readySession)]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4 around £50");
+    });
+
+    act(() => {
+      result.current.reset();
+    });
+
+    expect(result.current.state.status).toBe("planning");
+    expect(result.current.state.session?.planner_session_id).toBe("planner-1");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    expect(client.fetchSession).toHaveBeenCalledWith("planner-1");
+    expect(result.current.state.status).toBe("proposal_ready");
+  });
+
+  test("keeps polling when a planning session fetch fails", async () => {
+    vi.useFakeTimers();
+    const client = createPlannerClient({
+      createResults: [success(planningSession)],
+      fetchResults: [
+        {
+          ok: false,
+          error: {
+            kind: "http",
+            status: 502,
+            message: "Planner status is temporarily unavailable."
+          }
+        },
+        success(readySession)
+      ]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4 around £50");
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+      await Promise.resolve();
+    });
+
+    expect(result.current.state.status).toBe("planning");
+    expect(result.current.state.session?.planner_session_id).toBe("planner-1");
+    expect(result.current.reset()).toBe(false);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+      await Promise.resolve();
+    });
+
+    expect(client.fetchSession).toHaveBeenCalledTimes(2);
+    expect(result.current.state.status).toBe("proposal_ready");
+  });
+
   test("loads disabled planner status and blocks prompt submission", async () => {
     const client = createPlannerClient({
       statusResult: success({
@@ -556,7 +626,7 @@ describe("usePlanner", () => {
     expect(result.current.state.message).toBe("One item is no longer available.");
   });
 
-  test("keeps the final line in each package course", async () => {
+  test("removes the final line in a course", async () => {
     const client = createPlannerClient({
       createResults: [success(readySession)]
     });
@@ -570,11 +640,13 @@ describe("usePlanner", () => {
       result.current.removeLine("tiramisu-cup-single");
     });
 
-    expect(result.current.draftProposal?.line_count).toBe(3);
+    expect(result.current.draftProposal?.line_count).toBe(2);
+    expect(result.current.draftProposal?.item_count).toBe(3);
+    expect(result.current.draftProposal?.total_minor).toBe(1345);
     expect(
       result.current.draftProposal?.courses.find((course) => course.course === "dessert")
         ?.lines
-    ).toHaveLength(1);
+    ).toBeUndefined();
   });
 
   test("accepts a proposal into the selected basket mode", async () => {
