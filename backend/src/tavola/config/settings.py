@@ -2,6 +2,8 @@ import os
 from dataclasses import dataclass, field
 from typing import Literal
 
+from dotenv import find_dotenv, load_dotenv
+
 CodexSandboxMode = Literal["read-only", "workspace-write", "danger-full-access"]
 CodexReasoningEffort = Literal[
     "sdk-default",
@@ -20,6 +22,17 @@ class MissingPlannerCodexCredentialsError(RuntimeError):
     """Raised when real Codex is required but no credential source is configured."""
 
 
+_DOTENV_LOADED = False
+
+
+def _load_dotenv_once() -> None:
+    global _DOTENV_LOADED
+    if _DOTENV_LOADED:
+        return
+    load_dotenv(find_dotenv())
+    _DOTENV_LOADED = True
+
+
 @dataclass(frozen=True, slots=True)
 class PlannerRuntimeStatus:
     enabled: bool
@@ -28,10 +41,12 @@ class PlannerRuntimeStatus:
 
 
 def _env_str(name: str, default: str) -> str:
+    _load_dotenv_once()
     return os.environ.get(name, default)
 
 
 def _env_bool(name: str, default: bool) -> bool:
+    _load_dotenv_once()
     raw_value = os.environ.get(name)
     if raw_value is None:
         return default
@@ -47,6 +62,7 @@ def _env_bool(name: str, default: bool) -> bool:
 
 
 def _env_positive_int(name: str, default: int) -> int:
+    _load_dotenv_once()
     raw_value = os.environ.get(name)
     if raw_value is None:
         return default
@@ -59,6 +75,7 @@ def _env_positive_int(name: str, default: int) -> int:
 
 
 def _env_non_negative_int(name: str, default: int) -> int:
+    _load_dotenv_once()
     raw_value = os.environ.get(name)
     if raw_value is None:
         return default
@@ -116,6 +133,7 @@ def _env_missing_credentials_behavior() -> MissingCredentialsBehavior:
 
 
 def _env_codex_credentials_configured() -> bool:
+    _load_dotenv_once()
     if os.environ.get("OPENAI_API_KEY"):
         return True
     return _env_bool("TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED", False)
