@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-
+import { QuantityStepper } from "../../components/QuantityStepper";
 import { formatBasketMoney } from "./basketFormat";
 import { getCatalogImageAsset } from "../catalog/catalogImages";
 import type { BasketLine } from "../../types/basket";
@@ -17,12 +16,6 @@ export function BasketLineItem({
   onRemoveLine,
   onSetLineQuantity
 }: BasketLineItemProps) {
-  const [draftQuantity, setDraftQuantity] = useState(String(line.quantity));
-
-  useEffect(() => {
-    setDraftQuantity(String(line.quantity));
-  }, [line.quantity]);
-
   const unitPrice = formatBasketMoney({
     amount_minor: line.unit_price_minor,
     currency: line.currency
@@ -32,24 +25,6 @@ export function BasketLineItem({
     currency: line.currency
   });
   const image = getCatalogImageAsset(line.image_id, line.name);
-
-  function submitDraftQuantity() {
-    if (isPending) {
-      setDraftQuantity(String(line.quantity));
-      return;
-    }
-
-    const nextQuantity = Number.parseInt(draftQuantity, 10);
-
-    if (!Number.isInteger(nextQuantity) || nextQuantity < 1) {
-      setDraftQuantity(String(line.quantity));
-      return;
-    }
-
-    if (nextQuantity !== line.quantity) {
-      onSetLineQuantity(line.sku_id, nextQuantity);
-    }
-  }
 
   return (
     <li className="basket-line" aria-label={line.name}>
@@ -74,42 +49,18 @@ export function BasketLineItem({
         </div>
 
         <div className="basket-line__controls">
-          <div
+          <QuantityStepper
             className="basket-line__quantity"
-            aria-label={`${line.name} quantity`}
-          >
-            <button
-              aria-label={`Decrease ${line.name} quantity`}
-              disabled={isPending || line.quantity <= 1}
-              onClick={() => onSetLineQuantity(line.sku_id, line.quantity - 1)}
-              type="button"
-            >
-              -
-            </button>
-            <input
-              aria-label={`Quantity for ${line.name}`}
-              disabled={isPending}
-              inputMode="numeric"
-              min={1}
-              onBlur={submitDraftQuantity}
-              onChange={(event) => setDraftQuantity(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.currentTarget.blur();
-                }
-              }}
-              type="number"
-              value={draftQuantity}
-            />
-            <button
-              aria-label={`Increase ${line.name} quantity`}
-              disabled={isPending}
-              onClick={() => onSetLineQuantity(line.sku_id, line.quantity + 1)}
-              type="button"
-            >
-              +
-            </button>
-          </div>
+            decreaseLabel={`Decrease ${line.name} quantity`}
+            disabled={isPending}
+            groupLabel={`${line.name} quantity`}
+            increaseLabel={`Increase ${line.name} quantity`}
+            inputLabel={`Quantity for ${line.name}`}
+            quantity={line.quantity}
+            onQuantityChange={(quantity) =>
+              onSetLineQuantity(line.sku_id, quantity)
+            }
+          />
           <button
             aria-label={`Remove ${line.name} from basket`}
             className="basket-line__remove"

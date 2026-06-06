@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 
+import { QuantityStepper } from "../../components/QuantityStepper";
 import { formatBasketMoney } from "../basket/basketFormat";
 import { getCatalogImageAsset } from "../catalog/catalogImages";
 import type { Basket } from "../../types/basket";
@@ -643,13 +644,6 @@ function ProposalLineItem({
     currency: line.currency
   });
 
-  function updateQuantity(value: string) {
-    const quantity = Number.parseInt(value, 10);
-    if (Number.isInteger(quantity) && quantity > 0) {
-      onSetLineQuantity(line.sku_id, quantity);
-    }
-  }
-
   return (
     <li className="planner-line" aria-label={lineName}>
       <span aria-hidden="true" className="planner-line__rail" />
@@ -661,43 +655,43 @@ function ProposalLineItem({
         width={image.width}
       />
       <div className="planner-line__body">
-        <div className="planner-line__summary">
-          <div>
-            <h5>{lineName}</h5>
-            <p>
-              {line.unit_label} · {unitPrice} each
-            </p>
-          </div>
-          <strong>{lineTotal}</strong>
+        <div className="planner-line__copy">
+          <h5>{lineName}</h5>
+          <p>
+            {line.unit_label} · {unitPrice} each
+          </p>
+          <p className="planner-line__rationale">
+            {customerPlannerText(line.rationale)}
+          </p>
         </div>
-        <p className="planner-line__rationale">
-          {customerPlannerText(line.rationale)}
-        </p>
-        {isReadOnly ? null : (
-          <div className="planner-line__controls">
-            <label>
-              <span>Quantity for {lineName}</span>
-              <input
+        <div className="planner-line__commerce">
+          <strong>{lineTotal}</strong>
+          {isReadOnly ? null : (
+            <div className="planner-line__controls">
+              <QuantityStepper
+                className="planner-line__quantity"
+                decreaseLabel={`Decrease ${lineName} quantity`}
                 disabled={isDisabled}
-                inputMode="numeric"
-                min={1}
-                onBlur={(event) => updateQuantity(event.currentTarget.value)}
-                onChange={(event) => updateQuantity(event.currentTarget.value)}
-                type="number"
-                value={line.quantity}
+                groupLabel={`${lineName} quantity`}
+                increaseLabel={`Increase ${lineName} quantity`}
+                inputLabel={`Quantity for ${lineName}`}
+                quantity={line.quantity}
+                onQuantityChange={(quantity) =>
+                  onSetLineQuantity(line.sku_id, quantity)
+                }
               />
-            </label>
-            <button
-              aria-label={`Remove ${lineName} from proposal`}
-              className="planner-action--secondary"
-              disabled={isDisabled}
-              onClick={() => onRemoveLine(line.sku_id)}
-              type="button"
-            >
-              Remove
-            </button>
-          </div>
-        )}
+              <button
+                aria-label={`Remove ${lineName} from proposal`}
+                className="planner-action--secondary planner-line__remove"
+                disabled={isDisabled}
+                onClick={() => onRemoveLine(line.sku_id)}
+                type="button"
+              >
+                Remove
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </li>
   );
