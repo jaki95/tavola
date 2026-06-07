@@ -50,6 +50,11 @@ below 30 seconds for an acceptable demo run. Runs above 30 seconds are benchmark
 misses even when the Planning UX remains customer-safe and the backend continues
 until the 60-second technical timeout.
 
+These benchmarks are historical/operator evidence only. They must not define
+customer-facing progress copy. During Planning, the UI should show backend-owned
+Planning updates emitted by Tavola's session lifecycle, and should not invent
+elapsed-time phases or later steps from a timer.
+
 Use only the Codex SDK runtime path for benchmark decisions. Do not benchmark or
 select a fake runtime planner, direct Responses API fallback, or alternate model
 route outside the SDK.
@@ -96,13 +101,14 @@ Do not record prompts beyond the approved persona labels, raw Codex transcripts,
 tool arguments, final proposal JSON, customer personal details, credential
 paths, token values, stack traces, or SDK trace output.
 
-Previous latency evidence showed Tavola MCP handlers were effectively instant:
-the live `Vegetarian dinner for 4 around GBP 50` trace spent about 2 ms in MCP
-tool handlers and about 50 seconds outside those handlers. Treat new benchmark
-work as Codex SDK/model/config and UX evidence unless timing data proves a
-different backend bottleneck.
+Historical benchmark evidence from the 2026-06-04 real Codex SDK run showed
+Tavola MCP handlers were effectively instant: the live
+`Vegetarian dinner for 4 around GBP 50` trace spent about 2 ms in MCP tool
+handlers and about 50 seconds outside those handlers. Treat new benchmark work
+as Codex SDK/model/config and UX evidence unless timing data proves a different
+backend bottleneck.
 
-Latest benchmark decision from the 2026-06-04 real Codex SDK run:
+Historical benchmark decision from the 2026-06-04 real Codex SDK run:
 
 ```text
 model: gpt-5.5
@@ -130,6 +136,12 @@ than as generic search.
 The planner surface should show the small `powered by Codex` attribution. Basket
 and checkout copy should return to Tavola meal-plan language after the proposal
 is accepted.
+
+While a session is Planning, the planner surface should show only backend-owned
+Planning updates returned by the session API. Suitable narration is Tavola
+checking the catalog, composing the menu, validating products, and calculating
+prices. Do not describe timer-based progress, elapsed thresholds, SDK internals,
+or Codex trace events as customer-visible Planner UX.
 
 ## Language Rules
 

@@ -137,6 +137,10 @@ backend-provided Planning updates.
 
 ### Task 2.1: Parse Planning Updates In The Frontend
 
+- **Status**: Completed 2026-06-07. Added frontend Planning update stage/types,
+  required API response parsing, invalid-shape rejection, and update-message
+  sanitization through the planner text sanitizer.
+
 - **Location**:
   - `frontend/src/types/planner.ts`
   - `frontend/src/api/planner.ts`
@@ -154,6 +158,9 @@ backend-provided Planning updates.
 
 ### Task 2.2: Remove Elapsed-Time Progress State
 
+- **Status**: Completed 2026-06-07. Removed elapsed-time state/interval from
+  `usePlanner`; Planning UI state now exposes backend session updates only.
+
 - **Location**:
   - `frontend/src/features/planner/usePlanner.ts`
   - `frontend/src/features/planner/usePlanner.test.ts`
@@ -170,6 +177,10 @@ backend-provided Planning updates.
   - `cd frontend && npm test -- usePlanner`
 
 ### Task 2.3: Render Backend Updates In PlannerWorkspace
+
+- **Status**: Completed 2026-06-07. `PlannerWorkspace` renders latest backend
+  Planning update in a polite live region, shows update history only during
+  Planning, and collapses terminal states to follow-up/proposal/failure UI.
 
 - **Location**:
   - `frontend/src/features/planner/PlannerWorkspace.tsx`
@@ -189,6 +200,12 @@ backend-provided Planning updates.
   - `cd frontend && npm test -- PlannerWorkspace App`
 
 ### Task 2.4: Verify And Update Docs
+
+- **Status**: Completed 2026-06-07. Updated planner docs from elapsed-time UX to
+  backend-owned Planning updates; focused/full test suites, build, lint, and
+  real browser checks completed. Browser typing-dependent follow-up/edit checks
+  were blocked by the in-app browser clipboard integration and are reported in
+  handoff.
 
 - **Location**:
   - `docs/frontend-browser-approval-check.md`

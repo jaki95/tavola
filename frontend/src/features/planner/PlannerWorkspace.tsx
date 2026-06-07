@@ -12,7 +12,9 @@ import type { CatalogProductDetail } from "../../types/catalog";
 import type {
   AcceptMenuProposalMode,
   MenuProposal,
-  MenuProposalLine
+  MenuProposalLine,
+  PlanningUpdate,
+  PlanningUpdateStage
 } from "../../types/planner";
 import { usePlanner, type PlannerClient } from "./usePlanner";
 
@@ -232,8 +234,9 @@ export function PlannerWorkspace({
         </p>
       ) : null}
 
-      {planner.state.status === "planning" ? (
-        <PlanningStatus elapsedMs={planner.planningElapsedMs} />
+      {planner.state.status === "planning" &&
+      planner.state.session?.planning_updates.length ? (
+        <PlanningStatus updates={planner.state.session.planning_updates} />
       ) : null}
 
       {planner.state.status === "failed" ||
@@ -299,12 +302,12 @@ export function PlannerWorkspace({
 function PlannerTrust() {
   return (
     <aside className="planner-trust" aria-label="Planner validation promise">
-      <strong>Tavola validates before Basket changes.</strong>
+      <strong>Tavola checks every proposal before Basket changes.</strong>
       <ul>
-        <li>Real Products from the catalog</li>
-        <li>Prices come from Tavola's catalog</li>
-        <li>Dietary requests checked against product labels</li>
-        <li>Menu proposal shown for review</li>
+        <li>Catalog products only</li>
+        <li>Tavola prices and totals</li>
+        <li>Product labels checked</li>
+        <li>Review before adding</li>
       </ul>
     </aside>
   );
@@ -329,75 +332,76 @@ function mapPlannerProductDetailResult(
   };
 }
 
-function PlanningStatus({ elapsedMs }: { elapsedMs: number | null }) {
-  const progress = planningProgress(elapsedMs);
+function PlanningStatus({ updates }: { updates: PlanningUpdate[] }) {
+  const latestUpdate = updates.at(-1);
+  const latestTimelineIndex = latestUpdate
+    ? timelineIndexForStage(latestUpdate.stage)
+    : -1;
+
+  if (!latestUpdate) {
+    return null;
+  }
 
   return (
-    <section
-      aria-label="Planning updates"
-      aria-live="polite"
-      className="planner-live"
-      role="status"
-    >
+    <section aria-label="Planning updates" className="planner-live">
       <div className="planner-live__summary">
         <span aria-hidden="true" className="planner-live__signal" />
         <div>
-          <p>{progress.message}</p>
+          <p aria-live="polite" role="status">
+            {customerPlannerText(latestUpdate.message)}
+          </p>
         </div>
       </div>
-      <ol className="planner-live__steps" aria-label="Planning progress">
-        {planningSteps.map((step, index) => (
-          <li
-            className={
-              index < progress.activeIndex
-                ? "planner-live__step planner-live__step--done"
-                : index === progress.activeIndex
-                  ? "planner-live__step planner-live__step--active"
-                  : "planner-live__step"
-            }
-            key={step}
-          >
-            {step}
-          </li>
-        ))}
+      <ol className="planner-live__steps" aria-label="Planning update history">
+        {planningTimeline.map((timelineItem, index) => {
+          const update = updates.find(
+            (candidate) => candidate.stage === timelineItem.stage
+          );
+          const stepClass =
+            latestTimelineIndex === -1 || index > latestTimelineIndex
+              ? "planner-live__step"
+              : index === latestTimelineIndex
+                ? "planner-live__step planner-live__step--active"
+                : "planner-live__step planner-live__step--done";
+
+          return (
+            <li
+              aria-current={index === latestTimelineIndex ? "step" : undefined}
+              className={stepClass}
+              key={timelineItem.stage}
+            >
+              {update
+                ? customerPlannerText(update.message)
+                : timelineItem.pendingLabel}
+              {index === latestTimelineIndex ? (
+                <span aria-hidden="true" className="planner-live__ellipsis">
+                  <span>.</span>
+                  <span>.</span>
+                  <span>.</span>
+                </span>
+              ) : null}
+            </li>
+          );
+        })}
       </ol>
     </section>
   );
 }
 
-const planningSteps = ["Catalog", "Menu shape", "Prices", "Review"];
+const planningTimeline: Array<{
+  stage: PlanningUpdateStage;
+  pendingLabel: string;
+}> = [
+  { stage: "queued", pendingLabel: "Sending request" },
+  { stage: "planning", pendingLabel: "Checking catalog" },
+  { stage: "validating", pendingLabel: "Reviewing products" }
+];
 
-function planningProgress(elapsedMs: number | null): {
-  activeIndex: number;
-  message: string;
-} {
-  const elapsed = elapsedMs ?? 0;
+function timelineIndexForStage(stage: PlanningUpdateStage): number {
+  const visibleStage =
+    stage === "started" || stage === "connecting" ? "queued" : stage;
 
-  if (elapsed >= 30_000) {
-    return {
-      activeIndex: 3,
-      message: "Tavola is checking the proposal before review."
-    };
-  }
-
-  if (elapsed >= 15_000) {
-    return {
-      activeIndex: 2,
-      message: "Validating products and prices."
-    };
-  }
-
-  if (elapsed >= 5_000) {
-    return {
-      activeIndex: 1,
-      message: "Checking the catalog and shaping a menu."
-    };
-  }
-
-  return {
-    activeIndex: 0,
-    message: "Tavola is planning your menu."
-  };
+  return planningTimeline.findIndex((item) => item.stage === visibleStage);
 }
 
 function ProposalReview({
@@ -784,6 +788,17 @@ function customerPlannerText(value: string): string {
   return value
     .replace(/\bTavola tools\b/gi, "Tavola checks")
     .replace(/\bplanner tool execution\b/gi, "planner checks")
+    .replace(/\bTavola is getting your menu request ready\./gi, "Sending request")
+    .replace(/\bPlanning has started\./gi, "Sending request")
+    .replace(/\bConnecting to Tavola's planner\./gi, "Preparing Tavola's menu checks.")
+    .replace(/\bPreparing Tavola's menu checks\./gi, "Sending request")
+    .replace(/\bPreparing your menu plan\./gi, "Sending request")
+    .replace(/\bRequest received\./gi, "Sending request")
+    .replace(/\bStarting request\./gi, "Sending request")
+    .replace(/\bRequest queued\./gi, "Sending request")
+    .replace(/\bChecking the menu against Tavola's catalog\./gi, "Reviewing products and prices")
+    .replace(/\bChecking Tavola's catalog\./gi, "Checking Tavola's catalog")
+    .replace(/\bReviewing products and prices\./gi, "Reviewing products and prices")
     .replace(/\bpackage templates\b/gi, "menu plans")
     .replace(/\bpackage template\b/gi, "menu plan")
     .replace(/\btemplates\b/gi, "menu plans")

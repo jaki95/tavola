@@ -132,7 +132,11 @@ const readySession: PlannerSessionResponse = {
   follow_up_answers: [],
   follow_up_question: null,
   menu_proposal: proposal,
-  validation_errors: []
+  validation_errors: [],
+  planning_updates: [
+    { stage: "queued", message: "Sending request" },
+    { stage: "ready", message: "Your menu proposal is ready to review." }
+  ]
 };
 
 const planningSession: PlannerSessionResponse = {
@@ -142,7 +146,10 @@ const planningSession: PlannerSessionResponse = {
   follow_up_answers: [],
   follow_up_question: null,
   menu_proposal: null,
-  validation_errors: []
+  validation_errors: [],
+  planning_updates: [
+    { stage: "queued", message: "Sending request" }
+  ]
 };
 
 const pairedAntipastoSession: PlannerSessionResponse = {
@@ -157,7 +164,11 @@ const needsInputSession: PlannerSessionResponse = {
   follow_up_answers: [],
   follow_up_question: "How many people are you serving?",
   menu_proposal: null,
-  validation_errors: []
+  validation_errors: [],
+  planning_updates: [
+    { stage: "queued", message: "Sending request" },
+    { stage: "needs_input", message: "Tavola needs one more detail." }
+  ]
 };
 
 const updatedBasket: Basket = {
@@ -245,36 +256,52 @@ describe("usePlanner", () => {
     expect(result.current.draftProposal?.title).toBe("Vegetarian dinner for four");
   });
 
-  test("tracks elapsed time while a planner request is planning", async () => {
+  test("exposes planning updates from the latest polled session", async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-06-04T12:00:00Z"));
-    const deferredCreate = createDeferred<ApiResult<PlannerSessionResponse>>();
+    const startedSession: PlannerSessionResponse = {
+      ...planningSession,
+      planning_updates: [
+        ...planningSession.planning_updates,
+        { stage: "started", message: "Sending request" }
+      ]
+    };
+    const catalogSession: PlannerSessionResponse = {
+      ...planningSession,
+      planning_updates: [
+        ...startedSession.planning_updates,
+        { stage: "planning", message: "Checking Tavola's catalog" }
+      ]
+    };
     const client = createPlannerClient({
-      createResults: [deferredCreate.promise]
+      createResults: [success(startedSession)],
+      fetchResults: [success(catalogSession), success(readySession)]
     });
     const { result } = renderHook(() => usePlanner({ client }));
 
-    let submitPromise!: Promise<void>;
-    act(() => {
-      submitPromise = result.current.submitPrompt("Vegetarian dinner for 4");
+    await act(async () => {
+      await result.current.submitPrompt("Vegetarian dinner for 4");
     });
 
     expect(result.current.state.status).toBe("planning");
-    expect(result.current.planningElapsedMs).toBe(0);
-
-    act(() => {
-      vi.advanceTimersByTime(7_000);
-    });
-
-    expect(result.current.planningElapsedMs).toBe(7_000);
+    expect(result.current.state.session?.planning_updates.at(-1)?.message).toBe(
+      "Sending request"
+    );
+    expect(result.current).not.toHaveProperty("planningElapsedMs");
 
     await act(async () => {
-      deferredCreate.resolve(success(readySession));
-      await submitPromise;
+      await vi.advanceTimersByTimeAsync(2_000);
+    });
+
+    expect(result.current.state.status).toBe("planning");
+    expect(result.current.state.session?.planning_updates.at(-1)?.message).toBe(
+      "Checking Tavola's catalog"
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
     });
 
     expect(result.current.state.status).toBe("proposal_ready");
-    expect(result.current.planningElapsedMs).toBeNull();
   });
 
   test("keeps the original request visible while answering a follow-up", async () => {
@@ -283,7 +310,11 @@ describe("usePlanner", () => {
       ...planningSession,
       planner_session_id: "planner-2",
       customer_request: "Plan a dinner",
-      follow_up_answers: ["4 people"]
+      follow_up_answers: ["4 people"],
+      planning_updates: [
+        ...needsInputSession.planning_updates,
+        { stage: "queued", message: "Tavola is getting your updated menu request ready." }
+      ]
     };
     const client = createPlannerClient({
       createResults: [success(needsInputSession)],
@@ -488,7 +519,35 @@ describe("usePlanner", () => {
     expect(result.current.state.message).toBe(
       "The Tavola API returned an invalid planner response."
     );
-    expect(result.current.planningElapsedMs).toBeNull();
+  });
+
+  test("fails instead of spinning forever when the planning session disappears", async () => {
+    vi.useFakeTimers();
+    const client = createPlannerClient({
+      createResults: [success(planningSession)],
+      fetchResults: [
+        {
+          ok: false,
+          error: {
+            kind: "http",
+            status: 404,
+            message: "Planner session not found."
+          }
+        }
+      ]
+    });
+    const { result } = renderHook(() => usePlanner({ client }));
+
+    await act(async () => {
+      await result.current.submitPrompt("Dinner with drinks for 6");
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
+      await Promise.resolve();
+    });
+
+    expect(result.current.state.status).toBe("failed");
+    expect(result.current.state.message).toBe("Planner session not found.");
   });
 
   test("loads disabled planner status and blocks prompt submission", async () => {

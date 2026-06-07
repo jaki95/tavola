@@ -113,6 +113,11 @@ technical timeout, and missing configuration exit nonzero. Do not paste prompts,
 raw Codex transcripts, tool arguments, credentials, stack traces, or proposal
 JSON into handoff notes.
 
+Benchmark classes and elapsed timings are historical/operator evidence, not
+customer-facing progress UX. The Planner UI should render backend-owned Planning
+updates returned by the session API while status is `planning`; it should not
+derive progress phases from elapsed time.
+
 Use this benchmark handoff format after at least three repeats of the primary
 persona:
 
@@ -128,10 +133,10 @@ decision: <below 10s achieved|below 30s accepted|above 30s demo slow-path>
 
 The primary persona is `Vegetarian dinner for 4 around GBP 50`. Use
 `docs/demo-codex-planner.md` for the broader browser demo personas and
-customer-facing acceptance checks. Previous sanitized traces showed Tavola MCP
-tool handlers taking about 2 ms during a roughly 50-second live run, so benchmark
-decisions should focus on Codex SDK model/config behavior unless new timing
-events show a different bottleneck.
+customer-facing acceptance checks. Historical sanitized traces from 2026-06-04
+showed Tavola MCP tool handlers taking about 2 ms during a roughly 50-second
+live run, so benchmark decisions should focus on Codex SDK model/config behavior
+unless new timing events show a different bottleneck.
 
 The installed `openai-codex` SDK accepts model names as strings; public model
 documentation is not proof that a model is available through the active local
