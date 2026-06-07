@@ -52,20 +52,26 @@ export function BasketLineItem({
           <QuantityStepper
             className="basket-line__quantity"
             decreaseLabel={`Decrease ${line.name} quantity`}
-            disabled={isPending}
+            disabled={false}
             groupLabel={`${line.name} quantity`}
             increaseLabel={`Increase ${line.name} quantity`}
             inputLabel={`Quantity for ${line.name}`}
             quantity={line.quantity}
-            onQuantityChange={(quantity) =>
-              onSetLineQuantity(line.sku_id, quantity)
-            }
+            onQuantityChange={(quantity) => {
+              if (!isPending) {
+                onSetLineQuantity(line.sku_id, quantity);
+              }
+            }}
           />
           <button
             aria-label={`Remove ${line.name} from basket`}
+            aria-disabled={isPending}
             className="basket-line__remove"
-            disabled={isPending}
-            onClick={() => onRemoveLine(line.sku_id)}
+            onClick={() => {
+              if (!isPending) {
+                onRemoveLine(line.sku_id);
+              }
+            }}
             type="button"
           >
             Remove

@@ -253,8 +253,9 @@ describe("BasketPanel", () => {
     );
   });
 
-  test("disables only the changing basket line while a mutation is pending", () => {
+  test("keeps basket controls visually stable while a line mutation is pending", () => {
     const onSetLineQuantity = vi.fn();
+    const onRemoveLine = vi.fn();
 
     renderBasketPanel({
       basket: {
@@ -267,6 +268,7 @@ describe("BasketPanel", () => {
         skuId: "fresh-tagliatelle-250g",
         action: "set"
       },
+      onRemoveLine,
       onSetLineQuantity
     });
 
@@ -280,17 +282,17 @@ describe("BasketPanel", () => {
       "Quantity for Fresh Tagliatelle"
     );
 
-    expect(quantityInput).toBeDisabled();
+    expect(quantityInput).toBeEnabled();
     expect(
       within(tagliatelleLine).getByRole("button", {
         name: "Increase Fresh Tagliatelle quantity"
       })
-    ).toBeDisabled();
-    expect(
-      within(tagliatelleLine).getByRole("button", {
-        name: "Remove Fresh Tagliatelle from basket"
-      })
-    ).toBeDisabled();
+    ).toBeEnabled();
+    const pendingRemoveButton = within(tagliatelleLine).getByRole("button", {
+      name: "Remove Fresh Tagliatelle from basket"
+    });
+    expect(pendingRemoveButton).toBeEnabled();
+    expect(pendingRemoveButton).toHaveAttribute("aria-disabled", "true");
     expect(
       within(ravioliLine).getByRole("button", {
         name: "Increase Ricotta Spinach Ravioli quantity"
@@ -301,11 +303,16 @@ describe("BasketPanel", () => {
         name: "Remove Ricotta Spinach Ravioli from basket"
       })
     ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Review and checkout" })
+    ).toBeEnabled();
 
     fireEvent.change(quantityInput, { target: { value: "4" } });
     fireEvent.blur(quantityInput);
+    fireEvent.click(pendingRemoveButton);
 
     expect(onSetLineQuantity).not.toHaveBeenCalled();
+    expect(onRemoveLine).not.toHaveBeenCalled();
   });
 });
 

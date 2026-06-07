@@ -208,7 +208,7 @@ describe("CatalogGrid", () => {
     expect(within(productCard).getByTitle("2 in basket")).toHaveTextContent("2");
   });
 
-  test("shows pending feedback only on the product being added", () => {
+  test("keeps catalog add controls visually stable while a product is being added", () => {
     render(
       <CatalogGrid
         basketQuantities={{
@@ -223,9 +223,13 @@ describe("CatalogGrid", () => {
       />
     );
 
-    expect(
-      screen.getByRole("button", { name: "Adding Fresh Tagliatelle to basket" })
-    ).toBeDisabled();
+    const pendingAddButton = screen.getByRole("button", {
+      name: "Add another Fresh Tagliatelle to basket, 2 in basket"
+    });
+    expect(pendingAddButton).toBeEnabled();
+    expect(pendingAddButton).toHaveAttribute("aria-disabled", "true");
+    expect(within(pendingAddButton).getByText("Add")).toBeInTheDocument();
+    expect(screen.getByTitle("2 in basket")).toHaveTextContent("2");
     expect(
       screen.getByRole("button", {
         name: "Add another Ricotta Spinach Ravioli to basket, 1 in basket"

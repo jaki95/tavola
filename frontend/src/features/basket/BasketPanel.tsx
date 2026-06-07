@@ -25,8 +25,7 @@ export function BasketPanel({
   const pendingSkuId = isPending ? mutation.skuId : null;
   const canCheckout =
     basket.status === "success" &&
-    Boolean(visibleBasket && visibleBasket.lines.length > 0) &&
-    !isPending;
+    Boolean(visibleBasket && visibleBasket.lines.length > 0);
 
   return (
     <section

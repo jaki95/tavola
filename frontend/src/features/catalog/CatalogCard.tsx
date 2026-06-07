@@ -60,7 +60,7 @@ export function CatalogCard({
             <span aria-hidden="true">i</span>
           </button>
           <div className="catalog-card__basket-action">
-            {isInBasket && !isAddPending ? (
+            {isInBasket ? (
               <span
                 aria-live="polite"
                 className="catalog-card__basket-quantity"
@@ -71,18 +71,20 @@ export function CatalogCard({
             ) : null}
             <button
               aria-label={
-                isAddPending
-                  ? `Adding ${product.name} to basket`
-                  : `${isInBasket ? "Add another" : "Add"} ${product.name} to basket${
-                      isInBasket ? `, ${basketQuantityLabel}` : ""
-                    }`
+                `${isInBasket ? "Add another" : "Add"} ${product.name} to basket${
+                  isInBasket ? `, ${basketQuantityLabel}` : ""
+                }`
               }
+              aria-disabled={isAddPending}
               className="catalog-card__add catalog-add-button"
-              disabled={isAddPending}
               type="button"
-              onClick={() => onAddProduct(product.sku_id, 1)}
+              onClick={() => {
+                if (!isAddPending) {
+                  onAddProduct(product.sku_id, 1);
+                }
+              }}
             >
-              <span>{isAddPending ? "Adding" : "Add"}</span>
+              <span>Add</span>
             </button>
           </div>
         </div>
