@@ -221,10 +221,6 @@ function sanitizePlannerSessionResponse(
       response.follow_up_question === null
         ? null
         : sanitizeCustomerPlannerText(response.follow_up_question),
-    menu_proposal:
-      response.menu_proposal === null
-        ? null
-        : sanitizeMenuProposal(response.menu_proposal),
     validation_errors: response.validation_errors.map((error) => ({
       ...error,
       message: sanitizeCustomerPlannerText(error.message)
@@ -233,29 +229,6 @@ function sanitizePlannerSessionResponse(
       ...update,
       message: sanitizeCustomerPlannerText(update.message)
     }))
-  };
-}
-
-function sanitizeMenuProposal(proposal: MenuProposal): MenuProposal {
-  return {
-    ...proposal,
-    title: sanitizeCustomerPlannerText(proposal.title),
-    explanation: sanitizeCustomerPlannerText(proposal.explanation),
-    planner_notes: proposal.planner_notes.map((note) => ({
-      ...note,
-      message: sanitizeCustomerPlannerText(note.message)
-    })),
-    courses: proposal.courses.map((course) => ({
-      ...course,
-      course_label: sanitizeCustomerPlannerText(course.course_label),
-      lines: course.lines.map((line) => ({
-        ...line,
-        name: sanitizeCustomerPlannerText(line.name),
-        category_label: sanitizeCustomerPlannerText(line.category_label),
-        rationale: sanitizeCustomerPlannerText(line.rationale)
-      }))
-    })),
-    warnings: proposal.warnings.map(sanitizeCustomerPlannerText)
   };
 }
 
