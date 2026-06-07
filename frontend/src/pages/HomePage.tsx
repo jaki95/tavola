@@ -22,6 +22,10 @@ export function HomePage() {
   const [hasUnseenPlanProposal, setHasUnseenPlanProposal] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const isBasketMutationPending = basket.mutation.status === "pending";
+  const pendingAddSkuId =
+    basket.mutation.status === "pending" && basket.mutation.action === "add"
+      ? basket.mutation.skuId
+      : null;
   const isBasketUpdating =
     isBasketMutationPending || basket.basket.status === "loading";
   const basketQuantities = getBasketQuantities(basket.basket.basket);
@@ -81,8 +85,8 @@ export function HomePage() {
               <CatalogBrowser
                 basketQuantities={basketQuantities}
                 isActive={activeWorkflow === "shop"}
-                isAddPending={isBasketMutationPending}
                 onAddProduct={basket.addLine}
+                pendingAddSkuId={pendingAddSkuId}
               />
             </section>
             <section

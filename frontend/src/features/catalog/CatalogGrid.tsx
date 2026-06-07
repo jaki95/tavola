@@ -4,19 +4,19 @@ import type { CatalogProductSummary } from "../../types/catalog";
 type CatalogGridProps = {
   products: CatalogProductSummary[];
   basketQuantities?: Record<string, number>;
-  isAddPending?: boolean;
   onAddProduct?: (skuId: string, quantity: number) => void;
   onSelectProduct: (skuId: string) => void;
   onResetFilters: () => void;
+  pendingAddSkuId?: string | null;
 };
 
 export function CatalogGrid({
   products,
   basketQuantities = {},
-  isAddPending = false,
   onAddProduct = () => {},
   onSelectProduct,
-  onResetFilters
+  onResetFilters,
+  pendingAddSkuId = null
 }: CatalogGridProps) {
   const availableProducts = products.filter(isAvailableProduct);
 
@@ -38,7 +38,7 @@ export function CatalogGrid({
         <li key={product.sku_id}>
           <CatalogCard
             basketQuantity={basketQuantities[product.sku_id] ?? 0}
-            isAddPending={isAddPending}
+            isAddPending={pendingAddSkuId === product.sku_id}
             onAddProduct={onAddProduct}
             onSelectProduct={onSelectProduct}
             product={product}

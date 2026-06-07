@@ -20,6 +20,16 @@ const tagliatelle: CatalogProductSummary = {
   contains_alcohol: false
 };
 
+const ravioli: CatalogProductSummary = {
+  ...tagliatelle,
+  sku_id: "ricotta-spinach-ravioli-300g",
+  name: "Ricotta Spinach Ravioli",
+  unit_label: "300g",
+  unit_price_minor: 575,
+  short_description: "Fresh ravioli filled with ricotta and spinach.",
+  image_id: "ricotta-spinach-ravioli-300g"
+};
+
 describe("CatalogGrid", () => {
   test("renders backend catalog products as semantic product cards", () => {
     render(
@@ -198,20 +208,30 @@ describe("CatalogGrid", () => {
     expect(within(productCard).getByTitle("2 in basket")).toHaveTextContent("2");
   });
 
-  test("disables add actions while a basket mutation is pending", () => {
+  test("shows pending feedback only on the product being added", () => {
     render(
       <CatalogGrid
-        products={[tagliatelle]}
+        basketQuantities={{
+          "fresh-tagliatelle-250g": 2,
+          "ricotta-spinach-ravioli-300g": 1
+        }}
+        pendingAddSkuId="fresh-tagliatelle-250g"
+        products={[tagliatelle, ravioli]}
         onAddProduct={vi.fn()}
         onSelectProduct={vi.fn()}
         onResetFilters={vi.fn()}
-        isAddPending={true}
       />
     );
 
     expect(
       screen.getByRole("button", { name: "Adding Fresh Tagliatelle to basket" })
     ).toBeDisabled();
+    expect(
+      screen.getByRole("button", {
+        name: "Add another Ricotta Spinach Ravioli to basket, 1 in basket"
+      })
+    ).toBeEnabled();
+    expect(screen.getByTitle("1 in basket")).toHaveTextContent("1");
   });
 
   test("shows an empty matching-products state with reset action", () => {

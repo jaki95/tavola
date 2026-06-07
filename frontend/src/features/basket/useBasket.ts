@@ -43,11 +43,15 @@ export type BasketMutationState =
   | {
       status: "pending";
       message: null;
+      skuId: string;
+      action: BasketMutationAction;
     }
   | {
       status: "error";
       message: string;
     };
+
+export type BasketMutationAction = "add" | "set" | "remove";
 
 type UseBasketOptions = {
   client?: BasketClient;
@@ -76,6 +80,7 @@ export function useBasket({
   });
   const loadRequestId = useRef(0);
   const basketRef = useRef<Basket | null>(null);
+  const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   const applyBasket = useCallback(
     (nextBasket: Basket) => {
@@ -148,40 +153,54 @@ export function useBasket({
   }, [loadCurrentBasket]);
 
   const mutateBasket = useCallback(
-    async (mutationCall: (currentBasket: Basket) => Promise<ApiResult<Basket>>) => {
-      const currentBasket = basketRef.current;
-      if (!currentBasket) {
+    (
+      context: { skuId: string; action: BasketMutationAction },
+      mutationCall: (currentBasket: Basket) => Promise<ApiResult<Basket>>
+    ) => {
+      const runMutation = async () => {
+        const currentBasket = basketRef.current;
+        if (!currentBasket) {
+          setMutation({
+            status: "error",
+            message: "Basket is not ready yet."
+          });
+          return;
+        }
+
+        setMutation({ status: "pending", message: null, ...context });
+        const result = await mutationCall(currentBasket);
+
+        if (result.ok) {
+          applyBasket(result.data);
+          setMutation({ status: "idle", message: null });
+          return;
+        }
+
         setMutation({
           status: "error",
-          message: "Basket is not ready yet."
+          message: result.error.message
         });
-        return;
-      }
+      };
 
-      setMutation({ status: "pending", message: null });
-      const result = await mutationCall(currentBasket);
-
-      if (result.ok) {
-        applyBasket(result.data);
-        setMutation({ status: "idle", message: null });
-        return;
-      }
-
-      setMutation({
-        status: "error",
-        message: result.error.message
-      });
+      const queuedMutation = mutationQueueRef.current.then(
+        runMutation,
+        runMutation
+      );
+      mutationQueueRef.current = queuedMutation.catch(() => undefined);
+      return queuedMutation;
     },
     [applyBasket]
   );
 
   const addLine = useCallback(
     async (skuId: string, quantity: number) => {
-      await mutateBasket(async (currentBasket) =>
-        await client.addBasketLine(currentBasket.basket_id, {
-          sku_id: skuId,
-          quantity
-        })
+      await mutateBasket(
+        { skuId, action: "add" },
+        async (currentBasket) =>
+          await client.addBasketLine(currentBasket.basket_id, {
+            sku_id: skuId,
+            quantity
+          })
       );
     },
     [client, mutateBasket]
@@ -189,10 +208,12 @@ export function useBasket({
 
   const setLineQuantity = useCallback(
     async (skuId: string, quantity: number) => {
-      await mutateBasket(async (currentBasket) =>
-        await client.setBasketLineQuantity(currentBasket.basket_id, skuId, {
-          quantity
-        })
+      await mutateBasket(
+        { skuId, action: "set" },
+        async (currentBasket) =>
+          await client.setBasketLineQuantity(currentBasket.basket_id, skuId, {
+            quantity
+          })
       );
     },
     [client, mutateBasket]
@@ -200,8 +221,10 @@ export function useBasket({
 
   const removeLine = useCallback(
     async (skuId: string) => {
-      await mutateBasket(async (currentBasket) =>
-        await client.removeBasketLine(currentBasket.basket_id, skuId)
+      await mutateBasket(
+        { skuId, action: "remove" },
+        async (currentBasket) =>
+          await client.removeBasketLine(currentBasket.basket_id, skuId)
       );
     },
     [client, mutateBasket]
