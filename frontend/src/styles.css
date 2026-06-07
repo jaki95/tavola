@@ -122,7 +122,7 @@ textarea::placeholder {
 .eyebrow {
   color: var(--color-basil);
   font-size: 0.73rem;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -169,7 +169,7 @@ textarea::placeholder {
   color: var(--color-muted);
   cursor: pointer;
   font-size: 0.9rem;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1;
   white-space: nowrap;
   transition:
@@ -213,7 +213,7 @@ textarea::placeholder {
   background: rgb(45 101 68 / 10%);
   color: var(--color-basil);
   font-size: 0.68rem;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -237,7 +237,7 @@ h1 {
   color: var(--color-ink);
   font-family: var(--font-display);
   font-size: clamp(3rem, 5vw, 5.2rem);
-  font-weight: 850;
+  font-weight: 800;
   letter-spacing: 0;
   line-height: 0.92;
 }
@@ -287,7 +287,7 @@ h1 {
 .status-panel__label {
   margin: 0;
   color: var(--color-ink);
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1.05;
 }
 
@@ -415,7 +415,6 @@ h1 {
     inset 0 2px 0 rgb(74 49 28 / 5%),
     0 1px 0 rgb(255 255 255 / 72%);
   color: var(--color-ink);
-  font-family: var(--font-display);
   font-size: 1.08rem;
   line-height: 1.25;
 }
@@ -473,8 +472,9 @@ h1 {
 
 .planner-trust strong {
   color: var(--color-enamel);
-  font-size: 0.9rem;
-  line-height: 1.18;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.24;
 }
 
 .planner-trust ul {
@@ -484,8 +484,8 @@ h1 {
   padding: 0;
   color: var(--color-muted);
   font-size: 0.79rem;
-  font-weight: 750;
-  line-height: 1.25;
+  font-weight: 650;
+  line-height: 1.34;
   list-style: none;
 }
 
@@ -515,7 +515,7 @@ h1 {
 .planner-examples {
   color: var(--color-muted);
   font-size: 0.84rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .planner-request-summary {
@@ -540,18 +540,18 @@ h1 {
 }
 
 .planner-request-summary span {
-  color: var(--color-basil);
+  color: var(--color-enamel);
   font-size: 0.74rem;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1;
   text-transform: uppercase;
 }
 
 .planner-request-summary strong {
   color: var(--color-ink);
-  font-family: var(--font-display);
-  font-size: 1.08rem;
-  line-height: 1.08;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.22;
   overflow-wrap: anywhere;
 }
 
@@ -566,6 +566,8 @@ h1 {
   border-color: var(--color-hairline);
   background: rgb(255 253 247 / 82%);
   color: var(--color-muted);
+  font-size: 0.92rem;
+  font-weight: 700;
   box-shadow: inset 0 -2px 0 rgb(74 49 28 / 5%);
 }
 
@@ -598,7 +600,7 @@ h1 {
   margin: 0;
   padding: 10px 12px;
   border-radius: 7px;
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .planner-workspace__status {
@@ -648,8 +650,9 @@ h1 {
 .planner-live p {
   margin: 0;
   color: var(--color-ink);
-  font-weight: 900;
-  line-height: 1.2;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.24;
 }
 
 .planner-live__summary span:not(.planner-live__signal, .planner-live__ellipsis) {
@@ -657,7 +660,7 @@ h1 {
   margin-top: 2px;
   color: var(--color-muted);
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 650;
 }
 
 .planner-live__ellipsis {
@@ -707,7 +710,7 @@ h1 {
   margin: 0;
   color: var(--color-basil);
   font-size: 0.78rem;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1.2;
   text-transform: uppercase;
 }
@@ -742,7 +745,7 @@ h1 {
   gap: 6px;
   color: var(--color-ink);
   font-size: 0.78rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .planner-follow-up__form input {
@@ -805,7 +808,7 @@ h1 {
 .planner-proposal__totals span {
   color: var(--color-muted);
   font-size: 0.74rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -813,7 +816,7 @@ h1 {
   color: var(--color-ink);
   font-family: var(--font-display);
   font-size: 1.45rem;
-  font-weight: 850;
+  font-weight: 800;
   line-height: 1;
 }
 
@@ -843,7 +846,7 @@ h1 {
 .planner-proposal-receipt__copy span {
   color: var(--color-basil);
   font-size: 0.74rem;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1;
   text-transform: uppercase;
 }
@@ -856,7 +859,7 @@ h1 {
   margin: 0;
   color: var(--color-muted);
   font-size: 0.88rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.3;
 }
 
@@ -897,7 +900,7 @@ h1 {
 .planner-proposal-action-strip__details span {
   color: var(--color-basil);
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1;
   text-transform: uppercase;
 }
@@ -905,7 +908,7 @@ h1 {
 .planner-proposal-action-strip__details strong {
   color: var(--color-ink);
   font-size: 1rem;
-  font-weight: 950;
+  font-weight: 700;
   line-height: 1.1;
 }
 
@@ -915,7 +918,7 @@ h1 {
   margin: 0;
   color: var(--color-muted);
   font-size: 0.84rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.25;
 }
 
@@ -937,7 +940,7 @@ h1 {
   margin: 0;
   color: var(--color-tomato-dark);
   font-size: 0.84rem;
-  font-weight: 850;
+  font-weight: 700;
   line-height: 1.25;
 }
 
@@ -968,7 +971,7 @@ h1 {
   margin: 4px 0 0;
   color: var(--color-muted);
   font-size: 0.84rem;
-  font-weight: 750;
+  font-weight: 700;
   line-height: 1.28;
 }
 
@@ -1005,7 +1008,7 @@ h1 {
 
 .planner-warnings p {
   margin: 0;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .planner-courses {
@@ -1132,7 +1135,7 @@ h1 {
   font-family: var(--font-display);
   font-size: 0.86rem;
   font-style: italic;
-  font-weight: 850;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -1148,7 +1151,7 @@ h1 {
   margin: 0;
   color: var(--color-muted);
   font-size: 0.84rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .planner-line__commerce {
@@ -1160,7 +1163,7 @@ h1 {
 
 .planner-line__commerce strong {
   color: var(--color-ink);
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .planner-line__rationale {
@@ -1271,7 +1274,7 @@ h1 {
   margin: 0;
   color: var(--color-muted);
   font-size: 0.76rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -1283,7 +1286,7 @@ h1 {
   background: transparent;
   color: var(--color-muted);
   font-size: 0.82rem;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .catalog-state {
@@ -1332,7 +1335,7 @@ h1 {
   background: rgb(255 253 247 / 82%);
   color: var(--color-ink);
   cursor: pointer;
-  font-weight: 900;
+  font-weight: 700;
   box-shadow: inset 0 -2px 0 rgb(74 49 28 / 5%);
   transition:
     border-color 160ms ease,
@@ -1386,7 +1389,7 @@ h1 {
   font-family: var(--font-display);
   font-size: 1.08rem;
   font-style: italic;
-  font-weight: 850;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -1419,7 +1422,7 @@ h1 {
 .catalog-filters__search-field {
   color: var(--color-ink);
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -1451,7 +1454,7 @@ h1 {
   color: var(--color-muted);
   cursor: pointer;
   font-size: 0.8rem;
-  font-weight: 800;
+  font-weight: 700;
   transition:
     border-color 160ms ease,
     background-color 160ms ease,
@@ -1714,7 +1717,7 @@ h1 {
   margin: 0;
   color: var(--color-muted);
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -1776,7 +1779,7 @@ h1 {
 .catalog-detail__price {
   color: var(--color-ink);
   font-size: 1.08rem;
-  font-weight: 950;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -1812,7 +1815,7 @@ h1 {
 .catalog-detail__facts dt {
   color: var(--color-muted);
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -1820,7 +1823,7 @@ h1 {
 .catalog-detail__facts dd {
   margin: 2px 0 0;
   color: var(--color-ink);
-  font-weight: 900;
+  font-weight: 700;
   overflow-wrap: anywhere;
 }
 
@@ -1841,7 +1844,7 @@ h1 {
   background: var(--color-basil-soft);
   color: var(--color-basil);
   font-size: 0.68rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -1897,7 +1900,7 @@ h1 {
   background: var(--color-basil-soft);
   color: var(--color-basil);
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1;
   white-space: nowrap;
 }
@@ -1905,7 +1908,7 @@ h1 {
 .catalog-add-button__state {
   color: currentColor;
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 700;
   opacity: 0.74;
   text-transform: uppercase;
 }
@@ -1998,7 +2001,7 @@ h1 {
   color: var(--color-tomato);
   font-family: var(--font-display);
   font-size: 2.15rem;
-  font-weight: 850;
+  font-weight: 800;
   line-height: 1;
 }
 
@@ -2017,13 +2020,13 @@ h1 {
   color: var(--color-tomato);
   font-family: var(--font-display);
   font-size: 1.5rem;
-  font-weight: 850;
+  font-weight: 800;
   line-height: 1;
 }
 
 .basket-panel__summary span:last-child {
   font-size: 0.74rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -2039,7 +2042,7 @@ h1 {
   border-radius: 7px;
   background: rgb(35 90 114 / 8%);
   color: var(--color-enamel);
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .basket-panel__alert {
@@ -2051,7 +2054,7 @@ h1 {
   background: rgb(157 47 34 / 7%);
   color: var(--color-tomato-dark);
   box-shadow: inset 0 0 0 1px rgb(157 47 34 / 10%);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .basket-panel__alert p {
@@ -2154,13 +2157,13 @@ h1 {
   margin: 6px 0 0;
   color: var(--color-muted);
   font-size: 0.86rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .basket-line__summary strong {
   color: var(--color-ink);
   font-size: 0.95rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .basket-line__controls {
@@ -2209,7 +2212,7 @@ h1 {
   border-radius: 0;
   background: rgb(255 253 247 / 86%);
   color: var(--color-ink);
-  font-weight: 900;
+  font-weight: 700;
   text-align: center;
 }
 
@@ -2280,7 +2283,7 @@ h1 {
   color: var(--color-tomato);
   font-family: var(--font-display);
   font-size: 2rem;
-  font-weight: 850;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -2299,13 +2302,13 @@ h1 {
   color: var(--color-tomato);
   font-family: var(--font-display);
   font-size: 1.5rem;
-  font-weight: 850;
+  font-weight: 700;
   line-height: 1;
 }
 
 .checkout-panel__summary span:last-child {
   font-size: 0.74rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -2374,7 +2377,7 @@ h1 {
   border-top: 1px solid var(--color-hairline);
   color: var(--color-muted);
   font-size: 0.88rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .checkout-review li span:first-child {
@@ -2397,7 +2400,7 @@ h1 {
   gap: 6px;
   color: var(--color-ink);
   font-size: 0.78rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -2419,7 +2422,7 @@ h1 {
   margin: 0;
   color: var(--color-muted);
   font-size: 0.88rem;
-  font-weight: 750;
+  font-weight: 700;
   line-height: 1.38;
 }
 
@@ -2434,7 +2437,7 @@ h1 {
   margin: 0;
   padding: 10px 12px;
   border-radius: 7px;
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .checkout-panel__status {
@@ -2492,14 +2495,14 @@ h1 {
 .checkout-confirmation dt {
   color: var(--color-basil);
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
 .checkout-confirmation dd {
   margin: 2px 0 0;
   color: var(--color-ink);
-  font-weight: 900;
+  font-weight: 700;
   overflow-wrap: anywhere;
 }
 
@@ -2507,7 +2510,7 @@ h1 {
   padding: 8px 0;
   border-top: 1px solid rgb(24 85 61 / 16%);
   color: var(--color-ink);
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .checkout-panel__footer {
@@ -2675,7 +2678,7 @@ button:disabled:hover {
   color: var(--color-tomato);
   font-family: var(--font-display);
   font-size: 1.6rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .catalog-detail__unit {
