@@ -22,6 +22,7 @@ export function BasketPanel({
 }: BasketPanelProps) {
   const visibleBasket = basket.basket;
   const isPending = mutation.status === "pending";
+  const pendingSkuId = isPending ? mutation.skuId : null;
   const canCheckout =
     basket.status === "success" &&
     Boolean(visibleBasket && visibleBasket.lines.length > 0) &&
@@ -63,9 +64,9 @@ export function BasketPanel({
 
       <BasketContents
         basket={visibleBasket}
-        isPending={isPending}
         onRemoveLine={onRemoveLine}
         onSetLineQuantity={onSetLineQuantity}
+        pendingSkuId={pendingSkuId}
       />
 
       <div className="basket-panel__checkout">
@@ -96,14 +97,14 @@ function BasketSummary({ basket }: { basket: Basket | null }) {
 
 function BasketContents({
   basket,
-  isPending,
   onRemoveLine,
-  onSetLineQuantity
+  onSetLineQuantity,
+  pendingSkuId
 }: {
   basket: Basket | null;
-  isPending: boolean;
   onRemoveLine: (skuId: string) => void;
   onSetLineQuantity: (skuId: string, quantity: number) => void;
+  pendingSkuId: string | null;
 }) {
   if (!basket || basket.lines.length === 0) {
     return (
@@ -118,7 +119,7 @@ function BasketContents({
     <ul className="basket-panel__lines" aria-label="Basket lines">
       {basket.lines.map((line) => (
         <BasketLineItem
-          isPending={isPending}
+          isPending={pendingSkuId === line.sku_id}
           key={line.sku_id}
           line={line}
           onRemoveLine={onRemoveLine}

@@ -36,6 +36,29 @@ const tagliatelleBasket: Basket = {
   line_count: 1
 };
 
+const mixedBasket: Basket = {
+  basket_id: "basket-1",
+  lines: [
+    tagliatelleBasket.lines[0],
+    {
+      sku_id: "ricotta-spinach-ravioli-300g",
+      name: "Ricotta Spinach Ravioli",
+      category_id: "primi",
+      category_label: "Primi",
+      unit_label: "300g",
+      quantity: 1,
+      unit_price_minor: 575,
+      line_total_minor: 575,
+      currency: "GBP",
+      image_id: "ricotta-spinach-ravioli-300g"
+    }
+  ],
+  total_minor: 1425,
+  currency: "GBP",
+  item_count: 3,
+  line_count: 2
+};
+
 const idleMutation: BasketMutationState = {
   status: "idle",
   message: null
@@ -230,30 +253,54 @@ describe("BasketPanel", () => {
     );
   });
 
-  test("disables mutation controls while a basket mutation is pending", () => {
+  test("disables only the changing basket line while a mutation is pending", () => {
     const onSetLineQuantity = vi.fn();
 
     renderBasketPanel({
       basket: {
         status: "success",
-        basket: tagliatelleBasket
+        basket: mixedBasket
       },
       mutation: {
         status: "pending",
-        message: null
+        message: null,
+        skuId: "fresh-tagliatelle-250g",
+        action: "set"
       },
       onSetLineQuantity
     });
 
-    const quantityInput = screen.getByLabelText("Quantity for Fresh Tagliatelle");
+    const tagliatelleLine = screen.getByRole("listitem", {
+      name: /fresh tagliatelle/i
+    });
+    const ravioliLine = screen.getByRole("listitem", {
+      name: /ricotta spinach ravioli/i
+    });
+    const quantityInput = within(tagliatelleLine).getByLabelText(
+      "Quantity for Fresh Tagliatelle"
+    );
 
     expect(quantityInput).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "Increase Fresh Tagliatelle quantity" })
+      within(tagliatelleLine).getByRole("button", {
+        name: "Increase Fresh Tagliatelle quantity"
+      })
     ).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "Remove Fresh Tagliatelle from basket" })
+      within(tagliatelleLine).getByRole("button", {
+        name: "Remove Fresh Tagliatelle from basket"
+      })
     ).toBeDisabled();
+    expect(
+      within(ravioliLine).getByRole("button", {
+        name: "Increase Ricotta Spinach Ravioli quantity"
+      })
+    ).toBeEnabled();
+    expect(
+      within(ravioliLine).getByRole("button", {
+        name: "Remove Ricotta Spinach Ravioli from basket"
+      })
+    ).toBeEnabled();
 
     fireEvent.change(quantityInput, { target: { value: "4" } });
     fireEvent.blur(quantityInput);

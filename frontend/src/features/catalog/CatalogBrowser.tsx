@@ -6,15 +6,15 @@ import { useCatalogBrowser } from "./useCatalogBrowser";
 type CatalogBrowserProps = {
   basketQuantities?: Record<string, number>;
   isActive?: boolean;
-  isAddPending?: boolean;
   onAddProduct?: (skuId: string, quantity: number) => void;
+  pendingAddSkuId?: string | null;
 };
 
 export function CatalogBrowser({
   basketQuantities = {},
   isActive = true,
-  isAddPending = false,
-  onAddProduct = () => {}
+  onAddProduct = () => {},
+  pendingAddSkuId = null
 }: CatalogBrowserProps) {
   const {
     catalog,
@@ -97,10 +97,10 @@ export function CatalogBrowser({
           <div className="catalog-browser__workspace">
             <CatalogGrid
               basketQuantities={basketQuantities}
-              isAddPending={isAddPending}
               onAddProduct={onAddProduct}
               onResetFilters={resetFilters}
               onSelectProduct={openDetail}
+              pendingAddSkuId={pendingAddSkuId}
               products={catalog.products}
             />
           </div>
@@ -108,7 +108,10 @@ export function CatalogBrowser({
           <CatalogDetail
             basketQuantity={getDetailBasketQuantity(detail, basketQuantities)}
             detail={detail}
-            isAddPending={isAddPending}
+            isAddPending={
+              detail.status === "success" &&
+              pendingAddSkuId === detail.product.sku_id
+            }
             onAddProduct={onAddProduct}
             onClose={closeDetail}
           />
