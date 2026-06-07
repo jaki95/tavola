@@ -127,6 +127,30 @@ const pairedAntipastoProposal: MenuProposal = {
   line_count: 4
 };
 
+const pairedInternalCopyProposal: MenuProposal = {
+  ...pairedAntipastoProposal,
+  title: "SKU-backed dinner",
+  explanation: "A validated SKU proposal using a package template.",
+  planner_notes: [
+    {
+      note_type: "evidence",
+      source: "tavola",
+      message: "Validated by Tavola for SKU validity."
+    }
+  ],
+  courses: pairedAntipastoProposal.courses.map((course) => ({
+    ...course,
+    lines: course.lines.map((line) => ({
+      ...line,
+      rationale:
+        line.sku_id === "focaccia-genovese-piece"
+          ? "This SKU rounds out the antipasto plate."
+          : line.rationale
+    }))
+  })),
+  warnings: ["One SKU was adjusted."]
+};
+
 const readySession: PlannerSessionResponse = {
   planner_session_id: "planner-1",
   status: "proposal_ready",
@@ -157,6 +181,11 @@ const planningSession: PlannerSessionResponse = {
 const pairedAntipastoSession: PlannerSessionResponse = {
   ...readySession,
   menu_proposal: pairedAntipastoProposal
+};
+
+const pairedInternalCopySession: PlannerSessionResponse = {
+  ...readySession,
+  menu_proposal: pairedInternalCopyProposal
 };
 
 const needsInputSession: PlannerSessionResponse = {
@@ -692,6 +721,64 @@ describe("PlannerWorkspace", () => {
 
     expect(screen.queryByText("Focaccia Genovese")).not.toBeInTheDocument();
     expect(screen.getAllByText("£32.70")).toHaveLength(2);
+  });
+
+  test("preserves backend planner notes when accepting after removing a line", async () => {
+    const onBasketAccepted = vi.fn();
+    const client = createPlannerClient({
+      createResults: [success(pairedInternalCopySession)],
+      acceptResults: [
+        success({ basket: populatedBasket, meal_plan_grouping: mealPlanGrouping })
+      ]
+    });
+
+    renderPlannerWorkspace({ client, onBasketAccepted });
+    submitReadyPrompt();
+
+    expect(
+      await screen.findByRole("heading", { name: "product-backed dinner" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("A validated product proposal using a menu plan.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Validated by Tavola for product validity.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("This product rounds out the antipasto plate.")
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remove Focaccia Genovese from proposal" })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add to basket" }));
+
+    await waitFor(() => {
+      expect(client.acceptProposal).toHaveBeenCalledWith("planner-1", {
+        basket_id: "basket-1",
+        mode: "append",
+        menu_proposal: expect.objectContaining({
+          title: "SKU-backed dinner",
+          explanation: "A validated SKU proposal using a package template.",
+          planner_notes: [
+            {
+              note_type: "evidence",
+              source: "tavola",
+              message: "Validated by Tavola for SKU validity."
+            }
+          ],
+          warnings: ["One SKU was adjusted."]
+        })
+      });
+    });
+    const acceptedProposal =
+      vi.mocked(client.acceptProposal).mock.calls[0]![1].menu_proposal;
+    expect(
+      acceptedProposal.courses.flatMap((course) =>
+        course.lines.map((line) => line.sku_id)
+      )
+    ).not.toContain("focaccia-genovese-piece");
+    expect(onBasketAccepted).toHaveBeenCalledWith(populatedBasket);
   });
 
   test("opens catalog product details from a planned menu line", async () => {

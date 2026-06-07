@@ -238,7 +238,7 @@ describe("planner API client", () => {
     expect(result.data.menu_proposal?.courses.at(-1)?.course).toBe("drinks");
   });
 
-  test("maps internal SKU wording out of customer-facing proposal copy", async () => {
+  test("preserves proposal copy for backend round-trips", async () => {
     const { fetchPlannerSession } = await loadPlannerClient();
     const firstCourse = proposal.courses[0]!;
     const firstLine = firstCourse.lines[0]!;
@@ -278,16 +278,16 @@ describe("planner API client", () => {
     }
     const mappedProposal = result.data.menu_proposal!;
     expect(mappedProposal.explanation).toBe(
-      "A validated product-backed dinner plan using this menu plan."
+      "A validated SKU-backed dinner plan using this package template."
     );
     expect(mappedProposal.planner_notes[0]!.message).toBe(
-      "Validated by Tavola for product validity."
+      "Validated by Tavola for SKU validity."
     );
     expect(mappedProposal.courses[0]!.lines[0]!.rationale).toBe(
-      "This product anchors the main course."
+      "This SKU anchors the main course."
     );
     expect(mappedProposal.warnings[0]).toBe(
-      "One product was adjusted during validation."
+      "One SKU was adjusted during validation."
     );
     expect(mappedProposal.courses[0]!.lines[0]!.sku_id).toBe(
       "fresh-tagliatelle-250g"
