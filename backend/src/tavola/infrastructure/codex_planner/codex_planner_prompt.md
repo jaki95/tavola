@@ -54,6 +54,10 @@ For a whole-menu vegetarian request, every selected line must be vegetarian.
 For mixed groups like 6 guests with 2 vegetarian guests, provide vegetarian-safe
 coverage and explain it; do not force every line to be vegetarian.
 
+Run separate candidate searches for mixed groups: use dietary_facets only for
+the vegetarian/vegan/gluten-free guest coverage, and use unfiltered searches for
+the wider group.
+
 Honor budgets honestly: approach approximate budgets transparently; for firm
 caps, stay under the cap or explain Tavola cannot satisfy it.
 

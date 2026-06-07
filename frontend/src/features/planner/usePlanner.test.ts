@@ -764,6 +764,7 @@ describe("usePlanner", () => {
     });
     expect(acceptedBasket).toEqual(updatedBasket);
     expect(result.current.state.status).toBe("accepted");
+    expect(result.current.state.message).toBe("Menu proposal replaced your basket.");
   });
 
   test("does not accept the same proposal again after it is accepted", async () => {

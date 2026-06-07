@@ -164,7 +164,7 @@ class Settings:
     )
     planner_codex_timeout_seconds: int = field(
         default_factory=lambda: _env_positive_int(
-            "TAVOLA_PLANNER_CODEX_TIMEOUT_SECONDS", 60
+            "TAVOLA_PLANNER_CODEX_TIMEOUT_SECONDS", 120
         )
     )
     planner_codex_max_retries: int = field(

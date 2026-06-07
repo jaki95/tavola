@@ -428,7 +428,10 @@ export function usePlanner({ client = defaultPlannerClient }: UsePlannerOptions 
           menu_proposal: draftProposal,
           follow_up_question: null
         },
-        message: "Menu proposal added to your basket.",
+        message:
+          mode === "replace"
+            ? "Menu proposal replaced your basket."
+            : "Menu proposal added to your basket.",
         basket: result.data.basket
       });
       return result.data.basket;

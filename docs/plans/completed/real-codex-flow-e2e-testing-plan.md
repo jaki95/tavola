@@ -155,6 +155,55 @@ Browser findings:
 Evidence screenshots were captured under `/private/tmp/` during the run and
 were not committed to the repository.
 
+### Execution Findings: 2026-06-07 Live Local Codex Run
+
+Credential path tested:
+
+- Local Codex login declared with
+  `TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED=true`.
+- No credential values, auth files, raw transcripts, or SDK traces were
+  recorded in the handoff.
+
+Live status, fallback, and browser findings:
+
+- The updated live backend returned `enabled: true` and `mode: "real_codex"`.
+- Disabled fallback returned `enabled: false` and `mode: "disabled"`.
+- Vite proxy browser checks covered live Planner states through backend port
+  `8002` because port `8000` was already occupied by a pre-existing process;
+  disabled fallback was checked through backend port `8003`.
+- Browser approval covered loading, proposal-ready, follow-up, append success,
+  replace confirmation, replace success, validation error, checkout success,
+  disabled fallback, and console error checks.
+- Customer-facing UI did not expose `SKU` or `sku_id` during proposal, hard
+  constraint, or validation-error states.
+
+Prompt findings:
+
+- `Vegetarian dinner for 4 around £50` returned a validated proposal and
+  appended to Basket after a quantity edit.
+- `Help me plan Sunday lunch` produced a party-size follow-up and reached a
+  validated proposal after `Four people`.
+- `Aperitivo for 6 with drinks` returned a validated drinks proposal and
+  replaced an existing Basket after confirmation.
+- `Dairy-free dinner for 8 under £20` returned an honest light-dinner proposal;
+  raising the proposal quantity past the Basket max produced a product-language
+  validation error and left Basket unchanged.
+
+Latency and config findings:
+
+- The original 60-second default caused one benchmark timeout even though the
+  SDK completed shortly after timeout.
+- A 90-second default still timed out once in the browser flow.
+- The planner default timeout is now 120 seconds. With that default, the
+  benchmark succeeded 3/3 runs, all classified as slow: min 30,942 ms, median
+  48,301 ms, max 52,771 ms.
+- The benchmark confirmed the current tool contract uses
+  `find_catalog_candidates`; measured time remained dominated by Codex SDK/model
+  turns rather than Tavola handlers.
+
+Evidence screenshots were captured under `/private/tmp/` with names prefixed
+`tavola-` and were not committed to the repository.
+
 ### Latency Benchmark Addendum
 
 The real-flow test now includes Tavola's Planner latency benchmark checklist.

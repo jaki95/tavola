@@ -31,9 +31,9 @@ type PlannerWorkspaceProps = {
 };
 
 const examplePrompts = [
-  "Vegetarian dinner for 4 around £50",
-  "Aperitivo for 6 with drinks",
-  "Help me plan Sunday lunch"
+  "Dinner for 10 with one vegetarian guest",
+  "Antipasti and pasta for 4 around £50",
+  "Aperitivo for 6 with drinks"
 ];
 
 export function PlannerWorkspace({
