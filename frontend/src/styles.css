@@ -356,12 +356,6 @@ h1 {
   line-height: 0.95;
 }
 
-.planner-workspace__codex {
-  color: var(--color-enamel);
-  font-size: 0.76rem;
-  font-weight: 850;
-}
-
 .planner-workspace__lede {
   max-width: 520px;
   margin: 0;
@@ -429,9 +423,38 @@ h1 {
 .planner-composer button {
   grid-area: action;
   align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   width: 100%;
   min-height: 3.1rem;
   padding: 10px 16px;
+}
+
+.planner-composer__spark {
+  position: relative;
+  width: 0.82rem;
+  height: 0.82rem;
+  color: var(--color-paper);
+  opacity: 0.94;
+}
+
+.planner-composer__spark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  clip-path: polygon(
+    50% 0,
+    61% 38%,
+    100% 50%,
+    61% 62%,
+    50% 100%,
+    39% 62%,
+    0 50%,
+    39% 38%
+  );
 }
 
 .planner-trust {
@@ -440,14 +463,16 @@ h1 {
   gap: 8px;
   min-width: 0;
   padding: 10px 12px;
-  border: 1px solid rgb(45 101 68 / 22%);
+  border: 1px solid rgb(33 86 109 / 18%);
   border-radius: 8px;
-  background: rgb(226 237 220 / 72%);
+  background:
+    linear-gradient(180deg, rgb(255 253 247 / 86%), rgb(248 243 234 / 68%)),
+    var(--color-paper);
   color: var(--color-ink);
 }
 
 .planner-trust strong {
-  color: var(--color-basil);
+  color: var(--color-enamel);
   font-size: 0.9rem;
   line-height: 1.18;
 }
@@ -476,8 +501,8 @@ h1 {
   width: 0.42rem;
   height: 0.42rem;
   border-radius: 999px;
-  background: var(--color-basil);
-  box-shadow: 0 0 0 3px rgb(45 101 68 / 10%);
+  background: var(--color-enamel);
+  box-shadow: 0 0 0 3px rgb(33 86 109 / 10%);
 }
 
 .planner-examples {
@@ -590,9 +615,8 @@ h1 {
 }
 
 .planner-live {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
+  display: flex;
+  align-items: center;
   min-width: 0;
   padding: 12px;
   border: 1px solid var(--color-hairline);
@@ -613,21 +637,12 @@ h1 {
 
 .planner-live__signal {
   position: relative;
-  flex: 0 0 0.8rem;
-  width: 0.8rem;
-  height: 0.8rem;
+  flex: 0 0 0.62rem;
+  width: 0.62rem;
+  height: 0.62rem;
   border-radius: 999px;
   background: var(--color-saffron);
-  box-shadow: 0 0 0 5px rgb(201 143 31 / 12%);
-}
-
-.planner-live__signal::after {
-  content: "";
-  position: absolute;
-  inset: -6px;
-  border: 1px solid rgb(201 143 31 / 30%);
-  border-radius: inherit;
-  animation: planner-live-pulse 1.7s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  box-shadow: 0 0 0 4px rgb(201 143 31 / 12%);
 }
 
 .planner-live p {
@@ -637,79 +652,12 @@ h1 {
   line-height: 1.2;
 }
 
-.planner-live__steps {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.planner-live__step {
-  position: relative;
-  min-width: 0;
-  padding: 7px 8px 7px 24px;
-  border: 1px solid var(--color-hairline);
-  border-radius: 7px;
-  background: rgb(255 253 247 / 66%);
+.planner-live__summary span:not(.planner-live__signal, .planner-live__ellipsis) {
+  display: block;
+  margin-top: 2px;
   color: var(--color-muted);
-  font-size: 0.76rem;
-  font-weight: 900;
-  line-height: 1.1;
-  overflow-wrap: anywhere;
-}
-
-.planner-live__step::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 9px;
-  width: 0.44rem;
-  height: 0.44rem;
-  border-radius: 999px;
-  background: rgb(102 88 76 / 44%);
-  transform: translateY(-50%);
-}
-
-.planner-live__step--done {
-  border-color: rgb(45 101 68 / 22%);
-  background: rgb(226 237 220 / 58%);
-  color: var(--color-basil);
-}
-
-.planner-live__step--done::before {
-  width: 0.92rem;
-  height: 0.92rem;
-  left: 7px;
-  background: var(--color-basil);
-}
-
-.planner-live__step--done::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 12px;
-  width: 0.22rem;
-  height: 0.42rem;
-  border-right: 2px solid var(--color-paper);
-  border-bottom: 2px solid var(--color-paper);
-  transform: translateY(-58%) rotate(42deg);
-}
-
-.planner-live__step--active {
-  border-color: rgb(33 86 109 / 28%);
-  background: rgb(33 86 109 / 8%);
-  color: var(--color-enamel);
-  box-shadow:
-    inset 0 -2px 0 rgb(33 86 109 / 8%),
-    0 0 0 3px rgb(33 86 109 / 8%);
-  animation: planner-step-current 1.8s ease-in-out infinite;
-}
-
-.planner-live__step--active::before {
-  background: var(--color-enamel);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .planner-live__ellipsis {
@@ -2594,33 +2542,6 @@ button:disabled {
 button:disabled:hover {
   box-shadow: var(--shadow-control);
   transform: none;
-}
-
-@keyframes planner-live-pulse {
-  0% {
-    opacity: 0.72;
-    transform: scale(0.82);
-  }
-
-  100% {
-    opacity: 0;
-    transform: scale(1.42);
-  }
-}
-
-@keyframes planner-step-current {
-  0%,
-  100% {
-    box-shadow:
-      inset 0 -2px 0 rgb(33 86 109 / 8%),
-      0 0 0 3px rgb(33 86 109 / 7%);
-  }
-
-  50% {
-    box-shadow:
-      inset 0 -2px 0 rgb(33 86 109 / 10%),
-      0 0 0 5px rgb(33 86 109 / 13%);
-  }
 }
 
 @keyframes planner-step-dot {

@@ -253,7 +253,7 @@ describe("PlannerWorkspace", () => {
     vi.useRealTimers();
   });
 
-  test("renders the planner heading without the old decorative logo", () => {
+  test("renders the planner heading without runtime branding or the old decorative logo", () => {
     const client = createPlannerClient({});
 
     const { container } = renderPlannerWorkspace({ client });
@@ -261,16 +261,21 @@ describe("PlannerWorkspace", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Plan a menu" })
     ).toBeInTheDocument();
-    expect(screen.getByText("powered by Codex")).toBeInTheDocument();
+    expect(screen.queryByText("powered by Codex")).not.toBeInTheDocument();
     expect(container.querySelector(".planner-workspace__icon")).toBeNull();
   });
 
   test("shows persona examples and a neutral request prompt", () => {
     const client = createPlannerClient({});
 
-    renderPlannerWorkspace({ client });
+    const { container } = renderPlannerWorkspace({ client });
 
     expect(screen.getByPlaceholderText("What are you planning?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Plan menu" })).toBeDisabled();
+    expect(container.querySelector(".planner-composer__spark")).toHaveAttribute(
+      "aria-hidden",
+      "true"
+    );
     expect(
       screen.queryByPlaceholderText("Vegetarian dinner for 4 around £50")
     ).not.toBeInTheDocument();
@@ -310,11 +315,12 @@ describe("PlannerWorkspace", () => {
       await Promise.resolve();
     });
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Sending request"
+      "Reading your request"
     );
-    expect(screen.getByLabelText("Planning update history")).toHaveTextContent(
-      "Sending request...Checking catalogReviewing products"
+    expect(screen.getByLabelText("Menu planning")).toHaveTextContent(
+      "Tavola checks products, prices, and labels before review."
     );
+    expect(screen.queryByLabelText("Planning update history")).not.toBeInTheDocument();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2_000);
@@ -326,7 +332,7 @@ describe("PlannerWorkspace", () => {
         name: "Vegetarian dinner for four"
       })
     ).toBeInTheDocument();
-    expect(screen.getByText("powered by Codex")).toBeInTheDocument();
+    expect(screen.queryByText("powered by Codex")).not.toBeInTheDocument();
     expect(screen.getByText("Fresh Tagliatelle")).toBeInTheDocument();
     expect(screen.getByText("Prices were calculated by Tavola.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add to basket" })).toBeEnabled();
@@ -420,7 +426,7 @@ describe("PlannerWorkspace", () => {
     });
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Sending request"
+      "Reading your request"
     );
 
     await act(async () => {
@@ -428,18 +434,19 @@ describe("PlannerWorkspace", () => {
     });
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Checking Tavola's catalog"
+      "Matching catalog products"
     );
-    expect(screen.getByLabelText("Planning update history")).toHaveTextContent(
-      "Sending requestChecking Tavola's catalog...Reviewing products"
+    expect(screen.getByLabelText("Menu planning")).toHaveTextContent(
+      "Tavola checks products, prices, and labels before review."
     );
+    expect(screen.queryByLabelText("Planning update history")).not.toBeInTheDocument();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(30_000);
     });
 
     const statusCopy = screen.getByRole("status").textContent ?? "";
-    expect(statusCopy).toContain("Checking Tavola's catalog");
+    expect(statusCopy).toContain("Matching catalog products");
     expect(statusCopy).not.toContain("Still planning.");
     expect(statusCopy).not.toMatch(/\d+s elapsed/i);
     expect(screen.queryByLabelText("Planning progress")).not.toBeInTheDocument();
@@ -472,10 +479,10 @@ describe("PlannerWorkspace", () => {
     expect(
       screen.getByLabelText("Planner validation promise")
     ).toHaveTextContent("Tavola checks every proposal before Basket changes.");
-    expect(screen.getByText("Catalog products only")).toBeInTheDocument();
-    expect(screen.getByText("Tavola prices and totals")).toBeInTheDocument();
+    expect(screen.getByText("Real catalog products only")).toBeInTheDocument();
+    expect(screen.getByText("Prices and totals checked")).toBeInTheDocument();
     expect(screen.getByText("Product labels checked")).toBeInTheDocument();
-    expect(screen.getByText("Review before adding")).toBeInTheDocument();
+    expect(screen.getByText("You review before adding")).toBeInTheDocument();
   });
 
   test("disables prompt submission when the planner is unavailable", async () => {
@@ -553,7 +560,7 @@ describe("PlannerWorkspace", () => {
       message: "4 people"
     });
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Checking Tavola's catalog"
+      "Matching catalog products"
     );
 
     await act(async () => {
@@ -590,7 +597,7 @@ describe("PlannerWorkspace", () => {
       "Vegetarian dinner for 4 around £50"
     );
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Sending request"
+      "Reading your request"
     );
     expect(client.createSession).toHaveBeenCalledTimes(1);
 
@@ -645,7 +652,7 @@ describe("PlannerWorkspace", () => {
 
     expect(screen.queryByLabelText("Meal request")).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Sending request"
+      "Reading your request"
     );
 
     await act(async () => {

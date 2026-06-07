@@ -13,8 +13,7 @@ import type {
   AcceptMenuProposalMode,
   MenuProposal,
   MenuProposalLine,
-  PlanningUpdate,
-  PlanningUpdateStage
+  PlanningUpdate
 } from "../../types/planner";
 import { usePlanner, type PlannerClient } from "./usePlanner";
 
@@ -152,7 +151,6 @@ export function PlannerWorkspace({
         <div className="planner-workspace__title-group">
           <div className="planner-workspace__heading-line">
             <h2 id="planner-workspace-title">Plan a menu</h2>
-            <span className="planner-workspace__codex">powered by Codex</span>
           </div>
           <p className="planner-workspace__lede">
             Include party size, budget, occasion, or constraints.
@@ -179,6 +177,7 @@ export function PlannerWorkspace({
                 disabled={isPlannerUnavailable || !prompt.trim()}
                 type="submit"
               >
+                <span aria-hidden="true" className="planner-composer__spark" />
                 Plan menu
               </button>
             </form>
@@ -304,10 +303,10 @@ function PlannerTrust() {
     <aside className="planner-trust" aria-label="Planner validation promise">
       <strong>Tavola checks every proposal before Basket changes.</strong>
       <ul>
-        <li>Catalog products only</li>
-        <li>Tavola prices and totals</li>
+        <li>Real catalog products only</li>
+        <li>Prices and totals checked</li>
         <li>Product labels checked</li>
-        <li>Review before adding</li>
+        <li>You review before adding</li>
       </ul>
     </aside>
   );
@@ -334,74 +333,49 @@ function mapPlannerProductDetailResult(
 
 function PlanningStatus({ updates }: { updates: PlanningUpdate[] }) {
   const latestUpdate = updates.at(-1);
-  const latestTimelineIndex = latestUpdate
-    ? timelineIndexForStage(latestUpdate.stage)
-    : -1;
 
   if (!latestUpdate) {
     return null;
   }
 
   return (
-    <section aria-label="Planning updates" className="planner-live">
+    <section aria-label="Menu planning" className="planner-live">
       <div className="planner-live__summary">
         <span aria-hidden="true" className="planner-live__signal" />
         <div>
           <p aria-live="polite" role="status">
-            {customerPlannerText(latestUpdate.message)}
+            {planningStatusText(latestUpdate)}
+            <span aria-hidden="true" className="planner-live__ellipsis">
+              <span>.</span>
+              <span>.</span>
+              <span>.</span>
+            </span>
           </p>
+          <span>Tavola checks products, prices, and labels before review.</span>
         </div>
       </div>
-      <ol className="planner-live__steps" aria-label="Planning update history">
-        {planningTimeline.map((timelineItem, index) => {
-          const update = updates.find(
-            (candidate) => candidate.stage === timelineItem.stage
-          );
-          const stepClass =
-            latestTimelineIndex === -1 || index > latestTimelineIndex
-              ? "planner-live__step"
-              : index === latestTimelineIndex
-                ? "planner-live__step planner-live__step--active"
-                : "planner-live__step planner-live__step--done";
-
-          return (
-            <li
-              aria-current={index === latestTimelineIndex ? "step" : undefined}
-              className={stepClass}
-              key={timelineItem.stage}
-            >
-              {update
-                ? customerPlannerText(update.message)
-                : timelineItem.pendingLabel}
-              {index === latestTimelineIndex ? (
-                <span aria-hidden="true" className="planner-live__ellipsis">
-                  <span>.</span>
-                  <span>.</span>
-                  <span>.</span>
-                </span>
-              ) : null}
-            </li>
-          );
-        })}
-      </ol>
     </section>
   );
 }
 
-const planningTimeline: Array<{
-  stage: PlanningUpdateStage;
-  pendingLabel: string;
-}> = [
-  { stage: "queued", pendingLabel: "Sending request" },
-  { stage: "planning", pendingLabel: "Checking catalog" },
-  { stage: "validating", pendingLabel: "Reviewing products" }
-];
+function planningStatusText(update: PlanningUpdate): string {
+  if (
+    update.stage === "queued" ||
+    update.stage === "started" ||
+    update.stage === "connecting"
+  ) {
+    return "Reading your request";
+  }
 
-function timelineIndexForStage(stage: PlanningUpdateStage): number {
-  const visibleStage =
-    stage === "started" || stage === "connecting" ? "queued" : stage;
+  if (update.stage === "planning") {
+    return "Matching catalog products";
+  }
 
-  return planningTimeline.findIndex((item) => item.stage === visibleStage);
+  if (update.stage === "validating") {
+    return "Checking prices and labels";
+  }
+
+  return customerPlannerText(update.message);
 }
 
 function ProposalReview({
