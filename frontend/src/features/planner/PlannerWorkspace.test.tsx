@@ -253,7 +253,7 @@ describe("PlannerWorkspace", () => {
     vi.useRealTimers();
   });
 
-  test("renders the planner heading without runtime branding or the old decorative logo", () => {
+  test("renders the planner heading with Codex branding and without the old decorative logo", () => {
     const client = createPlannerClient({});
 
     const { container } = renderPlannerWorkspace({ client });
@@ -261,7 +261,7 @@ describe("PlannerWorkspace", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Plan a menu" })
     ).toBeInTheDocument();
-    expect(screen.queryByText("powered by Codex")).not.toBeInTheDocument();
+    expect(screen.getByText("powered by Codex")).toBeInTheDocument();
     expect(container.querySelector(".planner-workspace__icon")).toBeNull();
   });
 
@@ -332,7 +332,7 @@ describe("PlannerWorkspace", () => {
         name: "Vegetarian dinner for four"
       })
     ).toBeInTheDocument();
-    expect(screen.queryByText("powered by Codex")).not.toBeInTheDocument();
+    expect(screen.getByText("powered by Codex")).toBeInTheDocument();
     expect(screen.getByText("Fresh Tagliatelle")).toBeInTheDocument();
     expect(screen.getByText("Prices were calculated by Tavola.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add to basket" })).toBeEnabled();
