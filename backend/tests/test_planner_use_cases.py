@@ -45,6 +45,7 @@ def make_sku(
     name: str = "Fresh Tagliatelle",
     category: CatalogCategory | None = None,
     amount_minor: int = 425,
+    tags: tuple[str, ...] = ("pasta", "fresh"),
     is_available: bool = True,
 ) -> CatalogSku:
     return CatalogSku(
@@ -55,7 +56,7 @@ def make_sku(
         price=Money(amount_minor=amount_minor, currency="GBP"),
         short_description="Egg pasta cut fresh each morning.",
         detail_description="Silky ribbons of egg pasta for a quick supper.",
-        tags=("pasta", "fresh"),
+        tags=tags,
         facets=DietaryFacets(is_vegetarian=True),
         image_id=sku_id,
         display_order=1,
@@ -76,6 +77,34 @@ def make_drinks_sku(
     )
 
 
+def make_sauce_sku(
+    sku_id: str = "sugo-pomodoro-500g",
+    *,
+    name: str = "Sugo al Pomodoro",
+    amount_minor: int = 575,
+) -> CatalogSku:
+    return make_sku(
+        sku_id,
+        name=name,
+        category=CatalogCategory("pantry", "Pantry", 5),
+        amount_minor=amount_minor,
+        tags=("sauce", "pasta", "primo", "vegetarian"),
+    )
+
+
+def make_complete_pasta_catalog(
+    *,
+    pasta_amount_minor: int = 425,
+    sauce_amount_minor: int = 0,
+) -> StaticCatalogRepository:
+    return StaticCatalogRepository(
+        [
+            make_sku(amount_minor=pasta_amount_minor),
+            make_sauce_sku(amount_minor=sauce_amount_minor),
+        ]
+    )
+
+
 def make_proposal(*lines: ProposalLine) -> MenuProposal:
     return MenuProposal(
         title="Weeknight Pasta",
@@ -93,6 +122,21 @@ def raw_proposal(
     quantity: int = 2,
     rationale: str = "A flexible pasta course.",
 ) -> dict[str, object]:
+    lines: list[dict[str, object]] = [
+        {
+            "sku_id": sku_id,
+            "quantity": quantity,
+            "rationale": rationale,
+        }
+    ]
+    if sku_id == "fresh-tagliatelle-250g":
+        lines.append(
+            {
+                "sku_id": "sugo-pomodoro-500g",
+                "quantity": 1,
+                "rationale": "Tomato sauce completes the pasta course.",
+            }
+        )
     return {
         "title": "Weeknight Pasta",
         "explanation": "A compact pasta proposal.",
@@ -102,13 +146,7 @@ def raw_proposal(
         "courses": (
             {
                 "course": "primo",
-                "lines": (
-                    {
-                        "sku_id": sku_id,
-                        "quantity": quantity,
-                        "rationale": rationale,
-                    },
-                ),
+                "lines": tuple(lines),
             },
         ),
     }
@@ -154,7 +192,7 @@ class RepairingPlannerAgent:
 
 
 def test_validate_menu_proposal_resolves_products_and_recalculates_totals() -> None:
-    catalog_repository = StaticCatalogRepository([make_sku(amount_minor=425)])
+    catalog_repository = make_complete_pasta_catalog(pasta_amount_minor=425)
 
     result = ValidateMenuProposal(catalog_repository)(
         make_proposal(
@@ -162,7 +200,12 @@ def test_validate_menu_proposal_resolves_products_and_recalculates_totals() -> N
                 sku_id="fresh-tagliatelle-250g",
                 quantity=2,
                 rationale="A flexible pasta course.",
-            )
+            ),
+            ProposalLine(
+                sku_id="sugo-pomodoro-500g",
+                quantity=1,
+                rationale="Tomato sauce completes the pasta course.",
+            ),
         )
     )
 
@@ -170,8 +213,8 @@ def test_validate_menu_proposal_resolves_products_and_recalculates_totals() -> N
     assert result.menu_proposal is not None
     assert result.menu_proposal.total.amount_minor == 850
     assert result.menu_proposal.total.currency == "GBP"
-    assert result.menu_proposal.item_count == 2
-    assert result.menu_proposal.line_count == 1
+    assert result.menu_proposal.item_count == 3
+    assert result.menu_proposal.line_count == 2
     assert result.menu_proposal.courses[0].lines[0].sku.name == "Fresh Tagliatelle"
     assert result.menu_proposal.courses[0].lines[0].line_total.amount_minor == 850
 
@@ -232,6 +275,51 @@ def test_validate_menu_proposal_rejects_duplicate_sku_lines() -> None:
     assert result.menu_proposal is None
     assert result.validation_errors[0].code == PlannerValidationErrorCode.DUPLICATE_SKU
     assert result.validation_errors[0].sku_id == "fresh-tagliatelle-250g"
+
+
+def test_validate_menu_proposal_rejects_fresh_pasta_without_sauce_pairing() -> None:
+    result = ValidateMenuProposal(StaticCatalogRepository([make_sku()]))(
+        make_proposal(
+            ProposalLine(
+                sku_id="fresh-tagliatelle-250g",
+                quantity=2,
+                rationale="Fresh pasta for a quick supper.",
+            )
+        )
+    )
+
+    assert result.menu_proposal is None
+    assert (
+        result.validation_errors[0].code == PlannerValidationErrorCode.INVALID_PROPOSAL
+    )
+    assert result.validation_errors[0].sku_id == "fresh-tagliatelle-250g"
+    assert result.validation_errors[0].course == Course.PRIMO
+    assert "sauce" in result.validation_errors[0].message
+
+
+def test_validate_menu_proposal_accepts_fresh_pasta_with_sauce_pairing() -> None:
+    pasta = make_sku()
+    sugo = make_sauce_sku()
+
+    result = ValidateMenuProposal(StaticCatalogRepository([pasta, sugo]))(
+        make_proposal(
+            ProposalLine(
+                sku_id="fresh-tagliatelle-250g",
+                quantity=2,
+                rationale="Fresh pasta for a quick supper.",
+            ),
+            ProposalLine(
+                sku_id="sugo-pomodoro-500g",
+                quantity=1,
+                rationale="Tomato sauce completes the pasta course.",
+            ),
+        )
+    )
+
+    assert result.validation_errors == ()
+    assert result.menu_proposal is not None
+    assert result.menu_proposal.total.amount_minor == 1425
+    assert result.menu_proposal.line_count == 2
 
 
 @pytest.mark.parametrize("quantity", [0, True])
@@ -314,6 +402,7 @@ def test_validate_menu_proposal_reports_malformed_raw_shape(
 
 def test_validate_menu_proposal_preserves_course_grouping() -> None:
     primi = make_sku()
+    sauce = make_sauce_sku(amount_minor=0)
     dessert = make_sku(
         "tiramisu-cup-single",
         name="Tiramisu Cup",
@@ -335,6 +424,11 @@ def test_validate_menu_proposal_preserves_course_grouping() -> None:
                         quantity=2,
                         rationale="Main pasta course.",
                     ),
+                    ProposalLine(
+                        sku_id="sugo-pomodoro-500g",
+                        quantity=1,
+                        rationale="Tomato sauce completes the pasta course.",
+                    ),
                 ),
             ),
             CourseProposal(
@@ -350,7 +444,9 @@ def test_validate_menu_proposal_preserves_course_grouping() -> None:
         ),
     )
 
-    result = ValidateMenuProposal(StaticCatalogRepository([primi, dessert]))(proposal)
+    result = ValidateMenuProposal(StaticCatalogRepository([primi, sauce, dessert]))(
+        proposal
+    )
 
     assert result.menu_proposal is not None
     assert [course.course for course in result.menu_proposal.courses] == [
@@ -362,6 +458,7 @@ def test_validate_menu_proposal_preserves_course_grouping() -> None:
 
 def test_validate_menu_proposal_prices_appended_drinks_course() -> None:
     pasta = make_sku(amount_minor=425)
+    sauce = make_sauce_sku(amount_minor=0)
     drinks = make_drinks_sku(amount_minor=600)
     proposal = MenuProposal(
         title="Pasta With Drinks",
@@ -378,6 +475,11 @@ def test_validate_menu_proposal_prices_appended_drinks_course() -> None:
                         quantity=2,
                         rationale="Main pasta course.",
                     ),
+                    ProposalLine(
+                        sku_id="sugo-pomodoro-500g",
+                        quantity=1,
+                        rationale="Tomato sauce completes the pasta course.",
+                    ),
                 ),
             ),
             CourseProposal(
@@ -393,7 +495,9 @@ def test_validate_menu_proposal_prices_appended_drinks_course() -> None:
         ),
     )
 
-    result = ValidateMenuProposal(StaticCatalogRepository([pasta, drinks]))(proposal)
+    result = ValidateMenuProposal(StaticCatalogRepository([pasta, sauce, drinks]))(
+        proposal
+    )
 
     assert result.validation_errors == ()
     assert result.menu_proposal is not None
@@ -402,8 +506,8 @@ def test_validate_menu_proposal_prices_appended_drinks_course() -> None:
         Course.DRINKS,
     ]
     assert result.menu_proposal.total.amount_minor == 1450
-    assert result.menu_proposal.item_count == 3
-    assert result.menu_proposal.line_count == 2
+    assert result.menu_proposal.item_count == 4
+    assert result.menu_proposal.line_count == 3
     assert result.menu_proposal.courses[1].lines[0].line_total.amount_minor == 600
 
 
@@ -552,28 +656,8 @@ def test_plan_menu_from_request_returns_follow_up_from_fake_agent() -> None:
 
 def test_plan_menu_from_request_validates_fake_agent_proposal() -> None:
     planner = PlanMenuFromRequest(
-        agent=FakeMenuPlannerAgent.with_proposal(
-            {
-                "title": "Weeknight Pasta",
-                "explanation": "A compact pasta proposal.",
-                "planner_notes": ("Catalog identities checked.",),
-                "party_size": 2,
-                "package_template_id": "primo-only",
-                "courses": (
-                    {
-                        "course": "primo",
-                        "lines": (
-                            {
-                                "sku_id": "fresh-tagliatelle-250g",
-                                "quantity": 2,
-                                "rationale": "A flexible pasta course.",
-                            },
-                        ),
-                    },
-                ),
-            }
-        ),
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+        agent=FakeMenuPlannerAgent.with_proposal(raw_proposal(quantity=2)),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=425),
     )
 
     result = planner(customer_request="Dinner for two")
@@ -608,7 +692,7 @@ def test_plan_menu_from_request_repairs_once_after_tavola_validation_failure() -
     )
     planner = PlanMenuFromRequest(
         agent=agent,
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=425),
     )
 
     result = planner(customer_request="Dinner for two")
@@ -634,7 +718,7 @@ def test_plan_menu_from_request_stops_after_one_invalid_tavola_repair() -> None:
     )
     planner = PlanMenuFromRequest(
         agent=agent,
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=425),
     )
 
     result = planner(customer_request="Dinner for two")
@@ -651,7 +735,7 @@ def test_start_planner_session_saves_validated_proposal() -> None:
     use_case = StartPlannerSession(
         planner_repository=repository,
         agent=FakeMenuPlannerAgent.with_proposal(raw_proposal(quantity=2)),
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=425),
     )
 
     session = use_case(message="Dinner for two")
@@ -723,7 +807,7 @@ def test_complete_planning_session_updates_same_session_to_ready_proposal() -> N
     updated = CompletePlanningSession(
         planner_repository=repository,
         agent=FakeMenuPlannerAgent.with_proposal(raw_proposal(quantity=2)),
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=425),
     )(planner_session_id=session.planner_session_id.value)
 
     assert updated.planner_session_id == session.planner_session_id
@@ -787,7 +871,7 @@ def test_answer_follow_up_saves_answer_and_ready_proposal() -> None:
     answer = AnswerPlannerFollowUp(
         planner_repository=repository,
         agent=FakeMenuPlannerAgent.with_proposal(raw_proposal(quantity=4)),
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=425),
     )
 
     updated = answer(
@@ -832,12 +916,12 @@ def test_answer_follow_up_rejects_missing_or_ready_session() -> None:
     session = StartPlannerSession(
         planner_repository=repository,
         agent=FakeMenuPlannerAgent.with_proposal(raw_proposal()),
-        catalog_repository=StaticCatalogRepository([make_sku()]),
+        catalog_repository=make_complete_pasta_catalog(),
     )(message="Dinner for two")
     use_case = AnswerPlannerFollowUp(
         planner_repository=repository,
         agent=FakeMenuPlannerAgent.with_proposal(raw_proposal()),
-        catalog_repository=StaticCatalogRepository([make_sku()]),
+        catalog_repository=make_complete_pasta_catalog(),
     )
 
     with pytest.raises(PlannerSessionNotFound):
@@ -851,11 +935,11 @@ def test_revalidate_menu_proposal_recalculates_customer_edits() -> None:
     session = StartPlannerSession(
         planner_repository=repository,
         agent=FakeMenuPlannerAgent.with_proposal(raw_proposal(quantity=2)),
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=425),
     )(message="Dinner for two")
     use_case = RevalidateMenuProposal(
         planner_repository=repository,
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=500)]),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=500),
     )
 
     updated = use_case(
@@ -871,6 +955,7 @@ def test_revalidate_menu_proposal_recalculates_customer_edits() -> None:
 
 def test_revalidate_menu_proposal_rejects_added_valid_products() -> None:
     pasta = make_sku(amount_minor=425)
+    sauce = make_sauce_sku(amount_minor=0)
     dessert = make_sku(
         "tiramisu-cup-single",
         name="Tiramisu Cup",
@@ -881,11 +966,11 @@ def test_revalidate_menu_proposal_rejects_added_valid_products() -> None:
     session = StartPlannerSession(
         planner_repository=repository,
         agent=FakeMenuPlannerAgent.with_proposal(raw_proposal(quantity=2)),
-        catalog_repository=StaticCatalogRepository([pasta, dessert]),
+        catalog_repository=StaticCatalogRepository([pasta, sauce, dessert]),
     )(message="Dinner for two")
     use_case = RevalidateMenuProposal(
         planner_repository=repository,
-        catalog_repository=StaticCatalogRepository([pasta, dessert]),
+        catalog_repository=StaticCatalogRepository([pasta, sauce, dessert]),
     )
 
     updated = use_case(
@@ -905,11 +990,11 @@ def test_revalidate_menu_proposal_rejects_empty_edited_proposal() -> None:
     session = StartPlannerSession(
         planner_repository=repository,
         agent=FakeMenuPlannerAgent.with_proposal(raw_proposal()),
-        catalog_repository=StaticCatalogRepository([make_sku()]),
+        catalog_repository=make_complete_pasta_catalog(),
     )(message="Dinner for two")
     use_case = RevalidateMenuProposal(
         planner_repository=repository,
-        catalog_repository=StaticCatalogRepository([make_sku()]),
+        catalog_repository=make_complete_pasta_catalog(),
     )
 
     updated = use_case(
@@ -939,13 +1024,13 @@ def test_accept_menu_proposal_appends_lines_to_basket_and_marks_session_accepted
     session = StartPlannerSession(
         planner_repository=planner_repository,
         agent=FakeMenuPlannerAgent.with_proposal(raw_proposal(quantity=2)),
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=425),
     )(message="Dinner for two")
 
     result = AcceptMenuProposal(
         planner_repository=planner_repository,
         basket_repository=basket_repository,
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=425),
     )(
         planner_session_id=session.planner_session_id.value,
         basket_id="basket-1",
@@ -953,11 +1038,12 @@ def test_accept_menu_proposal_appends_lines_to_basket_and_marks_session_accepted
         raw_proposal=raw_proposal(quantity=2),
     )
 
-    assert result.basket.item_count == 2
+    assert result.basket.item_count == 3
     assert result.basket.total.amount_minor == 850
     assert result.meal_plan_grouping.title == "Weeknight Pasta"
     assert result.meal_plan_grouping.courses[0].line_sku_ids == (
         "fresh-tagliatelle-250g",
+        "sugo-pomodoro-500g",
     )
     accepted = planner_repository.get_session(session.planner_session_id)
     assert accepted is not None
@@ -1006,12 +1092,12 @@ def test_accept_menu_proposal_rejects_duplicate_acceptance() -> None:
     session = StartPlannerSession(
         planner_repository=planner_repository,
         agent=FakeMenuPlannerAgent.with_proposal(raw_proposal()),
-        catalog_repository=StaticCatalogRepository([make_sku()]),
+        catalog_repository=make_complete_pasta_catalog(),
     )(message="Dinner for two")
     accept = AcceptMenuProposal(
         planner_repository=planner_repository,
         basket_repository=basket_repository,
-        catalog_repository=StaticCatalogRepository([make_sku()]),
+        catalog_repository=make_complete_pasta_catalog(),
     )
     accept(
         planner_session_id=session.planner_session_id.value,
@@ -1031,6 +1117,7 @@ def test_accept_menu_proposal_rejects_duplicate_acceptance() -> None:
 
 def test_accept_menu_proposal_rejects_added_valid_products() -> None:
     pasta = make_sku(amount_minor=425)
+    sauce = make_sauce_sku(amount_minor=0)
     dessert = make_sku(
         "tiramisu-cup-single",
         name="Tiramisu Cup",
@@ -1043,12 +1130,12 @@ def test_accept_menu_proposal_rejects_added_valid_products() -> None:
     session = StartPlannerSession(
         planner_repository=planner_repository,
         agent=FakeMenuPlannerAgent.with_proposal(raw_proposal()),
-        catalog_repository=StaticCatalogRepository([pasta, dessert]),
+        catalog_repository=StaticCatalogRepository([pasta, sauce, dessert]),
     )(message="Dinner for two")
     accept = AcceptMenuProposal(
         planner_repository=planner_repository,
         basket_repository=basket_repository,
-        catalog_repository=StaticCatalogRepository([pasta, dessert]),
+        catalog_repository=StaticCatalogRepository([pasta, sauce, dessert]),
     )
 
     with pytest.raises(PlannerProposalInvalid) as exc_info:

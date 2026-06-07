@@ -56,7 +56,7 @@ class PlannerApiHarness:
         quantity: int = 2,
     ) -> None:
         validation_result = ValidateMenuProposal(
-            StaticCatalogRepository([make_sku(amount_minor=425)])
+            make_complete_pasta_catalog(pasta_amount_minor=425)
         )(
             MenuProposal(
                 title="Weeknight Pasta",
@@ -72,6 +72,11 @@ class PlannerApiHarness:
                                 sku_id="fresh-tagliatelle-250g",
                                 quantity=quantity,
                                 rationale="A flexible pasta course.",
+                            ),
+                            ProposalLine(
+                                sku_id="sugo-pomodoro-500g",
+                                quantity=1,
+                                rationale="Tomato sauce completes the pasta course.",
                             ),
                         ),
                     ),
@@ -113,12 +118,57 @@ def make_sku(
     )
 
 
+def make_sauce_sku(amount_minor: int = 0) -> CatalogSku:
+    return CatalogSku(
+        sku_id="sugo-pomodoro-500g",
+        name="Sugo al Pomodoro",
+        category=CatalogCategory("pantry", "Pantry", 5),
+        unit_label="jar 500g",
+        price=Money(amount_minor=amount_minor, currency="GBP"),
+        short_description="Slow tomato sugo with basil for pasta.",
+        detail_description="A jar of tomato sauce for fresh pasta.",
+        tags=("sugo", "sauce", "pasta", "primo"),
+        facets=DietaryFacets(is_vegetarian=True, is_vegan=True),
+        image_id="sugo-pomodoro-500g",
+        display_order=1,
+        is_available=True,
+    )
+
+
+def make_complete_pasta_catalog(
+    *,
+    pasta_amount_minor: int = 425,
+    sauce_amount_minor: int = 0,
+) -> StaticCatalogRepository:
+    return StaticCatalogRepository(
+        [
+            make_sku(amount_minor=pasta_amount_minor),
+            make_sauce_sku(amount_minor=sauce_amount_minor),
+        ]
+    )
+
+
 def raw_proposal(
     *,
     sku_id: str = "fresh-tagliatelle-250g",
     quantity: int = 2,
     rationale: str = "A flexible pasta course.",
 ) -> dict[str, object]:
+    lines: list[dict[str, object]] = [
+        {
+            "sku_id": sku_id,
+            "quantity": quantity,
+            "rationale": rationale,
+        }
+    ]
+    if sku_id == "fresh-tagliatelle-250g":
+        lines.append(
+            {
+                "sku_id": "sugo-pomodoro-500g",
+                "quantity": 1,
+                "rationale": "Tomato sauce completes the pasta course.",
+            }
+        )
     return {
         "title": "Weeknight Pasta",
         "explanation": "A compact pasta proposal.",
@@ -128,13 +178,7 @@ def raw_proposal(
         "courses": (
             {
                 "course": "primo",
-                "lines": (
-                    {
-                        "sku_id": sku_id,
-                        "quantity": quantity,
-                        "rationale": rationale,
-                    },
-                ),
+                "lines": tuple(lines),
             },
         ),
     }
@@ -146,6 +190,21 @@ def proposal_request(
     quantity: int = 2,
     rationale: str = "A flexible pasta course.",
 ) -> dict[str, object]:
+    lines: list[dict[str, object]] = [
+        {
+            "sku_id": sku_id,
+            "quantity": quantity,
+            "rationale": rationale,
+        }
+    ]
+    if sku_id == "fresh-tagliatelle-250g":
+        lines.append(
+            {
+                "sku_id": "sugo-pomodoro-500g",
+                "quantity": 1,
+                "rationale": "Tomato sauce completes the pasta course.",
+            }
+        )
     return {
         "title": "Weeknight Pasta",
         "explanation": "A compact pasta proposal.",
@@ -161,13 +220,7 @@ def proposal_request(
         "courses": [
             {
                 "course": "primo",
-                "lines": [
-                    {
-                        "sku_id": sku_id,
-                        "quantity": quantity,
-                        "rationale": rationale,
-                    }
-                ],
+                "lines": lines,
             }
         ],
         "warnings": [],
@@ -204,14 +257,27 @@ def expected_menu_proposal_response(quantity: int = 2) -> dict[str, object]:
                         "currency": "GBP",
                         "image_id": "fresh-tagliatelle-250g",
                         "rationale": "A flexible pasta course.",
-                    }
+                    },
+                    {
+                        "sku_id": "sugo-pomodoro-500g",
+                        "name": "Sugo al Pomodoro",
+                        "category_id": "pantry",
+                        "category_label": "Pantry",
+                        "unit_label": "jar 500g",
+                        "quantity": 1,
+                        "unit_price_minor": 0,
+                        "line_total_minor": 0,
+                        "currency": "GBP",
+                        "image_id": "sugo-pomodoro-500g",
+                        "rationale": "Tomato sauce completes the pasta course.",
+                    },
                 ],
             }
         ],
         "total_minor": 425 * quantity,
         "currency": "GBP",
-        "item_count": quantity,
-        "line_count": 1,
+        "item_count": quantity + 1,
+        "line_count": 2,
         "warnings": [],
     }
 
@@ -257,9 +323,7 @@ def install_test_dependencies(
         planner_repository
         or InMemoryPlannerSessionRepository(id_generator=lambda: "planner-1")
     )
-    resolved_catalog_repository = catalog_repository or StaticCatalogRepository(
-        [make_sku()]
-    )
+    resolved_catalog_repository = catalog_repository or make_complete_pasta_catalog()
     resolved_agent = agent or FakeMenuPlannerAgent.with_proposal(raw_proposal())
     background_runner = InProcessPlannerBackgroundRunner()
     runtime_status = PlannerRuntimeStatus(
@@ -400,6 +464,12 @@ def test_start_planner_session_returns_quickly_while_agent_keeps_running(
 
 
 def test_planner_status_reports_demo_mode(client: PlannerApiHarness) -> None:
+    app.dependency_overrides[get_planner_runtime_status] = lambda: PlannerRuntimeStatus(
+        enabled=False,
+        mode="disabled",
+        message="Planner is not enabled for this environment.",
+    )
+
     response = client.client.get("/api/planner/status")
 
     assert response.status_code == 200
@@ -477,7 +547,7 @@ def test_validate_edited_quantity_recalculates_proposal(
     body = response.json()
     assert body["status"] == "proposal_ready"
     assert body["menu_proposal"]["total_minor"] == 1275
-    assert body["menu_proposal"]["item_count"] == 3
+    assert body["menu_proposal"]["item_count"] == 4
     assert body["menu_proposal"]["courses"][0]["lines"][0]["quantity"] == 3
     assert body["menu_proposal"]["planner_notes"][-1] == {
         "note_type": "evidence",
@@ -518,12 +588,24 @@ def test_accept_append_returns_basket_and_meal_plan_grouping(
                     "line_total_minor": 850,
                     "currency": "GBP",
                     "image_id": "fresh-tagliatelle-250g",
-                }
+                },
+                {
+                    "sku_id": "sugo-pomodoro-500g",
+                    "name": "Sugo al Pomodoro",
+                    "category_id": "pantry",
+                    "category_label": "Pantry",
+                    "unit_label": "jar 500g",
+                    "quantity": 1,
+                    "unit_price_minor": 0,
+                    "line_total_minor": 0,
+                    "currency": "GBP",
+                    "image_id": "sugo-pomodoro-500g",
+                },
             ],
             "total_minor": 850,
             "currency": "GBP",
-            "item_count": 2,
-            "line_count": 1,
+            "item_count": 3,
+            "line_count": 2,
         },
         "meal_plan_grouping": {
             "title": "Weeknight Pasta",
@@ -533,7 +615,10 @@ def test_accept_append_returns_basket_and_meal_plan_grouping(
                 {
                     "course": "primo",
                     "course_label": "Primo",
-                    "line_sku_ids": ["fresh-tagliatelle-250g"],
+                    "line_sku_ids": [
+                        "fresh-tagliatelle-250g",
+                        "sugo-pomodoro-500g",
+                    ],
                 }
             ],
         },

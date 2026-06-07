@@ -34,6 +34,18 @@ def make_sku(
     )
 
 
+def make_sauce_sku(amount_minor: int = 0) -> CatalogSku:
+    return make_sku(
+        "sugo-pomodoro-500g",
+        name="Sugo al Pomodoro",
+        category=CatalogCategory("pantry", "Pantry", 5),
+        amount_minor=amount_minor,
+        unit_label="jar 500g",
+        tags=("sugo", "sauce", "pasta", "primo"),
+        facets=DietaryFacets(is_vegetarian=True, is_vegan=True),
+    )
+
+
 def test_find_catalog_candidates_returns_candidate_summaries() -> None:
     tools = create_planner_tool_handlers(
         StaticCatalogRepository(
@@ -111,14 +123,15 @@ def test_catalog_candidate_handlers_expose_only_catalog_lookup() -> None:
     )
 
 
-def test_find_catalog_candidates_seed_finds_pantry_pesto_by_tag() -> None:
+def test_find_catalog_candidates_seed_finds_pantry_sauces_by_pasta_tag() -> None:
     tools = create_planner_tool_handlers(StaticCatalogRepository.from_seed())
 
     result = tools.call("find_catalog_candidates", {"tags": ["pasta"]})
 
-    assert "pesto-genovese-180g" in {
-        product["sku_id"] for product in result["products"]
-    }
+    assert {
+        "sugo-pomodoro-500g",
+        "pesto-genovese-180g",
+    }.issubset({product["sku_id"] for product in result["products"]})
 
 
 def test_find_catalog_candidates_limits_results_and_reports_available_count() -> None:
@@ -173,7 +186,7 @@ def test_find_catalog_candidates_empty_results_recommends_broadening_filters() -
 
 def test_validate_proposal_returns_normalized_totals_from_tavola_validation() -> None:
     tools = create_planner_tool_handlers(
-        StaticCatalogRepository([make_sku(amount_minor=500)])
+        StaticCatalogRepository([make_sku(amount_minor=500), make_sauce_sku()])
     )
 
     result = tools.call(
@@ -194,6 +207,13 @@ def test_validate_proposal_returns_normalized_totals_from_tavola_validation() ->
                                 "quantity": 3,
                                 "rationale": "A flexible pasta course.",
                             },
+                            {
+                                "sku_id": "sugo-pomodoro-500g",
+                                "quantity": 1,
+                                "rationale": (
+                                    "Tomato sauce completes the pasta course."
+                                ),
+                            },
                         ],
                     },
                 ],
@@ -210,8 +230,8 @@ def test_validate_proposal_returns_normalized_totals_from_tavola_validation() ->
         "amount_minor": 1500,
         "currency": "GBP",
     }
-    assert result["menu_proposal"]["item_count"] == 3
-    assert result["menu_proposal"]["line_count"] == 1
+    assert result["menu_proposal"]["item_count"] == 4
+    assert result["menu_proposal"]["line_count"] == 2
     line = result["menu_proposal"]["courses"][0]["lines"][0]
     assert line["sku_id"] == "fresh-tagliatelle-250g"
     assert line["name"] == "Fresh Tagliatelle"

@@ -14,15 +14,20 @@ PLANNER_ENV_KEYS = (
     "OPENAI_API_KEY",
     "TAVOLA_PLANNER_CODEX_ENABLED",
     "TAVOLA_PLANNER_CODEX_MODEL",
+    "TAVOLA_PLANNER_CODEX_SANDBOX_MODE",
+    "TAVOLA_PLANNER_CODEX_REASONING_EFFORT",
     "TAVOLA_PLANNER_CODEX_TIMEOUT_SECONDS",
+    "TAVOLA_PLANNER_CODEX_MAX_RETRIES",
+    "TAVOLA_PLANNER_CODEX_MISSING_CREDENTIALS",
     "TAVOLA_PLANNER_CODEX_CREDENTIALS_CONFIGURED",
 )
 
 
 @pytest.fixture(autouse=True)
-def reset_dotenv_state():
+def reset_dotenv_state(monkeypatch: pytest.MonkeyPatch):
     original_env = {env_key: os.environ.get(env_key) for env_key in PLANNER_ENV_KEYS}
     original_dotenv_loaded = settings_module._DOTENV_LOADED
+    monkeypatch.setattr(settings_module, "find_dotenv", lambda: "")
     for env_key in PLANNER_ENV_KEYS:
         os.environ.pop(env_key, None)
     settings_module._DOTENV_LOADED = False
