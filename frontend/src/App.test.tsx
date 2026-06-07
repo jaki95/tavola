@@ -626,7 +626,9 @@ describe("App", () => {
       })
     ).toBeInTheDocument();
 
-    fireEvent.click(within(planner).getByRole("button", { name: "Add to basket" }));
+    fireEvent.click(
+      within(planner).getByRole("button", { name: "Add proposal to basket" })
+    );
 
     const basketPanel = await screen.findByRole("region", {
       name: "Current basket"

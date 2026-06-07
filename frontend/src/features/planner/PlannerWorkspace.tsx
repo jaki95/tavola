@@ -407,7 +407,6 @@ function ProposalReview({
     amount_minor: proposal.total_minor,
     currency: proposal.currency
   });
-  const basketHasLines = Boolean(basket && basket.lines.length > 0);
   const actionsDisabled = isAcceptPending || isAccepted;
   const overlapNote = getBasketOverlapNote(basket, proposal);
   const proposalDetails = (
@@ -484,29 +483,6 @@ function ProposalReview({
       />
 
       {proposalDetails}
-
-      <div className="planner-proposal__actions" aria-label="Menu proposal actions">
-        <button
-          disabled={actionsDisabled || proposal.line_count === 0 || !basket}
-          onClick={() => onAccept("append")}
-          type="button"
-        >
-          {isAcceptPending ? "Adding" : "Add to basket"}
-        </button>
-        <button
-          className="planner-action--secondary"
-          disabled={
-            actionsDisabled ||
-            proposal.line_count === 0 ||
-            !basket ||
-            (basketHasLines && isConfirmingReplace)
-          }
-          onClick={() => onAccept("replace")}
-          type="button"
-        >
-          Replace basket
-        </button>
-      </div>
     </div>
   );
 }

@@ -364,7 +364,10 @@ describe("PlannerWorkspace", () => {
     expect(screen.getByText("powered by Codex")).toBeInTheDocument();
     expect(screen.getByText("Fresh Tagliatelle")).toBeInTheDocument();
     expect(screen.getByText("Prices were calculated by Tavola.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add to basket" })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Add proposal to basket" })
+    ).toBeEnabled();
+    expect(screen.queryByLabelText("Menu proposal actions")).not.toBeInTheDocument();
   });
 
   test("renders proposal copy without internal SKU language", async () => {
@@ -751,7 +754,9 @@ describe("PlannerWorkspace", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Remove Focaccia Genovese from proposal" })
     );
-    fireEvent.click(screen.getByRole("button", { name: "Add to basket" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add proposal to basket" })
+    );
 
     await waitFor(() => {
       expect(client.acceptProposal).toHaveBeenCalledWith("planner-1", {
@@ -909,7 +914,9 @@ describe("PlannerWorkspace", () => {
     renderPlannerWorkspace({ client, onBasketAccepted });
     submitReadyPrompt();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Add to basket" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Add proposal to basket" })
+    );
 
     await waitFor(() => {
       expect(client.acceptProposal).toHaveBeenCalledWith("planner-1", {
@@ -957,7 +964,7 @@ describe("PlannerWorkspace", () => {
     submitReadyPrompt();
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "Replace basket" })
+      await screen.findByRole("button", { name: "Replace basket with proposal" })
     );
 
     expect(client.acceptProposal).not.toHaveBeenCalled();
