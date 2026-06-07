@@ -247,9 +247,10 @@ describe("CatalogDetail", () => {
     expect(within(addButton).getByText("1 in basket")).toBeInTheDocument();
   });
 
-  test("shows the detail add action pending state", () => {
+  test("keeps the detail add action visually stable while pending", () => {
     render(
       <CatalogDetail
+        basketQuantity={1}
         detail={{ status: "success", skuId: tagliatelle.sku_id, product: tagliatelle }}
         isAddPending={true}
         onAddProduct={vi.fn()}
@@ -257,9 +258,14 @@ describe("CatalogDetail", () => {
       />
     );
 
-    expect(
-      screen.getByRole("button", { name: "Adding Fresh Tagliatelle to basket" })
-    ).toBeDisabled();
+    const addButton = screen.getByRole("button", {
+      name: "Add another Fresh Tagliatelle to basket, 1 in basket"
+    });
+
+    expect(addButton).toBeEnabled();
+    expect(addButton).toHaveAttribute("aria-disabled", "true");
+    expect(within(addButton).getByText("Add another")).toBeInTheDocument();
+    expect(within(addButton).getByText("1 in basket")).toBeInTheDocument();
   });
 
   test("renders the detail product image as a static asset with stable desktop dimensions", () => {

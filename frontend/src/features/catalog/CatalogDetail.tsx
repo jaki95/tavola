@@ -215,21 +215,23 @@ function PopulatedDetail({
         {showAddAction ? (
           <button
             aria-label={
-              isAddPending
-                ? `Adding ${product.name} to basket`
-                : `${isInBasket ? "Add another" : "Add"} ${product.name} to basket${
-                    isInBasket ? `, ${basketQuantityLabel}` : ""
-                  }`
+              `${isInBasket ? "Add another" : "Add"} ${product.name} to basket${
+                isInBasket ? `, ${basketQuantityLabel}` : ""
+              }`
             }
+            aria-disabled={isAddPending}
             className="catalog-detail__add catalog-add-button"
-            disabled={isAddPending}
-            onClick={() => onAddProduct(product.sku_id, 1)}
+            onClick={() => {
+              if (!isAddPending) {
+                onAddProduct(product.sku_id, 1);
+              }
+            }}
             type="button"
           >
             <span>
-              {isAddPending ? "Adding" : isInBasket ? "Add another" : "Add to basket"}
+              {isInBasket ? "Add another" : "Add to basket"}
             </span>
-            {isInBasket && !isAddPending ? (
+            {isInBasket ? (
               <span className="catalog-add-button__state">{basketQuantityLabel}</span>
             ) : null}
           </button>
