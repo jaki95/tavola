@@ -905,8 +905,26 @@ def _course_pairing_errors(
     course: Course,
     lines: list[ValidatedProposalLine],
 ) -> tuple[PlannerValidationError, ...]:
-    if course != Course.PRIMO:
+    pasta_requiring_sauce = tuple(
+        line
+        for line in lines
+        if line.sku.sku_id in _PRIMO_PASTA_REQUIRING_SAUCE_SKU_IDS
+    )
+    if not pasta_requiring_sauce:
         return ()
+
+    if course != Course.PRIMO:
+        return tuple(
+            PlannerValidationError(
+                code=PlannerValidationErrorCode.INVALID_PROPOSAL,
+                message=(
+                    "Fresh Tagliatelle must be placed in a Primo course with a sauce."
+                ),
+                sku_id=line.sku.sku_id,
+                course=course,
+            )
+            for line in pasta_requiring_sauce
+        )
 
     has_sauce = any("sauce" in line.sku.tags for line in lines)
     if has_sauce:
@@ -921,8 +939,7 @@ def _course_pairing_errors(
             sku_id=line.sku.sku_id,
             course=course,
         )
-        for line in lines
-        if line.sku.sku_id in _PRIMO_PASTA_REQUIRING_SAUCE_SKU_IDS
+        for line in pasta_requiring_sauce
     )
 
 

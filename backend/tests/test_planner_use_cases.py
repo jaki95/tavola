@@ -322,6 +322,45 @@ def test_validate_menu_proposal_accepts_fresh_pasta_with_sauce_pairing() -> None
     assert result.menu_proposal.line_count == 2
 
 
+def test_validate_menu_proposal_rejects_fresh_pasta_outside_primo() -> None:
+    pasta = make_sku()
+    sugo = make_sauce_sku()
+    proposal = MenuProposal(
+        title="Tagliatelle Antipasto",
+        explanation="A misplaced fresh pasta proposal.",
+        planner_notes=("Catalog identities checked.",),
+        party_size=2,
+        package_template_id="antipasto-primo",
+        courses=(
+            CourseProposal(
+                course=Course.ANTIPASTO,
+                lines=(
+                    ProposalLine(
+                        sku_id="fresh-tagliatelle-250g",
+                        quantity=2,
+                        rationale="Fresh pasta is misplaced here.",
+                    ),
+                    ProposalLine(
+                        sku_id="sugo-pomodoro-500g",
+                        quantity=1,
+                        rationale="Sauce does not make this an antipasto.",
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    result = ValidateMenuProposal(StaticCatalogRepository([pasta, sugo]))(proposal)
+
+    assert result.menu_proposal is None
+    assert (
+        result.validation_errors[0].code == PlannerValidationErrorCode.INVALID_PROPOSAL
+    )
+    assert result.validation_errors[0].sku_id == "fresh-tagliatelle-250g"
+    assert result.validation_errors[0].course == Course.ANTIPASTO
+    assert "Primo course" in result.validation_errors[0].message
+
+
 @pytest.mark.parametrize("quantity", [0, True])
 def test_validate_menu_proposal_reports_invalid_raw_quantities(
     quantity: object,
