@@ -26,6 +26,8 @@ import type {
   PlannerSessionResponse,
   PlannerStatus,
   PlannerStatusResponse,
+  PlanningUpdate,
+  PlanningUpdateStage,
   PlannerValidationError,
   PlannerValidationErrorCode,
   ValidateMenuProposalRequest
@@ -37,6 +39,16 @@ const plannerStatusSet = new Set<string>([
   "needs_input",
   "proposal_ready",
   "accepted",
+  "failed"
+]);
+const planningUpdateStageSet = new Set<string>([
+  "queued",
+  "started",
+  "connecting",
+  "planning",
+  "validating",
+  "ready",
+  "needs_input",
   "failed"
 ]);
 const plannerModeSet = new Set<string>(["real_codex", "disabled"]);
@@ -216,6 +228,10 @@ function sanitizePlannerSessionResponse(
     validation_errors: response.validation_errors.map((error) => ({
       ...error,
       message: sanitizeCustomerPlannerText(error.message)
+    })),
+    planning_updates: response.planning_updates.map((update) => ({
+      ...update,
+      message: sanitizeCustomerPlannerText(update.message)
     }))
   };
 }
@@ -247,6 +263,17 @@ function sanitizeCustomerPlannerText(value: string): string {
   return value
     .replace(/\bTavola tools\b/gi, "Tavola checks")
     .replace(/\bplanner tool execution\b/gi, "planner checks")
+    .replace(/\bTavola is getting your menu request ready\./gi, "Sending request")
+    .replace(/\bPlanning has started\./gi, "Sending request")
+    .replace(/\bConnecting to Tavola's planner\./gi, "Preparing Tavola's menu checks.")
+    .replace(/\bPreparing Tavola's menu checks\./gi, "Sending request")
+    .replace(/\bPreparing your menu plan\./gi, "Sending request")
+    .replace(/\bRequest received\./gi, "Sending request")
+    .replace(/\bStarting request\./gi, "Sending request")
+    .replace(/\bRequest queued\./gi, "Sending request")
+    .replace(/\bChecking the menu against Tavola's catalog\./gi, "Reviewing products and prices")
+    .replace(/\bChecking Tavola's catalog\./gi, "Checking Tavola's catalog")
+    .replace(/\bReviewing products and prices\./gi, "Reviewing products and prices")
     .replace(/\bpackage templates\b/gi, "menu plans")
     .replace(/\bpackage template\b/gi, "menu plan")
     .replace(/\btemplates\b/gi, "menu plans")
@@ -288,7 +315,17 @@ function isPlannerSessionResponse(
       typeof value["follow_up_question"] === "string") &&
     (menuProposal === null || isMenuProposal(menuProposal)) &&
     Array.isArray(value["validation_errors"]) &&
-    value["validation_errors"].every(isPlannerValidationError)
+    value["validation_errors"].every(isPlannerValidationError) &&
+    Array.isArray(value["planning_updates"]) &&
+    value["planning_updates"].every(isPlanningUpdate)
+  );
+}
+
+function isPlanningUpdate(value: unknown): value is PlanningUpdate {
+  return (
+    isRecord(value) &&
+    isPlanningUpdateStage(value["stage"]) &&
+    typeof value["message"] === "string"
   );
 }
 
@@ -451,6 +488,10 @@ function isBasketLine(value: unknown): value is BasketLine {
 
 function isPlannerStatus(value: unknown): value is PlannerStatus {
   return typeof value === "string" && plannerStatusSet.has(value);
+}
+
+function isPlanningUpdateStage(value: unknown): value is PlanningUpdateStage {
+  return typeof value === "string" && planningUpdateStageSet.has(value);
 }
 
 function isPlannerMode(value: unknown): value is PlannerMode {

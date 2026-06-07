@@ -55,8 +55,9 @@ through backend smoke, browser approval, regression checks, and safe handoff.
 - Backend status reports live Codex mode when credentials are available.
 - Disabled mode still appears when credentials are absent or live Codex is not enabled.
 - Smoke commands return validated menu proposals for known persona prompts.
-- Browser approval covers live status, loading, follow-up, proposal, validation
-  error, append acceptance, replace acceptance, and success states.
+- Browser approval covers live status, backend-owned Planning updates,
+  follow-up, proposal, validation error, append acceptance, replace acceptance,
+  and success states.
 - Catalog, basket, and checkout remain usable.
 - Automated backend and frontend checks still pass after the live run.
 
@@ -112,7 +113,7 @@ MCP tool-use findings:
   should not require `search_catalog`, `list_package_templates`,
   `get_sku_detail`, or `validate_menu_proposal`.
 
-Timing findings from a sanitized live trace for
+Historical timing findings from a sanitized 2026-06-04 live trace for
 `Vegetarian dinner for 4 around £50`:
 
 ```text
@@ -134,6 +135,9 @@ non_tool_elapsed_ms 50479
 - Treat the listed tool names as historical trace labels; new smoke output
   should show Codex using `find_catalog_candidates`, followed by Tavola
   validating the returned proposal outside the Codex tool surface.
+- These timing findings are historical benchmark evidence, not intended Planner
+  UX. Current browser checks should expect backend-owned Planning updates from
+  Tavola's session lifecycle, not elapsed-time phases inferred by the frontend.
 
 Browser findings:
 
@@ -206,6 +210,10 @@ The real-flow test now includes Tavola's Planner latency benchmark checklist.
 The benchmark remains an opt-in real Codex SDK exercise, not a normal automated
 test and not a reason to introduce a fake runtime planner or direct non-SDK
 model path.
+
+Benchmark classes are operator evidence only. They must not drive customer
+progress copy; the Planner UI should render Planning updates returned by the
+backend while the session status is `planning`.
 
 Targets:
 
@@ -387,7 +395,8 @@ call out any material change to that split.
   make a small edit, and append it to the basket.
 - **Dependencies**: Task 1.7.
 - **Acceptance Criteria**:
-  - Loading state is visible while Codex runs.
+  - Backend-owned Planning updates are visible while the session is
+    `planning`.
   - Proposal-ready state renders courses, products, quantities, rationale,
     planner notes, warnings, item count, and total.
   - Customer-facing UI does not say `SKU`.
@@ -475,8 +484,8 @@ call out any material change to that split.
 - **Description**: Record the browser states tested through the in-app Browser.
 - **Dependencies**: Tasks 1.8 to 1.11.
 - **Acceptance Criteria**:
-  - Loading, empty, live status, follow-up, proposal, validation error, append
-    success, replace success, and disabled fallback are either checked or
+  - Planning updates, empty, live status, follow-up, proposal, validation error,
+    append success, replace success, and disabled fallback are either checked or
     explicitly marked unchecked with a reason.
   - Browser console is checked for unexpected errors.
   - Vite proxy path `/api/planner/status` is confirmed.
@@ -523,8 +532,8 @@ call out any material change to that split.
 - **Codex output varies**: Product choices and totals may differ between runs.
   Validate shape, constraints, and Tavola-calculated totals rather than exact
   item names unless the prompt requires a product.
-- **Latency**: Real Codex may be slow. Verify loading states and avoid repeated
-  browser submissions while one planner run is pending.
+- **Latency**: Real Codex may be slow. Verify backend-owned Planning updates and
+  avoid repeated browser submissions while one planner run is pending.
 - **Repair behavior**: The live demo defaults to zero malformed-output repair
   retries to avoid doubling a slow customer wait after invalid JSON or a bad
   final contract. Tavola validation repair is separate: when Codex returns an

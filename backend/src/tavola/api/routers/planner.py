@@ -303,8 +303,8 @@ def _planner_timing_sink(
 
 
 _PLANNING_UPDATE_MESSAGES = {
-    PlanningUpdateStage.CONNECTING: "Connecting to Tavola's planner.",
-    PlanningUpdateStage.PLANNING: "Checking Tavola's catalog.",
+    PlanningUpdateStage.CONNECTING: "Sending request",
+    PlanningUpdateStage.PLANNING: "Checking Tavola's catalog",
 }
 
 

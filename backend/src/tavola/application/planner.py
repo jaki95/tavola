@@ -232,11 +232,11 @@ class AcceptedMenuProposal:
 
 
 _PLANNING_UPDATE_MESSAGES = {
-    PlanningUpdateStage.QUEUED: "Tavola is getting your menu request ready.",
-    PlanningUpdateStage.STARTED: "Planning has started.",
-    PlanningUpdateStage.CONNECTING: "Connecting to Tavola's planner.",
-    PlanningUpdateStage.PLANNING: "Checking Tavola's catalog.",
-    PlanningUpdateStage.VALIDATING: "Checking the menu against Tavola's catalog.",
+    PlanningUpdateStage.QUEUED: "Sending request",
+    PlanningUpdateStage.STARTED: "Sending request",
+    PlanningUpdateStage.CONNECTING: "Sending request",
+    PlanningUpdateStage.PLANNING: "Checking Tavola's catalog",
+    PlanningUpdateStage.VALIDATING: "Reviewing products and prices",
     PlanningUpdateStage.READY: "Your menu proposal is ready to review.",
     PlanningUpdateStage.NEEDS_INPUT: "Tavola needs one more detail.",
     PlanningUpdateStage.FAILED: "Tavola could not finish this menu plan.",

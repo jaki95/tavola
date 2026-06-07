@@ -10,6 +10,21 @@ export type PlannerStatus =
 
 export type PlannerMode = "real_codex" | "disabled";
 
+export type PlanningUpdateStage =
+  | "queued"
+  | "started"
+  | "connecting"
+  | "planning"
+  | "validating"
+  | "ready"
+  | "needs_input"
+  | "failed";
+
+export type PlanningUpdate = {
+  stage: PlanningUpdateStage;
+  message: string;
+};
+
 export type PlannerStatusResponse = {
   enabled: boolean;
   mode: PlannerMode;
@@ -98,6 +113,7 @@ export type PlannerSessionResponse = {
   follow_up_question: string | null;
   menu_proposal: MenuProposal | null;
   validation_errors: PlannerValidationError[];
+  planning_updates: PlanningUpdate[];
 };
 
 export type CreatePlannerSessionRequest = {

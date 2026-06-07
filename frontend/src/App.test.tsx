@@ -195,7 +195,11 @@ const plannerReadySession: PlannerSessionResponse = {
   follow_up_answers: [],
   follow_up_question: null,
   menu_proposal: plannerProposal,
-  validation_errors: []
+  validation_errors: [],
+  planning_updates: [
+    { stage: "queued", message: "Sending request" },
+    { stage: "ready", message: "Your menu proposal is ready to review." }
+  ]
 };
 
 const plannerPlanningSession: PlannerSessionResponse = {
@@ -205,7 +209,10 @@ const plannerPlanningSession: PlannerSessionResponse = {
   follow_up_answers: [],
   follow_up_question: null,
   menu_proposal: null,
-  validation_errors: []
+  validation_errors: [],
+  planning_updates: [
+    { stage: "queued", message: "Sending request" }
+  ]
 };
 
 describe("App", () => {
@@ -491,6 +498,9 @@ describe("App", () => {
     const readyPlanTab = within(storefrontHeader).getByRole("tab", { name: "Plan" });
     expect(readyPlanTab).toHaveAccessibleDescription("Proposal ready");
     expect(within(readyPlanTab).getByText("Proposal ready")).toBeInTheDocument();
+    expect(storefrontHeader).not.toHaveTextContent(
+      "Sending request"
+    );
 
     fireEvent.click(within(storefrontHeader).getByRole("tab", { name: "Plan" }));
 

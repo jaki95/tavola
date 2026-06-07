@@ -12,7 +12,8 @@ import type { CatalogProductDetail } from "../../types/catalog";
 import type {
   AcceptMenuProposalMode,
   MenuProposal,
-  MenuProposalLine
+  MenuProposalLine,
+  PlanningUpdate
 } from "../../types/planner";
 import { usePlanner, type PlannerClient } from "./usePlanner";
 
@@ -150,7 +151,6 @@ export function PlannerWorkspace({
         <div className="planner-workspace__title-group">
           <div className="planner-workspace__heading-line">
             <h2 id="planner-workspace-title">Plan a menu</h2>
-            <span className="planner-workspace__codex">powered by Codex</span>
           </div>
           <p className="planner-workspace__lede">
             Include party size, budget, occasion, or constraints.
@@ -177,6 +177,7 @@ export function PlannerWorkspace({
                 disabled={isPlannerUnavailable || !prompt.trim()}
                 type="submit"
               >
+                <span aria-hidden="true" className="planner-composer__spark" />
                 Plan menu
               </button>
             </form>
@@ -232,8 +233,9 @@ export function PlannerWorkspace({
         </p>
       ) : null}
 
-      {planner.state.status === "planning" ? (
-        <PlanningStatus elapsedMs={planner.planningElapsedMs} />
+      {planner.state.status === "planning" &&
+      planner.state.session?.planning_updates.length ? (
+        <PlanningStatus updates={planner.state.session.planning_updates} />
       ) : null}
 
       {planner.state.status === "failed" ||
@@ -299,12 +301,12 @@ export function PlannerWorkspace({
 function PlannerTrust() {
   return (
     <aside className="planner-trust" aria-label="Planner validation promise">
-      <strong>Tavola validates before Basket changes.</strong>
+      <strong>Tavola checks every proposal before Basket changes.</strong>
       <ul>
-        <li>Real Products from the catalog</li>
-        <li>Prices come from Tavola's catalog</li>
-        <li>Dietary requests checked against product labels</li>
-        <li>Menu proposal shown for review</li>
+        <li>Real catalog products only</li>
+        <li>Prices and totals checked</li>
+        <li>Product labels checked</li>
+        <li>You review before adding</li>
       </ul>
     </aside>
   );
@@ -329,75 +331,51 @@ function mapPlannerProductDetailResult(
   };
 }
 
-function PlanningStatus({ elapsedMs }: { elapsedMs: number | null }) {
-  const progress = planningProgress(elapsedMs);
+function PlanningStatus({ updates }: { updates: PlanningUpdate[] }) {
+  const latestUpdate = updates.at(-1);
+
+  if (!latestUpdate) {
+    return null;
+  }
 
   return (
-    <section
-      aria-label="Planning updates"
-      aria-live="polite"
-      className="planner-live"
-      role="status"
-    >
+    <section aria-label="Menu planning" className="planner-live">
       <div className="planner-live__summary">
         <span aria-hidden="true" className="planner-live__signal" />
         <div>
-          <p>{progress.message}</p>
+          <p aria-live="polite" role="status">
+            {planningStatusText(latestUpdate)}
+            <span aria-hidden="true" className="planner-live__ellipsis">
+              <span>.</span>
+              <span>.</span>
+              <span>.</span>
+            </span>
+          </p>
+          <span>Tavola checks products, prices, and labels before review.</span>
         </div>
       </div>
-      <ol className="planner-live__steps" aria-label="Planning progress">
-        {planningSteps.map((step, index) => (
-          <li
-            className={
-              index < progress.activeIndex
-                ? "planner-live__step planner-live__step--done"
-                : index === progress.activeIndex
-                  ? "planner-live__step planner-live__step--active"
-                  : "planner-live__step"
-            }
-            key={step}
-          >
-            {step}
-          </li>
-        ))}
-      </ol>
     </section>
   );
 }
 
-const planningSteps = ["Catalog", "Menu shape", "Prices", "Review"];
-
-function planningProgress(elapsedMs: number | null): {
-  activeIndex: number;
-  message: string;
-} {
-  const elapsed = elapsedMs ?? 0;
-
-  if (elapsed >= 30_000) {
-    return {
-      activeIndex: 3,
-      message: "Tavola is checking the proposal before review."
-    };
+function planningStatusText(update: PlanningUpdate): string {
+  if (
+    update.stage === "queued" ||
+    update.stage === "started" ||
+    update.stage === "connecting"
+  ) {
+    return "Reading your request";
   }
 
-  if (elapsed >= 15_000) {
-    return {
-      activeIndex: 2,
-      message: "Validating products and prices."
-    };
+  if (update.stage === "planning") {
+    return "Matching catalog products";
   }
 
-  if (elapsed >= 5_000) {
-    return {
-      activeIndex: 1,
-      message: "Checking the catalog and shaping a menu."
-    };
+  if (update.stage === "validating") {
+    return "Checking prices and labels";
   }
 
-  return {
-    activeIndex: 0,
-    message: "Tavola is planning your menu."
-  };
+  return customerPlannerText(update.message);
 }
 
 function ProposalReview({
@@ -784,6 +762,17 @@ function customerPlannerText(value: string): string {
   return value
     .replace(/\bTavola tools\b/gi, "Tavola checks")
     .replace(/\bplanner tool execution\b/gi, "planner checks")
+    .replace(/\bTavola is getting your menu request ready\./gi, "Sending request")
+    .replace(/\bPlanning has started\./gi, "Sending request")
+    .replace(/\bConnecting to Tavola's planner\./gi, "Preparing Tavola's menu checks.")
+    .replace(/\bPreparing Tavola's menu checks\./gi, "Sending request")
+    .replace(/\bPreparing your menu plan\./gi, "Sending request")
+    .replace(/\bRequest received\./gi, "Sending request")
+    .replace(/\bStarting request\./gi, "Sending request")
+    .replace(/\bRequest queued\./gi, "Sending request")
+    .replace(/\bChecking the menu against Tavola's catalog\./gi, "Reviewing products and prices")
+    .replace(/\bChecking Tavola's catalog\./gi, "Checking Tavola's catalog")
+    .replace(/\bReviewing products and prices\./gi, "Reviewing products and prices")
     .replace(/\bpackage templates\b/gi, "menu plans")
     .replace(/\bpackage template\b/gi, "menu plan")
     .replace(/\btemplates\b/gi, "menu plans")

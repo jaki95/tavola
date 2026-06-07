@@ -708,7 +708,7 @@ def test_create_planning_session_saves_in_progress_state() -> None:
     assert [(update.stage, update.message) for update in session.planning_updates] == [
         (
             PlanningUpdateStage.QUEUED,
-            "Tavola is getting your menu request ready.",
+            "Sending request",
         )
     ]
     assert repository.get_session(session.planner_session_id) == session

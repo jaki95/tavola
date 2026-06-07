@@ -51,7 +51,13 @@ const plannerSession: PlannerSessionResponse = {
   follow_up_answers: [],
   follow_up_question: null,
   menu_proposal: proposal,
-  validation_errors: []
+  validation_errors: [],
+  planning_updates: [
+    {
+      stage: "ready",
+      message: "Your menu proposal is ready to review."
+    }
+  ]
 };
 
 const planningSession: PlannerSessionResponse = {
@@ -61,7 +67,17 @@ const planningSession: PlannerSessionResponse = {
   follow_up_answers: [],
   follow_up_question: null,
   menu_proposal: null,
-  validation_errors: []
+  validation_errors: [],
+  planning_updates: [
+    {
+      stage: "queued",
+      message: "Sending request"
+    },
+    {
+      stage: "planning",
+      message: "Checking Tavola's catalog"
+    }
+  ]
 };
 
 const plannerStatus = {
@@ -312,6 +328,32 @@ describe("planner API client", () => {
     expect(result).toEqual({ ok: true, data: planningSession });
   });
 
+  test("maps internal wording out of customer-facing planning updates", async () => {
+    const { fetchPlannerSession } = await loadPlannerClient();
+    stubJsonResponse({
+      ...planningSession,
+      planning_updates: [
+        {
+          stage: "connecting",
+          message: "Starting planner tool execution with package templates."
+        }
+      ]
+    });
+
+    const result = await fetchPlannerSession("planner-2");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.data.planning_updates).toEqual([
+      {
+        stage: "connecting",
+        message: "Starting planner checks with menu plans."
+      }
+    ]);
+  });
+
   test("validates an edited proposal without accepting it", async () => {
     const { validateProposal } = await loadPlannerClient();
     const fetchMock = stubJsonResponse(plannerSession);
@@ -375,6 +417,21 @@ describe("planner API client", () => {
     [
       "malformed validation error",
       { ...plannerSession, validation_errors: [{ code: "bad" }] }
+    ],
+    [
+      "missing planning update stage",
+      { ...plannerSession, planning_updates: [{ message: "Planning." }] }
+    ],
+    [
+      "unknown planning update stage",
+      {
+        ...plannerSession,
+        planning_updates: [{ stage: "thinking", message: "Planning." }]
+      }
+    ],
+    [
+      "missing planning update message",
+      { ...plannerSession, planning_updates: [{ stage: "planning" }] }
     ]
   ])("rejects a malformed planner session response: %s", async (
     _caseName,

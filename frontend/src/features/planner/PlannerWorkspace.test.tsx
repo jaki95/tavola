@@ -134,7 +134,11 @@ const readySession: PlannerSessionResponse = {
   follow_up_answers: [],
   follow_up_question: null,
   menu_proposal: proposal,
-  validation_errors: []
+  validation_errors: [],
+  planning_updates: [
+    { stage: "queued", message: "Sending request" },
+    { stage: "ready", message: "Your menu proposal is ready to review." }
+  ]
 };
 
 const planningSession: PlannerSessionResponse = {
@@ -144,7 +148,10 @@ const planningSession: PlannerSessionResponse = {
   follow_up_answers: [],
   follow_up_question: null,
   menu_proposal: null,
-  validation_errors: []
+  validation_errors: [],
+  planning_updates: [
+    { stage: "queued", message: "Sending request" }
+  ]
 };
 
 const pairedAntipastoSession: PlannerSessionResponse = {
@@ -159,7 +166,11 @@ const needsInputSession: PlannerSessionResponse = {
   follow_up_answers: [],
   follow_up_question: "How many people are you serving?",
   menu_proposal: null,
-  validation_errors: []
+  validation_errors: [],
+  planning_updates: [
+    { stage: "queued", message: "Sending request" },
+    { stage: "needs_input", message: "Tavola needs one more detail." }
+  ]
 };
 
 const emptyBasket: Basket = {
@@ -242,7 +253,7 @@ describe("PlannerWorkspace", () => {
     vi.useRealTimers();
   });
 
-  test("renders the planner heading without the old decorative logo", () => {
+  test("renders the planner heading without runtime branding or the old decorative logo", () => {
     const client = createPlannerClient({});
 
     const { container } = renderPlannerWorkspace({ client });
@@ -250,16 +261,21 @@ describe("PlannerWorkspace", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Plan a menu" })
     ).toBeInTheDocument();
-    expect(screen.getByText("powered by Codex")).toBeInTheDocument();
+    expect(screen.queryByText("powered by Codex")).not.toBeInTheDocument();
     expect(container.querySelector(".planner-workspace__icon")).toBeNull();
   });
 
   test("shows persona examples and a neutral request prompt", () => {
     const client = createPlannerClient({});
 
-    renderPlannerWorkspace({ client });
+    const { container } = renderPlannerWorkspace({ client });
 
     expect(screen.getByPlaceholderText("What are you planning?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Plan menu" })).toBeDisabled();
+    expect(container.querySelector(".planner-composer__spark")).toHaveAttribute(
+      "aria-hidden",
+      "true"
+    );
     expect(
       screen.queryByPlaceholderText("Vegetarian dinner for 4 around £50")
     ).not.toBeInTheDocument();
@@ -299,8 +315,12 @@ describe("PlannerWorkspace", () => {
       await Promise.resolve();
     });
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Tavola is planning your menu."
+      "Reading your request"
     );
+    expect(screen.getByLabelText("Menu planning")).toHaveTextContent(
+      "Tavola checks products, prices, and labels before review."
+    );
+    expect(screen.queryByLabelText("Planning update history")).not.toBeInTheDocument();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2_000);
@@ -312,7 +332,7 @@ describe("PlannerWorkspace", () => {
         name: "Vegetarian dinner for four"
       })
     ).toBeInTheDocument();
-    expect(screen.getByText("powered by Codex")).toBeInTheDocument();
+    expect(screen.queryByText("powered by Codex")).not.toBeInTheDocument();
     expect(screen.getByText("Fresh Tagliatelle")).toBeInTheDocument();
     expect(screen.getByText("Prices were calculated by Tavola.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add to basket" })).toBeEnabled();
@@ -383,50 +403,53 @@ describe("PlannerWorkspace", () => {
     );
   });
 
-  test("shows customer-safe progress copy while planning remains pending", async () => {
+  test("shows backend planning updates while planning remains pending", async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-06-04T12:00:00Z"));
+    const planningWithCatalogUpdate: PlannerSessionResponse = {
+      ...planningSession,
+      planning_updates: [
+        ...planningSession.planning_updates,
+        { stage: "planning", message: "Checking Tavola's catalog" }
+      ]
+    };
     const client = createPlannerClient({
       createResults: [success(planningSession)],
-      fetchResults: Array.from({ length: 20 }, () => success(planningSession))
+      fetchResults: Array.from({ length: 20 }, () =>
+        success(planningWithCatalogUpdate)
+      )
     });
 
     renderPlannerWorkspace({ client });
     submitReadyPrompt();
-
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Tavola is planning your menu."
-    );
-
-    act(() => {
-      vi.advanceTimersByTime(5_000);
+    await act(async () => {
+      await Promise.resolve();
     });
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Checking the catalog and shaping a menu."
+      "Reading your request"
     );
 
-    act(() => {
-      vi.advanceTimersByTime(10_000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000);
     });
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Validating products and prices."
+      "Matching catalog products"
     );
+    expect(screen.getByLabelText("Menu planning")).toHaveTextContent(
+      "Tavola checks products, prices, and labels before review."
+    );
+    expect(screen.queryByLabelText("Planning update history")).not.toBeInTheDocument();
 
-    act(() => {
-      vi.advanceTimersByTime(15_000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
     });
 
     const statusCopy = screen.getByRole("status").textContent ?? "";
-    expect(statusCopy).toContain(
-      "Tavola is checking the proposal before review."
-    );
+    expect(statusCopy).toContain("Matching catalog products");
     expect(statusCopy).not.toContain("Still planning.");
     expect(statusCopy).not.toMatch(/\d+s elapsed/i);
-    expect(screen.getByLabelText("Planning progress")).toHaveTextContent(
-      "CatalogMenu shapePricesReview"
-    );
+    expect(screen.queryByLabelText("Planning progress")).not.toBeInTheDocument();
     expect(statusCopy).not.toMatch(
       /codex|sdk|tool|thread|model|retry|token|credential/i
     );
@@ -455,19 +478,11 @@ describe("PlannerWorkspace", () => {
     expect(screen.queryByText("Live planner is ready.")).not.toBeInTheDocument();
     expect(
       screen.getByLabelText("Planner validation promise")
-    ).toHaveTextContent("Tavola validates before Basket changes.");
-    expect(
-      screen.getByText("Real Products from the catalog")
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Prices come from Tavola's catalog")
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Dietary requests checked against product labels")
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Menu proposal shown for review")
-    ).toBeInTheDocument();
+    ).toHaveTextContent("Tavola checks every proposal before Basket changes.");
+    expect(screen.getByText("Real catalog products only")).toBeInTheDocument();
+    expect(screen.getByText("Prices and totals checked")).toBeInTheDocument();
+    expect(screen.getByText("Product labels checked")).toBeInTheDocument();
+    expect(screen.getByText("You review before adding")).toBeInTheDocument();
   });
 
   test("disables prompt submission when the planner is unavailable", async () => {
@@ -505,7 +520,11 @@ describe("PlannerWorkspace", () => {
       ...planningSession,
       planner_session_id: "planner-2",
       customer_request: "Plan a dinner",
-      follow_up_answers: ["4 people"]
+      follow_up_answers: ["4 people"],
+      planning_updates: [
+        ...needsInputSession.planning_updates,
+        { stage: "planning", message: "Checking Tavola's catalog" }
+      ]
     };
     const client = createPlannerClient({
       createResults: [success(needsInputSession)],
@@ -541,7 +560,7 @@ describe("PlannerWorkspace", () => {
       message: "4 people"
     });
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Tavola is planning your menu."
+      "Matching catalog products"
     );
 
     await act(async () => {
@@ -560,6 +579,9 @@ describe("PlannerWorkspace", () => {
 
     renderPlannerWorkspace({ client });
     submitReadyPrompt();
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     expect(screen.queryByLabelText("Meal request")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Current planner request")).toHaveTextContent(
@@ -575,7 +597,7 @@ describe("PlannerWorkspace", () => {
       "Vegetarian dinner for 4 around £50"
     );
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Tavola is planning your menu."
+      "Reading your request"
     );
     expect(client.createSession).toHaveBeenCalledTimes(1);
 
@@ -630,7 +652,7 @@ describe("PlannerWorkspace", () => {
 
     expect(screen.queryByLabelText("Meal request")).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Tavola is planning your menu."
+      "Reading your request"
     );
 
     await act(async () => {

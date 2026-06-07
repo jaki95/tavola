@@ -228,12 +228,12 @@ def expected_session_response(quantity: int = 2) -> dict[str, object]:
         "planning_updates": [
             {
                 "stage": "queued",
-                "message": "Tavola is getting your menu request ready.",
+                "message": "Sending request",
             },
-            {"stage": "started", "message": "Planning has started."},
+            {"stage": "started", "message": "Sending request"},
             {
                 "stage": "validating",
-                "message": "Checking the menu against Tavola's catalog.",
+                "message": "Reviewing products and prices",
             },
             {
                 "stage": "ready",
@@ -351,7 +351,7 @@ def test_start_planner_session_returns_planning_then_polling_observes_proposal(
         "planning_updates": [
             {
                 "stage": "queued",
-                "message": "Tavola is getting your menu request ready.",
+                "message": "Sending request",
             }
         ],
     }
@@ -383,9 +383,9 @@ def test_start_planner_session_returns_quickly_while_agent_keeps_running(
     assert planning_response.json()["planning_updates"] == [
         {
             "stage": "queued",
-            "message": "Tavola is getting your menu request ready.",
+            "message": "Sending request",
         },
-        {"stage": "started", "message": "Planning has started."},
+        {"stage": "started", "message": "Sending request"},
     ]
 
     busy_response = client.client.post(
