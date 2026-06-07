@@ -151,6 +151,7 @@ export function PlannerWorkspace({
         <div className="planner-workspace__title-group">
           <div className="planner-workspace__heading-line">
             <h2 id="planner-workspace-title">Plan a menu</h2>
+            <span className="planner-workspace__codex">powered by Codex</span>
           </div>
           <p className="planner-workspace__lede">
             Include party size, budget, occasion, or constraints.

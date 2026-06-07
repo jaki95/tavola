@@ -30,8 +30,9 @@ Practical, local, trustworthy, quietly polished. Warmth via product copy, food
 imagery, serif brand, restrained tomato/basil/saffron accents. UI compact,
 task-first.
 
-Voice: Tavola terms only: Products, Basket, Checkout, Planner, Plan a menu,
-Menu proposal, Pickup. Hide impl terms.
+Voice: Tavola terms first: Products, Basket, Checkout, Planner, Plan a menu,
+Menu proposal, Pickup. Hide implementation terms except the small
+`powered by Codex` attribution inside the Planner surface.
 
 ## Anti-references
 
@@ -40,8 +41,10 @@ oversized hero, decorative metrics, noisy AI branding, dark terminal styling,
 mobile-first decisions.
 
 Never expose SKU, Codex run metadata, tool counts, transcripts, retries,
-backend plumbing. Planner must not invent products, claim unsupported dietary
-guarantees, or become separate cart.
+backend plumbing, or raw planner internals. The Planner may show the restrained
+`powered by Codex` badge, but progress/status copy must stay in Tavola language.
+Planner must not invent products, claim unsupported dietary guarantees, or
+become a separate cart.
 
 ## Design Principles
 

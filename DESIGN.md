@@ -18,19 +18,25 @@ colors:
 typography:
   display:
     fontFamily: "Fraunces, Iowan Old Style, Palatino Linotype, Georgia, serif"
-    fontSize: "2rem"
+    fontSize: "2.125rem"
     fontWeight: 800
-    lineHeight: 0.95
+    lineHeight: 1.08
     letterSpacing: "0"
   headline:
     fontFamily: "Fraunces, Iowan Old Style, Palatino Linotype, Georgia, serif"
-    fontSize: "1.7rem"
+    fontSize: "1.875rem"
     fontWeight: 800
-    lineHeight: 1
+    lineHeight: 1.08
     letterSpacing: "0"
   title:
     fontFamily: "Fraunces, Iowan Old Style, Palatino Linotype, Georgia, serif"
-    fontSize: "1.24rem"
+    fontSize: "1.125rem"
+    fontWeight: 800
+    lineHeight: 1.08
+    letterSpacing: "0"
+  section:
+    fontFamily: "Fraunces, Iowan Old Style, Palatino Linotype, Georgia, serif"
+    fontSize: "1.5rem"
     fontWeight: 800
     lineHeight: 1.08
     letterSpacing: "0"
@@ -41,10 +47,25 @@ typography:
     lineHeight: 1.5
   label:
     fontFamily: "Avenir Next, Gill Sans, Trebuchet MS, ui-sans-serif, sans-serif"
-    fontSize: "0.76rem"
-    fontWeight: 900
+    fontSize: "0.8125rem"
+    fontWeight: 700
     lineHeight: 1.2
     letterSpacing: "0"
+typeScale:
+  micro: "0.7rem"
+  caption: "0.75rem"
+  label: "0.8125rem"
+  meta: "0.875rem"
+  body: "1rem"
+  title: "1.125rem"
+  section: "1.5rem"
+  heading: "1.875rem"
+  display: "2.125rem"
+typeWeights:
+  copy: 400
+  medium: 650
+  label: 700
+  strong: 800
 rounded:
   xs: "6px"
   sm: "7px"
@@ -102,7 +123,8 @@ compact, trustworthy. Warmth from food imagery, serif brand, hairlines,
 tomato/basil/saffron/enamel accents.
 
 Reject enterprise/marketplace/SaaS/landing-page/terminal/metric/noisy-AI feel.
-No customer-facing SKU or Codex runtime detail.
+No customer-facing SKU or Codex runtime detail, except the small
+`powered by Codex` attribution inside the Planner surface.
 
 **Key Characteristics:** desktop; catalog + Basket visible; food-led cards;
 tomato for real actions; serif for brand/names; sans for controls/data/state.
@@ -152,18 +174,20 @@ pending/warning.
 
 ### Hierarchy
 
-- **Display** (800, 2rem-5.2rem, lh 0.92-0.95): brand, rare screen title.
-- **Headline** (800, 1.65rem-2rem, lh 1): Planner/checkout/Basket/detail.
-- **Title** (800, 1.08rem-1.35rem): product, basket line, course.
-- **Body** (400-800, 0.88rem-1rem, lh 1.35-1.5): prose/status/rationale.
+- **Display** (800, 2.125rem, lh 1.08): brand and rare screen-level title.
+- **Headline** (800, 1.875rem, lh 1.08): Planner, checkout, Basket, detail.
+- **Section** (800, 1.5rem, lh 1.08): product names, totals, receipt titles.
+- **Title** (800, 1.125rem, lh 1.08): basket lines, courses, compact headings.
+- **Body** (400-700, 0.875rem-1rem, lh 1.45-1.55): prose/status/rationale.
   Long prose 65-75ch.
-- **Label** (800-900, 0.68rem-0.9rem, tracking 0): tabs/badges/fields/buttons.
+- **Label** (700, 0.7rem-0.8125rem, tracking 0): tabs/badges/fields/buttons.
   Uppercase only compact metadata.
 
 ### Named Rules
 
 **Serif Is for Meaning.** No serif on dense UI.
 **No Tracked Kicker.** Uppercase ok; tracking 0; no marketing eyebrow stacks.
+**Fixed App Scale.** Product UI uses rem tokens, not fluid viewport type.
 
 ## 4. Elevation
 
@@ -252,7 +276,8 @@ courses/rationales = validated commerce info, not chat transcript.
 - **Don't** use oversized hero, metrics, noisy AI, terminal styling,
   mobile-first decisions.
 - **Don't** expose SKU, Codex metadata, tool counts, transcripts, retries,
-  backend plumbing.
+  backend plumbing, or raw planner internals. The only customer-facing Codex
+  text is the small `powered by Codex` attribution in the Planner heading.
 - **Don't** make Planner separate cart flow.
 - **Don't** claim unsupported diet guarantees or invent products.
 - **Don't** use side stripes, gradient text, glass cards, stripe decoration,
