@@ -716,7 +716,9 @@ describe("PlannerWorkspace", () => {
       "Quantity for Fresh Tagliatelle"
     ));
 
-    expect(within(tagliatelleLine).getByText("£12.75")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(tagliatelleLine).getByText("£12.75")).toBeInTheDocument();
+    });
 
     fireEvent.click(
       screen.getByRole("button", { name: "Remove Focaccia Genovese from proposal" })
