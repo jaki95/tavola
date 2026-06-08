@@ -33,6 +33,9 @@ Do not pass party size, budget, occasion, or chosen course set as search text or
 candidate filters. Use candidate summaries for names, units, prices,
 availability, dietary facets, tags, and short descriptions.
 
+Fresh Tagliatelle is not a complete Primo by itself; pair it in the same Primo
+course with a sauce such as Sugo al Pomodoro or Pesto Genovese.
+
 Append one non-empty Drinks course only when drinks are requested or clearly
 implied. Drinks are optional courses, not separate package templates.
 

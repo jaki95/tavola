@@ -188,6 +188,7 @@ class PlannerProposalInvalid(PlannerApplicationError):
 
 
 _REVALIDATED_NOTE = "Revalidated by Tavola."
+_PRIMO_PASTA_REQUIRING_SAUCE_SKU_IDS = frozenset({"fresh-tagliatelle-250g"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -770,6 +771,7 @@ class ValidateMenuProposal:
         line_count = 0
         for course in proposal.courses:
             validated_lines: list[ValidatedProposalLine] = []
+            course_error_count = len(errors)
             for line in course.lines:
                 sku = self._catalog_repository.get_sku(line.sku_id)
                 if sku is None:
@@ -812,6 +814,8 @@ class ValidateMenuProposal:
                         line_total=line_total,
                     )
                 )
+            if len(errors) == course_error_count:
+                errors.extend(_course_pairing_errors(course.course, validated_lines))
             validated_courses.append(
                 ValidatedCourseProposal(
                     course=course.course,
@@ -895,6 +899,48 @@ def _course_product_error(
             course=course,
         )
     return None
+
+
+def _course_pairing_errors(
+    course: Course,
+    lines: list[ValidatedProposalLine],
+) -> tuple[PlannerValidationError, ...]:
+    pasta_requiring_sauce = tuple(
+        line
+        for line in lines
+        if line.sku.sku_id in _PRIMO_PASTA_REQUIRING_SAUCE_SKU_IDS
+    )
+    if not pasta_requiring_sauce:
+        return ()
+
+    if course != Course.PRIMO:
+        return tuple(
+            PlannerValidationError(
+                code=PlannerValidationErrorCode.INVALID_PROPOSAL,
+                message=(
+                    "Fresh Tagliatelle must be placed in a Primo course with a sauce."
+                ),
+                sku_id=line.sku.sku_id,
+                course=course,
+            )
+            for line in pasta_requiring_sauce
+        )
+
+    has_sauce = any("sauce" in line.sku.tags for line in lines)
+    if has_sauce:
+        return ()
+
+    return tuple(
+        PlannerValidationError(
+            code=PlannerValidationErrorCode.INVALID_PROPOSAL,
+            message=(
+                "Fresh Tagliatelle must be paired with a sauce in the Primo course."
+            ),
+            sku_id=line.sku.sku_id,
+            course=course,
+        )
+        for line in pasta_requiring_sauce
+    )
 
 
 def _editable_proposal_for_session(

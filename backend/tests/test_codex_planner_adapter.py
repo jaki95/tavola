@@ -41,6 +41,31 @@ def make_sku(
     )
 
 
+def make_sauce_sku(amount_minor: int = 0) -> CatalogSku:
+    return CatalogSku(
+        sku_id="sugo-pomodoro-500g",
+        name="Sugo al Pomodoro",
+        category=CatalogCategory("pantry", "Pantry", 5),
+        unit_label="jar 500g",
+        price=Money(amount_minor=amount_minor, currency="GBP"),
+        short_description="Slow tomato sugo with basil for pasta.",
+        detail_description="A jar of tomato sauce for fresh pasta.",
+        tags=("sugo", "sauce", "pasta", "primo"),
+        facets=DietaryFacets(is_vegetarian=True, is_vegan=True),
+        image_id="sugo-pomodoro-500g",
+        display_order=1,
+        is_available=True,
+    )
+
+
+def make_complete_pasta_catalog(
+    pasta_amount_minor: int = 425,
+) -> StaticCatalogRepository:
+    return StaticCatalogRepository(
+        [make_sku(amount_minor=pasta_amount_minor), make_sauce_sku()]
+    )
+
+
 @dataclass
 class CapturingCodexClient:
     result: CodexSdkRunResult | None = None
@@ -113,27 +138,7 @@ def test_codex_adapter_configures_catalog_tool_and_tavola_validates_final_json()
 ):
     client = CapturingCodexClient(
         result=CodexSdkRunResult(
-            final_output=json.dumps(
-                {
-                    "title": "Weeknight Pasta",
-                    "explanation": "A compact pasta proposal.",
-                    "planner_notes": ["Catalog identities checked."],
-                    "party_size": 2,
-                    "package_template_id": "primo-only",
-                    "courses": [
-                        {
-                            "course": "primo",
-                            "lines": [
-                                {
-                                    "sku_id": "fresh-tagliatelle-250g",
-                                    "quantity": 2,
-                                    "rationale": "A flexible pasta course.",
-                                }
-                            ],
-                        }
-                    ],
-                }
-            ),
+            final_output=json.dumps(valid_raw_proposal()),
             tool_names=required_tool_names(),
         )
     )
@@ -145,7 +150,7 @@ def test_codex_adapter_configures_catalog_tool_and_tavola_validates_final_json()
     )
     planner = PlanMenuFromRequest(
         agent=agent,
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=425),
     )
 
     result = planner(customer_request="Vegetarian dinner for 2")
@@ -168,7 +173,7 @@ def test_codex_adapter_configures_catalog_tool_and_tavola_validates_final_json()
         ),
     )
     assert client.prompt is not None
-    assert len(client.prompt) < 3200
+    assert len(client.prompt) < 3400
     assert "Proposal flow" in client.prompt
     assert "antipasto-primo-dessert" in client.prompt
     assert "antipasto-primo" in client.prompt
@@ -203,6 +208,8 @@ def test_codex_adapter_configures_catalog_tool_and_tavola_validates_final_json()
     assert "mixed group" in client.prompt
     assert "Run separate candidate searches" in normalized_prompt
     assert "unfiltered searches for the wider group" in normalized_prompt
+    assert "Fresh Tagliatelle is not a complete Primo by itself" in client.prompt
+    assert "Sugo al Pomodoro or Pesto Genovese" in client.prompt
     assert "do not force every line to be vegetarian" in client.prompt
     assert "Final JSON contract" in client.prompt
     assert '"follow_up_question"' in client.prompt
@@ -224,7 +231,7 @@ def test_codex_adapter_loads_prompt_template_from_markdown_file() -> None:
     )
     planner = PlanMenuFromRequest(
         agent=CodexMenuPlannerAgent(client=client, model="codex-test-model"),
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=425),
     )
     prompt_file = (
         Path(__file__).parents[1]
@@ -262,7 +269,7 @@ def test_codex_adapter_repairs_malformed_json_once() -> None:
             model="codex-test-model",
             max_retries=1,
         ),
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=425),
     )
 
     result = planner(customer_request="Vegetarian dinner for 2")
@@ -334,7 +341,7 @@ def test_codex_adapter_emits_sanitized_timing_events_for_success() -> None:
             model="codex-test-model",
             timing_sink=events.append,
         ),
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=425),
     )
 
     result = planner(customer_request="Vegetarian dinner for 2")
@@ -375,7 +382,7 @@ def test_codex_adapter_emits_repair_attempt_timing_without_raw_output() -> None:
             max_retries=1,
             timing_sink=events.append,
         ),
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=425),
     )
 
     result = planner(customer_request="Vegetarian dinner for 2")
@@ -411,7 +418,7 @@ def test_codex_adapter_repairs_output_contract_failure_once() -> None:
             model="codex-test-model",
             max_retries=1,
         ),
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=425),
     )
 
     result = planner(customer_request="Vegetarian dinner for 2")
@@ -440,7 +447,7 @@ def test_codex_adapter_repairs_after_tavola_validation_failure() -> None:
             client=client,
             model="codex-test-model",
         ),
-        catalog_repository=StaticCatalogRepository([make_sku(amount_minor=425)]),
+        catalog_repository=make_complete_pasta_catalog(pasta_amount_minor=425),
     )
 
     result = planner(customer_request="Vegetarian dinner for 2")
@@ -631,7 +638,7 @@ def _run_agent(run_result: CodexSdkRunResult):
             client=CapturingCodexClient(result=run_result),
             model="codex-test-model",
         ),
-        catalog_repository=StaticCatalogRepository([make_sku()]),
+        catalog_repository=make_complete_pasta_catalog(),
     )
     return planner(customer_request="Dinner for two")
 
@@ -641,6 +648,21 @@ def required_tool_names() -> tuple[str, ...]:
 
 
 def valid_raw_proposal(sku_id: str = "fresh-tagliatelle-250g") -> dict[str, object]:
+    lines: list[dict[str, object]] = [
+        {
+            "sku_id": sku_id,
+            "quantity": 2,
+            "rationale": "A flexible pasta course.",
+        }
+    ]
+    if sku_id == "fresh-tagliatelle-250g":
+        lines.append(
+            {
+                "sku_id": "sugo-pomodoro-500g",
+                "quantity": 1,
+                "rationale": "Tomato sauce completes the pasta course.",
+            }
+        )
     return {
         "title": "Weeknight Pasta",
         "explanation": "A compact pasta proposal.",
@@ -650,13 +672,7 @@ def valid_raw_proposal(sku_id: str = "fresh-tagliatelle-250g") -> dict[str, obje
         "courses": [
             {
                 "course": "primo",
-                "lines": [
-                    {
-                        "sku_id": sku_id,
-                        "quantity": 2,
-                        "rationale": "A flexible pasta course.",
-                    }
-                ],
+                "lines": lines,
             }
         ],
     }
